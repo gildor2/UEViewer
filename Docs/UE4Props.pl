@@ -21,14 +21,27 @@
 	"Classes/Materials/MaterialInstanceBasePropertyOverrides.h",
 	"Classes/Materials/MaterialLayersFunctions.h",
 	"Public/StaticParameterSet.h",
+	"Public/MaterialCachedData.h",
 	"Classes/Materials/MaterialInstance.h",
 	"Classes/Materials/Material.h",
 	"Classes/Materials/MaterialInstanceConstant.h",
+	"Classes/Animation/Skeleton.h",
+	"Classes/Animation/AnimationAsset.h",
+	"Classes/Animation/AnimSequenceBase.h",
+	"Classes/Animation/AnimSequence.h",
+	"Classes/Animation/CustomAttributes.h",
+	"Classes/Curves/StringCurve.h",
+	"Classes/Curves/IntegralCurve.h",
+	"Classes/Curves/SimpleCurve.h",
+	"Classes/Animation/AnimLinkableElement.h",
+	"Classes/Animation/AnimNotifies/AnimNotify.h",
+	"Public/Animation/AnimTypes.h",
 );
 
 %consts =
 (
 	"EPhysicalMaterialMaskColor::MAX" => 8,
+	"NumMaterialRuntimeParameterTypes" => 5,
 );
 
 sub DBG() {0}
@@ -122,14 +135,19 @@ sub ParseClass
 			my $increment = 1;
 			if (defined($countValue))
 			{
-				if (exists($consts{$countValue}))
+				if ($countValue =~ /^[\d]+$/)
+				{
+					# numeric value
+					$increment = $countValue;
+				}
+				elsif (exists($consts{$countValue}))
 				{
 					$increment = $consts{$countValue};
 					$text .= "    // $countValue = $increment\n";
 				}
 				else
 				{
-					$text .= "    // Warning: array ofunknown size $countValue\n";
+					$text .= "    // Warning: array of unknown size $countValue\n";
 				}
 			}
 			$text .= "    /* $num */ $line\n";
@@ -140,6 +158,7 @@ sub ParseClass
 	if ($num)
 	{
 		print($text);
+		print("    /* $num properties */\n");
 		print("};\n");
 		$classProps{$className} = $num;
 	}

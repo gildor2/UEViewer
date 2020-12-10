@@ -1662,7 +1662,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 	while (Header.GetNextProperty(PropIndex, bIsZeroedProp))
 	{
 	#if DEBUG_PROPS
-		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp); //?? REMOVE
+		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp);
 	#endif
 		int ArrayIndex = 0;
 		const char* PropName = FindUnversionedProp(PropIndex, ArrayIndex);
@@ -1911,7 +1911,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 	appPrintf("<<< End of struct: %s\n", Name);
 #endif
 
-	unguard;
+	unguardf("Type=%s", Name);
 }
 
 #endif // UNREAL4
@@ -1948,11 +1948,19 @@ UObject *CreateClass(const char *Name)
 // Native serializers are defined in UE4 as "atomic" or "immutable" mark,
 // or with WithSerializer type trait.
 // reference: CoreUObject/Classes/Object.h
+// Modern UE4 native serializers are defined in CoreUObject/Private/UObject/Property.cpp
 
 BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FVector)
 	PROP_FLOAT(X)
 	PROP_FLOAT(Y)
 	PROP_FLOAT(Z)
+END_PROP_TABLE_EXTERNAL
+
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FQuat)
+	PROP_FLOAT(X)
+	PROP_FLOAT(Y)
+	PROP_FLOAT(Z)
+	PROP_FLOAT(W)
 END_PROP_TABLE_EXTERNAL
 
 BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FRotator)
@@ -1983,6 +1991,12 @@ BEGIN_PROP_TABLE_EXTERNAL(FBoxSphereBounds)
 	PROP_FLOAT(SphereRadius)
 END_PROP_TABLE_EXTERNAL
 
+BEGIN_PROP_TABLE_EXTERNAL(FTransform)
+	PROP_STRUC(Rotation, FQuat)
+	PROP_VECTOR(Translation)
+	PROP_VECTOR(Scale3D)
+END_PROP_TABLE_EXTERNAL
+
 #endif // UNREAL3
 
 #if UNREAL4
@@ -1998,11 +2012,13 @@ void RegisterCoreClasses()
 {
 	BEGIN_CLASS_TABLE
 		REGISTER_CLASS_EXTERNAL(FVector)
+		REGISTER_CLASS_EXTERNAL(FQuat)
 		REGISTER_CLASS_EXTERNAL(FRotator)
 		REGISTER_CLASS_EXTERNAL(FColor)
 	#if UNREAL3
 		REGISTER_CLASS_EXTERNAL(FLinearColor)
 		REGISTER_CLASS_EXTERNAL(FBoxSphereBounds)
+		REGISTER_CLASS_EXTERNAL(FTransform)
 	#endif
 	#if UNREAL4
 		REGISTER_CLASS_EXTERNAL(FIntPoint)

@@ -84,6 +84,7 @@ void SuppressUnknownClass(const char* ClassNameWildcard)
 }
 
 
+// todo: 'ClassType' probably should be dropped
 const CTypeInfo* FindClassType(const char* Name, bool ClassType)
 {
 	guard(FindClassType);
@@ -104,7 +105,8 @@ const CTypeInfo* FindClassType(const char* Name, bool ClassType)
 
 		if (!GClasses[i].TypeInfo) appError("No typeinfo for class");
 		const CTypeInfo *Type = GClasses[i].TypeInfo();
-		if (Type->IsClass() != ClassType) continue;
+		// FindUnversionedProp() calls FindStructType for classes and structs, so disable the comparison for now
+		// if (Type->IsClass() != ClassType) continue;
 #if DEBUG_TYPES
 		appPrintf("ok %s\n", Type->Name);
 #endif

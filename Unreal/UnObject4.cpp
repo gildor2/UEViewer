@@ -59,6 +59,16 @@ struct PropInfo
 
 #define DROP_OBJ_ARRAY(index)		{ "#arr_int32", index, 0 }, // TArray<UObject*>
 
+#define FORTNITE 1 //todo: disallow some UE4.26 features
+
+/*
+ * Class table. If class is missing here, it's assumed that its property list
+ * matches property table (declared with BEGIN_PROP_TABLE).
+ * Notes:
+ * - Classes should go in order: child, parent, parent's parent ... If not, the parent
+ *   class will be captured before the child, and the property index won't match.
+ * - If property is not listed, SerializeUnversionedProperties4 will skip the property as int32.
+ */
 static const PropInfo PropData[] =
 {
 BEGIN("UStaticMesh4")
@@ -91,6 +101,55 @@ BEGIN("USkeletalMesh4")
 	MAP(SkinWeightProfiles, 27)
 END
 
+BEGIN("USkeleton")
+	MAP(BoneTree, 0)
+	DROP_VECTOR4(2)						// FGuid VirtualBoneGuid
+	MAP(VirtualBones, 3)
+	MAP(Sockets, 4)
+	DROP_OBJ_ARRAY(6)					// TArray<UBlendProfile*> BlendProfiles
+	MAP(SlotGroups, 7)
+	DROP_OBJ_ARRAY(8)					// TArray<UAssetUserData*> AssetUserData
+END
+
+BEGIN("UAnimSequence4")
+	MAP(NumFrames, 0)
+	MAP(TrackToSkeletonMapTable, 1)
+	MAP(AdditiveAnimType, 4)
+	DROP_INT8(5)
+	MAP(RefPoseSeq, 6)
+	MAP(RefFrameIndex, 7)
+	MAP(RetargetSource, 8)
+#if !FORTNITE
+	// release 4.26 version
+	MAP(RetargetSourceAssetReferencePose, 9)
+	MAP(Interpolation, 10)
+	MAP(bEnableRootMotion, 11)
+	DROP_INT8(12, 13, 14, 15)
+	MAP(AuthoredSyncMarkers, 16)
+	MAP(BakedPerBoneCustomAttributeData, 17)
+#elif 1
+	MAP(RetargetSourceAssetReferencePose, 9)
+	MAP(Interpolation, 10)
+	MAP(bEnableRootMotion, 11)
+	DROP_INT8(12, 13, 14, 15)
+	MAP(AuthoredSyncMarkers, 16)
+	//MAP(BakedPerBoneCustomAttributeData, 17)
+#else
+	//MAP(RetargetSourceAssetReferencePose, 9)
+	MAP(Interpolation, 9)
+	MAP(bEnableRootMotion, 10)
+	DROP_INT8(11, 12, 13, 14)
+	MAP(AuthoredSyncMarkers, 15)
+	MAP(BakedPerBoneCustomAttributeData, 16)
+#endif
+END
+
+BEGIN("UAnimationAsset")
+	MAP(Skeleton, 0)
+	DROP_OBJ_ARRAY(1)					// MetaData
+	DROP_OBJ_ARRAY(2)					// AssetUserData
+END
+
 BEGIN("UTexture2D")
 	DROP_INT8(2)						// uint8 bTemporarilyDisableStreaming:1
 	DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
@@ -113,6 +172,30 @@ BEGIN("UMaterialInstance")
 	MAP(BasePropertyOverrides, 17)
 	MAP(StaticParameters, 18)
 	DROP_OBJ_ARRAY(20)					//todo: TArray<UObject*> CachedReferencedTextures
+END
+
+BEGIN("UMaterial3")
+	// known properties
+	MAP(BlendMode, 17)
+	MAP(TwoSided, 33)
+	MAP(bDisableDepthTest, 48)
+	// todo: native serializers
+	// todo: FScalarMaterialInput: (10, 11, 12, 25, 27)
+	// todo: FVectorMaterialInput: (13, 14, 24)
+	// todo: FColorMaterialInput: (15)
+	// todo: MAP(CachedExpressionData, 116)
+	//?? FShadingModelMaterialInput 28
+	//?? FLinearColor 46
+	// int8 properties
+	DROP_INT8(16, 17, 18, 19, 20, 21)
+	DROP_INT8(29, 30, 31, 32, 34, 35, 36, 37, 38)
+	DROP_INT8(48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59)
+	DROP_INT8(60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70)
+	DROP_INT8(75, 76, 77, 78, 79, 80, 82, 83, 84, 85)
+	DROP_INT8(86, 87, 88, 89, 90, 91, 92, 93, 94, 95)
+	DROP_INT8(96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111)
+	// other
+	DROP_VECTOR4(114)					// FGuid StateId
 END
 
 BEGIN("UMaterialInterface")
@@ -165,6 +248,11 @@ END
 BEGIN("FLightmassMaterialInterfaceSettings")
 	DROP_INT8(3, 4, 5, 6, 7)
 END
+
+BEGIN("FBoneNode")
+	DROP_INT64(0)						// FName Name_DEPRECATED
+	MAP(TranslationRetargetingMode, 2)	// TEnumAsByte<EBoneTranslationRetargetingMode::Type> TranslationRetargetingMode
+END
 };
 
 #undef MAP
@@ -188,10 +276,18 @@ static const ParentInfo ParentData[] =
 	{ "UStaticMesh4", "UStreamableRenderAsset", 25 },
 	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // just 1 UObject* property
 	{ "UMaterialInstance", "UMaterialInterface", 21 },
+	{ "UMaterial3", "UMaterialInterface", 117 },
+#if !FORTNITE
+	{ "UAnimSequence4", "UAnimSequenceBase", 18, },
+#else
+	{ "UAnimSequence4", "UAnimSequenceBase", 17, },
+#endif
+	{ "UAnimSequenceBase", "UAnimationAsset", 4 },
 	{ "FStaticSwitchParameter", "FStaticParameterBase", 1 },
 	{ "FStaticComponentMaskParameter", "FStaticParameterBase", 4 },
 	{ "FStaticTerrainLayerWeightParameter", "FStaticParameterBase", 2 },
 	{ "FStaticMaterialLayersParameter", "FStaticParameterBase", 1 },
+	{ "FAnimNotifyEvent", "FAnimLinkableElement", 17 },
 };
 
 const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) const
@@ -210,19 +306,19 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		if (PropIndex < Parent.NumProps)
 			continue;
 		// Compare types
-		if (CurrentType)
-		{
-			if (!CurrentType->IsA(Parent.ThisName + 1))
-				continue;
-		}
-		else
-		{
+//		if (CurrentType)
+//		{
+//			if (!CurrentType->IsA(Parent.ThisName + 1))
+//				continue;
+//		}
+//		else
+//		{
 			if (strcmp(CurrentClassName, Parent.ThisName) != 0)
 				continue;
-		}
+//		}
 		// Types are matching, redirect to parent
 		CurrentClassName = Parent.ParentName;
-		CurrentType = FindStructType(Parent.ParentName);
+		CurrentType = FindStructType(CurrentClassName);
 		PropIndex -= Parent.NumProps;
 	}
 
@@ -240,9 +336,10 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		// because of inheritance, so don't "break" a loop when we've scanned some class, check
 		// other classes too
 		bool IsOurClass;
-		if (CurrentType)
-			IsOurClass = CurrentType->IsA(p->Name + 1);
-		else
+		// Use exact name comparison to allow intermediate parents which aren't declared in PropData[]
+		// if (CurrentType)
+		//	IsOurClass = CurrentType->IsA(p->Name + 1);
+		// else
 			IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
 
 		while (++p < end && p->Name)
@@ -287,7 +384,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 
 	// The property not found. Try using CTypeInfo properties, assuming their layout matches UE
 	int CurrentPropIndex = 0;
-	assert(CurrentType);
+	if (CurrentType == NULL) appError("Enumerating properties of unknown type %s", CurrentClassName);
 	for (int Index = 0; Index < CurrentType->NumProps; Index++)
 	{
 		const CPropInfo& Prop = CurrentType->Props[Index];

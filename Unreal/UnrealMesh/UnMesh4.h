@@ -155,6 +155,17 @@ struct FBoneNode
 	END_PROP_TABLE
 };
 
+struct FAnimSlotGroup
+{
+	DECLARE_STRUCT(FAnimSlotGroup)
+	FName					GroupName;
+	TArray<FName>			SlotNames;
+	BEGIN_PROP_TABLE
+		PROP_NAME(GroupName)
+		PROP_ARRAY(SlotNames, PropType::FName)
+	END_PROP_TABLE
+};
+
 class USkeleton : public UObject
 {
 	DECLARE_CLASS(USkeleton, UObject);
@@ -165,11 +176,14 @@ public:
 	FSmartNameContainer		SmartNames;
 	TArray<FVirtualBone>	VirtualBones;
 	TArray<FBoneNode>		BoneTree;
-	//!! TODO: sockets
+	TArray<USkeletalMeshSocket*> Sockets;
+	TArray<FAnimSlotGroup>	SlotGroups;
 
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(VirtualBones, "FVirtualBone")
 		PROP_ARRAY(BoneTree, "FBoneNode")
+		PROP_ARRAY(Sockets, PropType::UObject)
+		PROP_ARRAY(SlotGroups, "FAnimSlotGroup")
 		PROP_DROP(Notifies)			// not working with notifies in our program
 	END_PROP_TABLE
 
@@ -608,6 +622,62 @@ struct FRawCurveTracks
 	friend FArchive& operator<<(FArchive& Ar, FRawCurveTracks& T);
 };
 
+struct FAnimLinkableElement
+{
+	DECLARE_STRUCT(FAnimLinkableElement);
+
+	int32					SlotIndex;
+	int32					SegmentIndex;
+	float					SegmentBeginTime;
+	float					SegmentLength;
+
+	BEGIN_PROP_TABLE
+		PROP_DROP(LinkedMontage, PropType::UObject)
+		PROP_INT(SlotIndex)
+		PROP_INT(SegmentIndex)
+		PROP_DROP(LinkMethod, PropType::Byte)
+		PROP_DROP(CachedLinkMethod, PropType::Byte)
+		PROP_FLOAT(SegmentBeginTime)
+		PROP_FLOAT(SegmentLength)
+		PROP_DROP(LinkValue, PropType::Float)
+		PROP_DROP(LinkedSequence, PropType::UObject)
+	END_PROP_TABLE
+};
+
+struct FAnimNotifyEvent : public FAnimLinkableElement
+{
+	DECLARE_STRUCT2(FAnimNotifyEvent, FAnimLinkableElement);
+
+	float					TriggerTimeOffset;
+	float					EndTriggerTimeOffset;
+	float					TriggerWeightThreshold;
+	FName					NotifyName;
+	float					Duration;
+	FAnimLinkableElement	EndLink;
+	bool					bConvertedFromBranchingPoint;
+	float					NotifyTriggerChance;
+	int32					TrackIndex;
+
+	BEGIN_PROP_TABLE
+		PROP_DROP(DisplayTime_DEPRECATED, PropType::Float)
+		PROP_FLOAT(TriggerTimeOffset)
+		PROP_FLOAT(EndTriggerTimeOffset)
+		PROP_FLOAT(TriggerWeightThreshold)
+		PROP_NAME(NotifyName)
+		PROP_DROP(Notify, PropType::UObject)
+		PROP_DROP(NotifyStateClass, PropType::UObject)
+		PROP_FLOAT(Duration)
+		PROP_STRUC(EndLink, FAnimLinkableElement)
+		PROP_BOOL(bConvertedFromBranchingPoint)
+		PROP_DROP(MontageTickType, PropType::Byte)
+		PROP_FLOAT(NotifyTriggerChance)
+		PROP_DROP(NotifyFilterType, PropType::Byte)
+		PROP_DROP(NotifyFilterLOD, PropType::Int)
+		PROP_DROP(bTriggerOnDedicatedServer, PropType::Bool)
+		PROP_DROP(bTriggerOnFollower, PropType::Bool)
+		PROP_INT(TrackIndex)
+	END_PROP_TABLE
+};
 
 class UAnimationAsset : public UObject
 {
@@ -637,12 +707,21 @@ class UAnimSequenceBase : public UAnimationAsset
 {
 	DECLARE_CLASS(UAnimSequenceBase, UAnimationAsset);
 public:
+	TArray<FAnimNotifyEvent> Notifies;
 	FRawCurveTracks			RawCurveData;
+	float					SequenceLength;
+	float					RateScale;
 
 	BEGIN_PROP_TABLE
+		PROP_ARRAY(Notifies, "FAnimNotifyEvent")
+		PROP_FLOAT(SequenceLength)
+		PROP_FLOAT(RateScale)
 		PROP_STRUC(RawCurveData, FRawCurveTracks)
-		PROP_DROP(Notifies)			// not working with notifies in our program
 	END_PROP_TABLE
+
+	UAnimSequenceBase()
+	:	RateScale(1.0f)
+	{}
 
 	virtual void Serialize(FArchive& Ar);
 };
@@ -690,13 +769,157 @@ struct FCompressedSegment
 	}
 };
 
+struct FStringCurveKey
+{
+	DECLARE_STRUCT(FStringCurveKey)
+	float					Time;
+	FString					Value;
+
+	friend FArchive& operator<<(FArchive& Ar, FStringCurveKey& K)
+	{
+		return Ar << K.Time << K.Value;
+	}
+
+	USE_NATIVE_SERIALIZER;
+
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(Time)
+		PROP_STRING(Value)
+	END_PROP_TABLE
+};
+
+struct FStringCurve
+{
+	DECLARE_STRUCT(FStringCurve)
+	FString					DefaultValue;
+	TArray<FStringCurveKey>	Keys;
+	BEGIN_PROP_TABLE
+		PROP_STRING(DefaultValue)
+		PROP_ARRAY(Keys, "FStringCurveKey")
+	END_PROP_TABLE
+};
+
+struct FBakedStringCustomAttribute
+{
+	DECLARE_STRUCT(FBakedStringCustomAttribute)
+	FName					AttributeName;
+	FStringCurve			StringCurve;
+	BEGIN_PROP_TABLE
+		PROP_NAME(AttributeName)
+		PROP_STRUC(StringCurve, FStringCurve)
+	END_PROP_TABLE
+};
+
+struct FIntegralKey
+{
+	DECLARE_STRUCT(FIntegralKey)
+	float					Time;
+	int32					Value;
+
+	// No native serializer
+
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(Time)
+		PROP_INT(Value)
+	END_PROP_TABLE
+};
+
+struct FIntegralCurve
+{
+	DECLARE_STRUCT(FIntegralCurve)
+	TArray<FIntegralKey>	Keys;
+	int32					DefaultValue;
+	bool					bUseDefaultValueBeforeFirstKey;
+	BEGIN_PROP_TABLE
+		PROP_ARRAY(Keys, "FIntegralKey")
+		PROP_INT(DefaultValue)
+		PROP_BOOL(bUseDefaultValueBeforeFirstKey)
+	END_PROP_TABLE
+};
+
+struct FBakedIntegerCustomAttribute
+{
+	DECLARE_STRUCT(FBakedIntegerCustomAttribute)
+	FName					AttributeName;
+	FIntegralCurve			IntCurve;
+	BEGIN_PROP_TABLE
+		PROP_NAME(AttributeName)
+		PROP_STRUC(IntCurve, FIntegralCurve)
+	END_PROP_TABLE
+};
+
+struct FSimpleCurveKey
+{
+	DECLARE_STRUCT(FSimpleCurveKey)
+	float					Time;
+	float					Value;
+
+	friend FArchive& operator<<(FArchive& Ar, FSimpleCurveKey& K)
+	{
+		return Ar << K.Time << K.Value;
+	}
+
+	USE_NATIVE_SERIALIZER;
+
+	BEGIN_PROP_TABLE
+		PROP_FLOAT(Time)
+		PROP_FLOAT(Value)
+	END_PROP_TABLE
+};
+
+struct FSimpleCurve
+{
+	DECLARE_STRUCT(FSimpleCurve)
+	int8 /*TEnumAsByte<ERichCurveInterpMode>*/ InterpMode;
+	TArray<FSimpleCurveKey>	Keys;
+	BEGIN_PROP_TABLE
+		PROP_BYTE(InterpMode)
+		PROP_ARRAY(Keys, "FSimpleCurveKey")
+	END_PROP_TABLE
+};
+
+struct FBakedFloatCustomAttribute
+{
+	DECLARE_STRUCT(FBakedFloatCustomAttribute)
+	FName					AttributeName;
+	FSimpleCurve			FloatCurve;
+	BEGIN_PROP_TABLE
+		PROP_NAME(AttributeName)
+		PROP_STRUC(FloatCurve, FSimpleCurve)
+	END_PROP_TABLE
+};
+
+struct FAnimSyncMarker
+{
+	DECLARE_STRUCT(FAnimSyncMarker)
+	FName					MarkerName;
+	float					Time;
+	BEGIN_PROP_TABLE
+		PROP_NAME(MarkerName)
+		PROP_FLOAT(Time)
+	END_PROP_TABLE
+};
+
+struct FBakedCustomAttributePerBoneData
+{
+	DECLARE_STRUCT(FBakedCustomAttributePerBoneData);
+	int32 BoneTreeIndex;
+	TArray<FBakedStringCustomAttribute> StringAttributes;
+	TArray<FBakedIntegerCustomAttribute> IntAttributes;
+	TArray<FBakedFloatCustomAttribute> FloatAttributes;
+	BEGIN_PROP_TABLE
+		PROP_INT(BoneTreeIndex)
+		PROP_ARRAY(StringAttributes, "FBakedStringCustomAttribute")
+		PROP_ARRAY(IntAttributes, "FBakedIntegerCustomAttribute")
+		PROP_ARRAY(FloatAttributes, "FBakedFloatCustomAttribute")
+	END_PROP_TABLE
+};
+
 class UAnimSequence4 : public UAnimSequenceBase
 {
 	DECLARE_CLASS(UAnimSequence4, UAnimSequenceBase);
 public:
 	int32					NumFrames;
-	float					RateScale;
-	float					SequenceLength;
 	TArray<FRawAnimSequenceTrack> RawAnimationData;
 	TArray<uint8>			CompressedByteStream;
 	TArray<FCompressedSegment> CompressedSegments;
@@ -713,11 +936,16 @@ public:
 	FRawCurveTracks			CompressedCurveData;
 	EAnimInterpolationType	Interpolation;
 	EAdditiveAnimationType	AdditiveAnimType;
+	UAnimSequence4*			RefPoseSeq;
+	int32					RefFrameIndex;
+	FName					RetargetSource;
+	TArray<FTransform>		RetargetSourceAssetReferencePose;
+	bool					bEnableRootMotion;
+	TArray<FAnimSyncMarker>	AuthoredSyncMarkers;
+	TArray<FBakedCustomAttributePerBoneData> BakedPerBoneCustomAttributeData;
 
 	BEGIN_PROP_TABLE
 		PROP_INT(NumFrames)
-		PROP_FLOAT(RateScale)
-		PROP_FLOAT(SequenceLength)
 		// Before UE4.12 some fields were serialized as properties
 		PROP_ENUM2(KeyEncodingFormat, AnimationKeyFormat)
 		PROP_ENUM2(TranslationCompressionFormat, AnimationCompressionFormat)
@@ -730,12 +958,17 @@ public:
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 		PROP_ENUM2(Interpolation, EAnimInterpolationType)
 		PROP_ENUM2(AdditiveAnimType, EAdditiveAnimationType)
-		PROP_DROP(RetargetSource)
+		PROP_NAME(RetargetSource)
+		PROP_OBJ(RefPoseSeq)
+		PROP_INT(RefFrameIndex)
+		PROP_ARRAY(RetargetSourceAssetReferencePose, "FTransform")
+		PROP_BOOL(bEnableRootMotion)
+		PROP_ARRAY(AuthoredSyncMarkers, "FAnimSyncMarker")
+		PROP_ARRAY(BakedPerBoneCustomAttributeData, "FBakedCustomAttributePerBoneData")
 	END_PROP_TABLE
 
 	UAnimSequence4()
-	:	RateScale(1.0f)
-	,	TranslationCompressionFormat(ACF_None)
+	:	TranslationCompressionFormat(ACF_None)
 	,	RotationCompressionFormat(ACF_None)
 	,	ScaleCompressionFormat(ACF_None)
 	,	KeyEncodingFormat(AKF_ConstantKeyLerp)
@@ -800,6 +1033,22 @@ public:
 	REGISTER_CLASS(FRawCurveTracks) \
 	REGISTER_CLASS(FVirtualBone) \
 	REGISTER_CLASS(FBoneNode) \
+	REGISTER_CLASS(FAnimSlotGroup) \
+	REGISTER_CLASS(FStringCurveKey) \
+	REGISTER_CLASS(FStringCurve) \
+	REGISTER_CLASS(FBakedStringCustomAttribute) \
+	REGISTER_CLASS(FIntegralKey) \
+	REGISTER_CLASS(FIntegralCurve) \
+	REGISTER_CLASS(FBakedIntegerCustomAttribute) \
+	REGISTER_CLASS(FSimpleCurveKey) \
+	REGISTER_CLASS(FSimpleCurve) \
+	REGISTER_CLASS(FAnimSyncMarker) \
+	REGISTER_CLASS(FBakedFloatCustomAttribute) \
+	REGISTER_CLASS(FBakedCustomAttributePerBoneData) \
+	REGISTER_CLASS(FAnimLinkableElement) \
+	REGISTER_CLASS(FAnimNotifyEvent) \
+	REGISTER_CLASS(UAnimationAsset) \
+	REGISTER_CLASS(UAnimSequenceBase) \
 	REGISTER_CLASS_ALIAS(UAnimSequence4, UAnimSequence) \
 	REGISTER_CLASS(UAnimStreamable)
 
