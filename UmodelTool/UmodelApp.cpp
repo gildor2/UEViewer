@@ -5,6 +5,7 @@
 #include <SDL2/SDL_syswm.h>			// for SDL_SysWMinfo, does <windows.h> includes
 #undef UnregisterClass
 #undef GetClassName
+#undef Bool
 
 #include "UnCore.h"
 #include "UnObject.h"

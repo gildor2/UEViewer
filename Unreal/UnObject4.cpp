@@ -52,10 +52,18 @@ struct PropInfo
 #define END							{ NULL,  0,        0 },	// end of class - mark with NULL name
 
 // Multi-property "drop" instructions
-#define DROP_INT8(index, ...)		{ "#int8", index, MakeBitmaskWithOffset<index,__VA_ARGS__>() },
-#define DROP_INT64(index, ...)		{ "#int64", index, MakeBitmaskWithOffset<index,__VA_ARGS__>() },
-#define DROP_VECTOR3(index, ...)	{ "#vec3", index,  MakeBitmaskWithOffset<index,__VA_ARGS__>() },
-#define DROP_VECTOR4(index, ...)	{ "#vec4", index,  MakeBitmaskWithOffset<index,__VA_ARGS__>() },	// FQuat, FGuid etc
+#if _MSC_VER
+#define DROP_INT8(index, ...)		{ "#int8", index, MakeBitmaskWithOffset<index, __VA_ARGS__>() },
+#define DROP_INT64(index, ...)		{ "#int64", index, MakeBitmaskWithOffset<index, __VA_ARGS__>() },
+#define DROP_VECTOR3(index, ...)	{ "#vec3", index,  MakeBitmaskWithOffset<index, __VA_ARGS__>() },
+#define DROP_VECTOR4(index, ...)	{ "#vec4", index,  MakeBitmaskWithOffset<index, __VA_ARGS__>() },	// FQuat, FGuid etc
+#else
+// gcc doesn't like empty __VA_ARGS__
+#define DROP_INT8(index, ...)		{ "#int8", index, MakeBitmaskWithOffset<index __VA_OPT__(,) __VA_ARGS__>() },
+#define DROP_INT64(index, ...)		{ "#int64", index, MakeBitmaskWithOffset<index __VA_OPT__(,) __VA_ARGS__>() },
+#define DROP_VECTOR3(index, ...)	{ "#vec3", index,  MakeBitmaskWithOffset<index __VA_OPT__(,) __VA_ARGS__>() },
+#define DROP_VECTOR4(index, ...)	{ "#vec4", index,  MakeBitmaskWithOffset<index __VA_OPT__(,) __VA_ARGS__>() },	// FQuat, FGuid etc
+#endif
 
 #define DROP_OBJ_ARRAY(index)		{ "#arr_int32", index, 0 }, // TArray<UObject*>
 

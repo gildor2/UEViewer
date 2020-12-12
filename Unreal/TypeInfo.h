@@ -192,7 +192,12 @@ namespace PropType
 // Structure property aggregated into the class
 #define PROP_STRUC(Field,Type)				_PROP_BASE(Field, #Type, Type)
 // Register a property which should be ignored
+#if _MSC_VER
 #define PROP_DROP(Field, ...)				CPropInfo(#Field, __VA_ARGS__),
+#else
+// gcc doesn't like  empty __VA_ARGS__
+#define PROP_DROP(Field, ...)				CPropInfo(#Field __VA_OPT__(,) __VA_ARGS__),
+#endif
 // Register another name for the same property
 #define PROP_ALIAS(Name,Alias)  			{ #Alias, ">" #Name, 0, 0 },
 
