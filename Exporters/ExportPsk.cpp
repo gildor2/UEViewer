@@ -490,6 +490,16 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		}
 	}
 
+	if (OriginalMesh->GetTypeinfo()->NumProps)
+	{
+		FArchive* PropAr = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.props.txt", OriginalMesh->Name);
+		if (PropAr)
+		{
+			OriginalMesh->GetTypeinfo()->SaveProps(OriginalMesh, *PropAr);
+			delete PropAr;
+		}
+	}
+
 	// export animation
 	if (Mesh->Anim)
 	{
@@ -783,4 +793,14 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 
 		unguardf("%d", Lod);
 	}
-}
+
+	if (OriginalMesh->GetTypeinfo()->NumProps)
+	{
+		FArchive* PropAr = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.props.txt", OriginalMesh->Name);
+		if (PropAr)
+		{
+			OriginalMesh->GetTypeinfo()->SaveProps(OriginalMesh, *PropAr);
+			delete PropAr;
+		}
+	}
+ }

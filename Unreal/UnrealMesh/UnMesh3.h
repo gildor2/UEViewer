@@ -119,6 +119,7 @@ struct FSkeletalMeshLODInfo
 	TArray<int>				LODMaterialMap;
 	TArray<bool>			bEnableShadowCasting;
 #if UNREAL4
+	FString					SourceImportFilename;
 	TArray<struct FBoneReference> BonesToRemove;
 	TArray<struct FBoneReference> BonesToPrioritize;
 #endif
@@ -155,7 +156,7 @@ struct FSkeletalMeshLODInfo
 		PROP_DROP(ScreenSize)
 		PROP_DROP(OptimizationSettings)
 		PROP_DROP(RemovedBones)
-		PROP_DROP(SourceImportFilename, PropType::FString)
+		PROP_STRING(SourceImportFilename)
 		PROP_DROP(bHasPerLODVertexColors)
 		PROP_DROP(bAllowCPUAccess)
 		PROP_DROP(bSupportUniformlyDistributedSampling)
