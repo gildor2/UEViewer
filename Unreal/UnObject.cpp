@@ -252,9 +252,18 @@ static bool SerializeStruc(FArchive &Ar, void *Data, int Index, const char *Stru
 	const CTypeInfo *ItemType = FindStructType(StrucName);
 	if (!ItemType) return false;
 	if (ItemType->NativeSerializer)
+	{
+		guard(NativeSerializer);
+	#if DEBUG_PROPS
+		appPrintf(">>> Native: %s\n", ItemType->Name);
+	#endif
 		ItemType->NativeSerializer(Ar, (byte*)Data + Index * ItemType->SizeOf);
+		unguard;
+	}
 	else
+	{
 		ItemType->SerializeUnrealProps(Ar, (byte*)Data + Index * ItemType->SizeOf);
+	}
 	return true;
 
 	unguardf("%s", StrucName);
@@ -946,8 +955,19 @@ void CTypeInfo::SerializeUnrealProps(FArchive& Ar, void* ObjectData) const
 	}
 #endif // BATMAN
 
+	if (NativeSerializer)
+	{
+		guard(NativeSerializer);
+	#if DEBUG_PROPS
+		appPrintf(">>> Native: %s\n", Name);
+	#endif
+		NativeSerializer(Ar, ObjectData);
+		return;
+		unguard;
+	}
+
 #if DEBUG_PROPS
-	appPrintf("-- Property list for %s --\n", Name);
+	appPrintf(">>> Enter struct: %s\n", Name);
 #endif
 
 	// property list
@@ -964,7 +984,7 @@ void CTypeInfo::SerializeUnrealProps(FArchive& Ar, void* ObjectData) const
 	}
 
 #if DEBUG_PROPS
-	appPrintf("-- end of property list --\n");
+	appPrintf("<<< End of struct: %s\n", Name);
 #endif
 
 	unguard;
@@ -1642,11 +1662,13 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 
 	if (NativeSerializer)
 	{
+		guard(NativeSerializer);
 	#if DEBUG_PROPS
 		appPrintf(">>> Native: %s\n", Name);
 	#endif
 		NativeSerializer(Ar, ObjectData);
 		return;
+		unguard;
 	}
 
 #if DEBUG_PROPS
