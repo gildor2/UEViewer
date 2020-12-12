@@ -292,7 +292,7 @@ enum EAnimRotationOnly
 class CAnimSet
 {
 public:
-	UObject					*OriginalAnim;			//?? make common for all mesh classes
+	UObject*				OriginalAnim;			//?? make common for all mesh classes
 	TArray<FName>			TrackBoneNames;
 	TArray<CAnimSequence*>	Sequences;
 
@@ -300,9 +300,22 @@ public:
 	TArray<bool>			UseAnimTranslation;		// per bone; used with AnimRotationOnly mode
 	TArray<bool>			ForceMeshTranslation;	// pre bone; used regardless of AnimRotationOnly
 
+	CAnimSet()
+	{}
+
 	CAnimSet(UObject *Original)
 	:	OriginalAnim(Original)
 	{}
+
+	// Make a copy of CAnimSet, except animations
+	void CopyAllButSequences(const CAnimSet& Other)
+	{
+		OriginalAnim = Other.OriginalAnim;
+		CopyArray(TrackBoneNames, Other.TrackBoneNames);
+		AnimRotationOnly = Other.AnimRotationOnly;
+		CopyArray(UseAnimTranslation, Other.UseAnimTranslation);
+		CopyArray(ForceMeshTranslation, Other.ForceMeshTranslation);
+	}
 
 	~CAnimSet()
 	{

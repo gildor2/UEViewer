@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+12.12.2020
+- saving .props.txt when exporting skeletal and static meshes, and for animation
+
 22.11.2020
 - added option for disabling vertex mesh loading (-novert command line option)
 

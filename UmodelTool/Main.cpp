@@ -148,6 +148,7 @@ END_CLASS_TABLE
 	SuppressUnknownClass("UPhysicalMaterial");
 	SuppressUnknownClass("UBodySetup");
 	SuppressUnknownClass("UNavCollision");
+	SuppressUnknownClass("USkeletalMeshSocket");
 }
 
 

@@ -507,42 +507,51 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 	}
 }
 
+// If Skeleton has at most this number of animations, export them as separate psa files.
+// This is needed because UAnimSequence4 can refer to other animation sequences in properties
+// (e.g. UAnimSequence4::RefPoseSeq).
+#define MIN_ANIMSET_SIZE 4
+
 //todo: review if this function could be reused for glTF
 const UObject* GetPrimaryAnimObject(const CAnimSet* Anim)
 {
+	guard(GetPrimaryAnimObject);
+#if UNREAL4
 	// When AnimSet consists of just 1 animation track, it is possible that we're exporting
 	// a separate UE4 AnimSequence. In this case it's worth using that AnimSequence's filename,
 	// otherwise we'll have multiple animations mapped to the same exported file.
 	if (Anim->Sequences.Num() && Anim->OriginalAnim->IsA("Skeleton"))
 	{
 		const USkeleton* Skeleton = static_cast<USkeleton*>(Anim->OriginalAnim);
-		if (Skeleton->OriginalAnims.Num() == 1)
+		assert(Skeleton->OriginalAnims.Num() == Anim->Sequences.Num());
+		// Allow up to 3
+		if (Skeleton->OriginalAnims.Num() <= MIN_ANIMSET_SIZE)
 			return Skeleton->OriginalAnims[0];
 	}
+#endif // UNREAL4
 
 	// Not a Skeleton, or has different animation track count
 	return Anim->OriginalAnim;
+	unguard;
 }
 
-void ExportPsa(const CAnimSet *Anim)
+static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 {
+	guard(DoExportPsa);
+
+	FArchive* Ar0 = CreateExportArchive(OriginalAnim, 0, "%s.psa", OriginalAnim->Name);
+	if (!Ar0) return;
+	FArchive &Ar = *Ar0;						// use "Ar << obj" instead of "(*Ar) << obj"
+
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader MainHdr, BoneHdr, AnimHdr, KeyHdr, ScaleKeysHdr;
 	int i;
 
-	if (!Anim->Sequences.Num()) return;			// empty CAnimSet
-
-	const UObject *OriginalAnim = GetPrimaryAnimObject(Anim);
-
-	FArchive *Ar0 = CreateExportArchive(OriginalAnim, 0, "%s.psa", OriginalAnim->Name);
-	if (!Ar0) return;
-	FArchive &Ar = *Ar0;						// use "Ar << obj" instead of "(*Ar) << obj"
+	MainHdr.TypeFlag = PSA_VERSION;
+	SAVE_CHUNK(MainHdr, "ANIMHEAD");
 
 	int numBones = Anim->TrackBoneNames.Num();
 	int numAnims = Anim->Sequences.Num();
-
-	MainHdr.TypeFlag = PSA_VERSION;
-	SAVE_CHUNK(MainHdr, "ANIMHEAD");
 
 	BoneHdr.DataCount = numBones;
 	BoneHdr.DataSize  = sizeof(FNamedBoneBinary);
@@ -657,55 +666,135 @@ void ExportPsa(const CAnimSet *Anim)
 	delete Ar0;
 
 	// generate configuration file with extended attributes
+	bool bSaveConfig = true;
 	if (!Anim->AnimRotationOnly && !Anim->UseAnimTranslation.Num() && !Anim->ForceMeshTranslation.Num() && !requireConfig)
 	{
 		// nothing to write
-		return;
+		bSaveConfig = false;
 	}
 
-	FArchive *Ar1 = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s.config", OriginalAnim->Name);
-	if (!Ar1) return;
-
-	// we are using UE3 property names here
-
-	// AnimRotationOnly
-	Ar1->Printf("[AnimSet]\nbAnimRotationOnly=%d\n", Anim->AnimRotationOnly);
-	// UseTranslationBoneNames
-	Ar1->Printf("\n[UseTranslationBoneNames]\n");
-	for (i = 0; i < Anim->UseAnimTranslation.Num(); i++)
-		if (Anim->UseAnimTranslation[i])
-			Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
-	// ForceMeshTranslationBoneNames
-	Ar1->Printf("\n[ForceMeshTranslationBoneNames]\n");
-	for (i = 0; i < Anim->ForceMeshTranslation.Num(); i++)
-		if (Anim->ForceMeshTranslation[i])
-			Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
-
-	if (requireConfig)
+	FArchive *Ar1 = NULL;
+	if (bSaveConfig)
 	{
-		// has removed tracks inside the sequence
-		// currently used for Unreal Championship 2 only
-		Ar1->Printf("\n[RemoveTracks]\n");
-		for (i = 0; i < numAnims; i++)
+		Ar1 = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s.config", OriginalAnim->Name);
+	}
+
+	if (Ar1)
+	{
+		// we are using UE3 property names here
+
+		// AnimRotationOnly
+		Ar1->Printf("[AnimSet]\nbAnimRotationOnly=%d\n", Anim->AnimRotationOnly);
+		// UseTranslationBoneNames
+		Ar1->Printf("\n[UseTranslationBoneNames]\n");
+		for (i = 0; i < Anim->UseAnimTranslation.Num(); i++)
+			if (Anim->UseAnimTranslation[i])
+				Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
+		// ForceMeshTranslationBoneNames
+		Ar1->Printf("\n[ForceMeshTranslationBoneNames]\n");
+		for (i = 0; i < Anim->ForceMeshTranslation.Num(); i++)
+			if (Anim->ForceMeshTranslation[i])
+				Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
+
+		if (requireConfig)
 		{
-			const CAnimSequence &S = *Anim->Sequences[i];
-			for (int b = 0; b < numBones; b++)
+			// has removed tracks inside the sequence
+			// currently used for Unreal Championship 2 only
+			Ar1->Printf("\n[RemoveTracks]\n");
+			for (i = 0; i < numAnims; i++)
 			{
+				const CAnimSequence &S = *Anim->Sequences[i];
+				for (int b = 0; b < numBones; b++)
+				{
 #define FLAG_NO_TRANSLATION		1
 #define FLAG_NO_ROTATION		2
-				static const char *FlagInfo[] = { "", "trans", "rot", "all" };
-				int flag = 0;
-				if (S.Tracks[b]->KeyPos.Num() == 0)
-					flag |= FLAG_NO_TRANSLATION;
-				if (S.Tracks[b]->KeyQuat.Num() == 0)
-					flag |= FLAG_NO_ROTATION;
-				if (flag)
-					Ar1->Printf("%s.%d=%s\n", *S.Name, b, FlagInfo[flag]);
+					static const char *FlagInfo[] = { "", "trans", "rot", "all" };
+					int flag = 0;
+					if (S.Tracks[b]->KeyPos.Num() == 0)
+						flag |= FLAG_NO_TRANSLATION;
+					if (S.Tracks[b]->KeyQuat.Num() == 0)
+						flag |= FLAG_NO_ROTATION;
+					if (flag)
+						Ar1->Printf("%s.%d=%s\n", *S.Name, b, FlagInfo[flag]);
+				}
 			}
+		}
+
+		delete Ar1;
+	}
+
+	//todo: .props.txt is not saved when multiple animations are stored in a single .psa file
+	if (OriginalAnim->GetTypeinfo()->NumProps)
+	{
+		FArchive* PropAr = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s.props.txt", OriginalAnim->Name);
+		if (PropAr)
+		{
+			OriginalAnim->GetTypeinfo()->SaveProps(OriginalAnim, *PropAr);
+
+#if UNREAL4
+			//todo: UE3 won't work here
+			if (Anim->OriginalAnim->IsA("Skeleton"))
+			{
+				const USkeleton* Skeleton = static_cast<USkeleton*>(Anim->OriginalAnim);
+				for (const UAnimSequence4* Seq : Skeleton->OriginalAnims)
+				{
+					PropAr->Printf("\n// Sequence: %s\n", Seq->Name);
+					Seq->GetTypeinfo()->SaveProps(Seq, *PropAr);
+				}
+			}
+#endif // UNREAL4
+
+			delete PropAr;
 		}
 	}
 
-	delete Ar1;
+	unguard;
+}
+
+void ExportPsa(const CAnimSet* Anim)
+{
+	if (!Anim->Sequences.Num()) return;			// empty CAnimSet
+
+	// Determine if CAnimSet will save animations as separate psa files, or all at once
+	const UObject* OriginalAnim = GetPrimaryAnimObject(Anim);
+
+	if (OriginalAnim == Anim->OriginalAnim || Anim->Sequences.Num() == 1)
+	{
+		// Export all animations in a single file
+		DoExportPsa(Anim, OriginalAnim);
+	}
+	else
+	{
+		guard(ExportAnimsByOne);
+#if UNREAL4
+		assert(Anim->OriginalAnim->IsA("Skeleton"));
+		const USkeleton* Skeleton = static_cast<USkeleton*>(Anim->OriginalAnim);
+
+		// Export animations separately, this will happen only when CAnimSet has
+		// a few sequences (but more than one)
+		CAnimSet TempAnimSet;
+		TempAnimSet.CopyAllButSequences(*Anim);
+		// Now we have a copy of AnimSet, let's set up Sequences array to a single
+		// item and export one-by-one
+		for (int AnimIndex = 0; AnimIndex < Anim->Sequences.Num(); AnimIndex++)
+		{
+			const CAnimSequence* Seq = Anim->Sequences[AnimIndex];
+			const UAnimSequence4* Seq4 = Skeleton->OriginalAnims[AnimIndex];
+			assert(strcmp(*Seq->Name, Seq4->Name) == 0);
+			TempAnimSet.Sequences.Empty(1);
+			TempAnimSet.Sequences.Add(const_cast<CAnimSequence*>(Seq));
+			// Do the export, pass UAnimSequence as the "main" object, so it will be
+			// used as psa file name.
+			DoExportPsa(&TempAnimSet, Seq4);
+		}
+		// Ensure TempAnimSet destructor will not release Sequences as they are owned by Anim object
+		TempAnimSet.Sequences.Empty();
+#else
+		// Shouldn't happen
+		assert(0);
+#endif
+		unguard;
+	}
 }
 
 
