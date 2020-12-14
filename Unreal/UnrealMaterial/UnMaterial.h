@@ -78,6 +78,7 @@ struct CMaterialParams
 	// tweaks
 	bool					SpecularFromAlpha;
 	bool					OpacityFromAlpha;
+	bool					PBRMaterial;
 };
 
 #undef ITERATE_ALL_PARAMS

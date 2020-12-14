@@ -767,7 +767,10 @@ void CApplication::Display()
 		glLightfv(GL_LIGHT0, GL_AMBIENT, white);
 	}
 	if (lightingMode != LIGHTING_SPECULAR)
+	{
+		glMaterialf (GL_FRONT, GL_SHININESS, 1.0);
 		glMaterialfv(GL_FRONT, GL_SPECULAR, black);
+	}
 #endif // LIGHTING_MODES
 
 	// draw scene

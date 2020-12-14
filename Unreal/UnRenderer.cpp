@@ -703,8 +703,10 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 
 	// diffuse
 	glActiveTexture(GL_TEXTURE0);	// used for BindDefaultMaterial() too
+	bool bHasDiffuse = false;
 	if (Params.Diffuse && Params.Diffuse->Bind())
 	{
+		bHasDiffuse = true;
 		DBG("Diffuse  : %s", Params.Diffuse->Name);
 		ADD_DEFINE("DIFFUSE 1");
 	}
@@ -736,6 +738,22 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		if (Params.Specular->Bind())
 			specularExpr = va("texture2D(specTex, TexCoord).%s * vec3(specular) * 1.5", !Params.SpecularFromAlpha ? "rgb" : "a");
 	}
+	else if (Params.SpecPower)
+	{
+		//todo: refactor at shader level, make a special function for PBR material, so no multiple texture2D will be used
+		// No specular color, but has specular power - use diffuse or white color (e.g. happens with UE4)
+		glActiveTexture(GL_TEXTURE0 + I_SpecularPower);
+		if (bHasDiffuse && Params.PBRMaterial && Params.SpecPower->Bind())
+		{
+			// Ideally should analyze metalness: when metallic=1, reflect environment (white) color. When
+			// metallic=0, reflect material's diffuse color.
+			specularExpr = "(GetMaterialDiffuseColor(TexCoord).rgb * texture2D(spPowTex, TexCoord).r * 0.2) * gl_FrontMaterial.shininess";
+		}
+		else
+		{
+			specularExpr = "vec3(1.0)";
+		}
+	}
 	// specular power
 	const char *specPowerExpr = "gl_FrontMaterial.shininess";
 	if (Params.SpecPower)
@@ -743,7 +761,12 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 		DBG("SpecPower: %s", Params.SpecPower->Name);
 		glActiveTexture(GL_TEXTURE0 + I_SpecularPower);
 		if (Params.SpecPower->Bind())
-			specPowerExpr = "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0";
+		{
+			if (!Params.PBRMaterial)
+				specPowerExpr = "texture2D(spPowTex, TexCoord).g * 100.0 + 5.0";
+			else
+				specPowerExpr = "(2.0 / pow(texture2D(spPowTex, TexCoord).r, 4.0) - 2.0) * gl_FrontMaterial.shininess / 10.0";
+		}
 	}
 
 	// opacity mask
@@ -825,7 +848,7 @@ void GL_NormalmapShader(CShader &shader, CMaterialParams &Params)
 	}
 
 	//!! NOTE: Specular and SpecPower are scaled by const to improve visual; should be scaled by parameters from material
-	subst[0] = Params.Normal ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0"  : "vec3(0.0, 0.0, 1.0)";
+	subst[0] = Params.Normal ? "texture2D(normTex, TexCoord).rgb * 2.0 - 1.0" : "vec3(0.0, 0.0, 1.0)";
 	subst[1] = specularExpr;
 	subst[2] = specPowerExpr;
 	subst[3] = opacityExpr;
@@ -2096,6 +2119,19 @@ void UMaterial3::GetParams(CMaterialParams &Params) const
 		 (Params.Diffuse && Params.Diffuse->IsTextureCube()) )
 		Params.Diffuse = NULL;
 
+#if UNREAL4
+	if (ArGame >= GAME_UE4_BASE)
+	{
+		Params.PBRMaterial = true;
+		if (Params.Specular)
+		{
+			// PRB material, no specular color
+			Params.SpecPower = Params.Specular;
+			Params.Specular = NULL;
+		}
+	}
+#endif // UNREA:4
+
 	unguard;
 }
 
@@ -2384,6 +2420,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	if (Parent && Parent != this) Parent->GetParams(Params);
 
 	Super::GetParams(Params);
+	CMaterialParams ParemtParams = Params;
 
 	// get local parameters
 	int DiffWeight = 0, NormWeight = 0, SpecWeight = 0, SpecPowWeight = 0, OpWeight = 0, EmWeight = 0, EmcWeight = 0, CubeWeight = 0, MaskWeight = 0;
@@ -2402,6 +2439,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 		if (!Tex) continue;
 
 		if (appStristr(Name, "detail")) continue;	// details normal etc
+		if (appStristr(Name, "gradient")) continue; // emissive gradient etc
 
 		DIFFUSE (appStristr(Name, "dif"), 100);
 		DIFFUSE (appStristr(Name, "albedo"), 100);
@@ -2446,6 +2484,24 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 			EMISSIVE(appStristr(Name, "cubemap_mask"), 100);
 		}
 #endif // DISHONORED
+#if UNREAL4
+		if (ArGame >= GAME_UE4_BASE)
+		{
+			// PRB material, no specular color
+			Params.PBRMaterial = true;
+			if (Params.Specular)
+			{
+				Params.SpecPower = Params.Specular;
+				Params.Specular = NULL;
+			}
+			if (ParemtParams.Emissive == Params.Emissive &&
+				ParemtParams.Diffuse != Params.Diffuse)
+			{
+				// Reset emissive if it came from parent, and diffuse has been changed locally
+				Params.Emissive = NULL;
+			}
+		}
+#endif // UNREA:4
 	}
 	for (i = 0; i < VectorParameterValues.Num(); i++)
 	{
