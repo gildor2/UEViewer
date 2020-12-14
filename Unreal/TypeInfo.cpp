@@ -332,7 +332,7 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 		for (int PropIndex = 0; PropIndex < Type->NumProps; PropIndex++)
 		{
 			const CPropInfo *Prop = Type->Props + PropIndex;
-			if (!Prop->TypeName)
+			if (!Prop->Count)
 			{
 //				appPrintf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
 				continue;

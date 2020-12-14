@@ -3,7 +3,8 @@
  *****************************************************************************/
 
 // Debug modes
-//#define SHOW_BUMP			// show specular only
+//#define SHOW_BUMP			// show only normalmap
+//#define SHOW_SPECULAR		// show only specular component
 //#define NORMALMAP			// show mesh using single light from viewer; no texuring, specular from everything
 //#define WORLDNORMAL		// show world normals as color
 
@@ -178,6 +179,10 @@ void PixelShaderMain()
 	color.rgb += pow(NdotHV, GetMaterialSpecularPower(TexCoord)) * GetMaterialSpecularColor(TexCoord);
 #endif // SPECULAR
 
+#ifdef SHOW_SPECULAR
+	color.rgb = pow(NdotHV, GetMaterialSpecularPower(TexCoord)) * GetMaterialSpecularColor(TexCoord);
+#endif
+
 #if CUBE && !DIFFUSE
 	color = vec4(0.0, 0.0, 0.0, 1.0);
 #endif
@@ -196,7 +201,7 @@ void PixelShaderMain()
 
 //	color.rgb = vec3(dot(normal, nEye), 0.3, 0.3);
 //	color.rgb = (normal * 0.5) + 0.5;
-//	color.rgb = (nEye* 0.5) + 0.5;
+//	color.rgb = (nEye * 0.5) + 0.5;
 //	color.rgb += pow(1.0 - dot(normal, nEye), 3.5) * vec3(0.5);	// Fresnel
 #ifdef NORMALMAP
 	color.rgb = pow(dot(normal, nEye), 3.5) * vec3(1.0);

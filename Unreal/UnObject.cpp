@@ -1900,6 +1900,11 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 			PROP_DBG("%s", *PROP(FName));
 		}
 		//todo: use NATIVE_SERIALIZER!
+		else if (COMPARE_TYPE(Prop->TypeName, PropType::FString))
+		{
+			Ar << PROP(FString);
+			PROP_DBG("%s", *PROP(FString));
+		}
 		else if (COMPARE_TYPE(Prop->TypeName, PropType::FVector))
 		{
 			Ar << PROP(FVector);

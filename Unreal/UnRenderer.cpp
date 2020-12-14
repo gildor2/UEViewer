@@ -428,7 +428,7 @@ static bool UploadCompressedTex(UUnrealMaterial* Tex, GLenum target, GLenum targ
 	case TPF_BC5:
 		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_RGTC)) return false;
 		format = GL_COMPRESSED_RG_RGTC2;
-		Tex->NormalUnpackExpr = "normal.z = sqrt(1.0 - normal.x * normal.x - normal.y * normal.y);";
+		Tex->NormalUnpackExpr = "normal.z = sqrt(max(1.0 - normal.x * normal.x - normal.y * normal.y, 0.0));";
 		break;
 	case TPF_BC6H:
 		if (!GL_SUPPORT(QGL_ARB_TEXTURE_COMPRESSION_BPTC)) return false;
