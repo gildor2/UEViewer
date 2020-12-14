@@ -157,37 +157,40 @@ void UObject::EndLoad()
 
 	guard(UObject::EndLoad);
 
-	// process GObjLoaded array
-	// NOTE: while loading one array element, array may grow!
-	TArray<UObject*> LoadedObjects;
+	// Process GObjLoaded array. Note that GObjLoaded may receive new element during PostLoad call
+	// (e.g. UMaterial3::ScanUE4Textures() does that), so we should use an outer loop to ensure
+	// all objects will be loaded.
 	while (GObjLoaded.Num())
 	{
-		UObject *Obj = GObjLoaded[0];
-		GObjLoaded.RemoveAt(0);
-		UnPackage *Package = Obj->Package;
+		TArray<UObject*> LoadedObjects;
+		while (GObjLoaded.Num())
+		{
+			UObject *Obj = GObjLoaded[0];
+			GObjLoaded.RemoveAt(0);
+			UnPackage *Package = Obj->Package;
 
-		guard(LoadObject);
-		PROFILE_LABEL(Obj->GetClassName());
+			guard(LoadObject);
+			PROFILE_LABEL(Obj->GetClassName());
 
-		Package->SetupReader(Obj->PackageIndex);
-		appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, *Package->GetFilename());
-		// setup NotifyInfo to describe object
-		appSetNotifyHeader("Loading object %s'%s.%s'", Obj->GetClassName(), Package->Name, Obj->Name);
+			Package->SetupReader(Obj->PackageIndex);
+			appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, *Package->GetFilename());
+			// setup NotifyInfo to describe object
+			appSetNotifyHeader("Loading object %s'%s.%s'", Obj->GetClassName(), Package->Name, Obj->Name);
 #if PROFILE_LOADING
-		appResetProfiler();
+			appResetProfiler();
 #endif
-		GLoadingObj = Obj;
-		Obj->Serialize(*Package);
-		GLoadingObj = NULL;
+			GLoadingObj = Obj;
+			Obj->Serialize(*Package);
+			GLoadingObj = NULL;
 #if PROFILE_LOADING
-		appPrintProfiler();
+			appPrintProfiler();
 #endif
-		// check for unread bytes
-		if (!Package->IsStopper())
-			appError("%s::Serialize(%s): %d unread bytes",
-				Obj->GetClassName(), Obj->Name,
-				Package->GetStopper() - Package->Tell());
-		LoadedObjects.Add(Obj);
+			// check for unread bytes
+			if (!Package->IsStopper())
+				appError("%s::Serialize(%s): %d unread bytes",
+					Obj->GetClassName(), Obj->Name,
+					Package->GetStopper() - Package->Tell());
+			LoadedObjects.Add(Obj);
 
 #if UNREAL4
 	#define UNVERS_STR		(Package->Game >= GAME_UE4_BASE && Package->Summary.IsUnversioned) ? " (unversioned)" : ""
@@ -197,25 +200,23 @@ void UObject::EndLoad()
 	#define EDITOR_STR		""
 #endif
 
-		unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s%s, game=%s", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
-			Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, EDITOR_STR, GetGameTag(Package->Game));
+			unguardf("%s'%s.%s', pos=%X, ver=%d/%d%s%s, game=%s", Obj->GetClassName(), Package->Name, Obj->Name, Package->Tell(),
+				Package->ArVer, Package->ArLicenseeVer, UNVERS_STR, EDITOR_STR, GetGameTag(Package->Game));
+		}
+		// postload objects
+		for (UObject* Obj : LoadedObjects)
+		{
+			guard(PostLoad);
+			Obj->PostLoad();
+			unguardf("%s", Obj->Name);
+		}
 	}
-	// postload objects
-	for (UObject* Obj : LoadedObjects)
-	{
-		guard(PostLoad);
-		Obj->PostLoad();
-		unguardf("%s", Obj->Name);
-	}
-	// cleanup
-	guard(Cleanup);
-	GObjLoaded.Empty();
+
+	// Cleanup
 	GObjBeginLoadCount--;		// decrement after loading
 	appSetNotifyHeader(NULL);
 	assert(GObjBeginLoadCount == 0);
-	unguard;
-
-	// close all opened file handles
+	// Close all opened file handles
 	UnPackage::CloseAllReaders();
 
 	unguard;
