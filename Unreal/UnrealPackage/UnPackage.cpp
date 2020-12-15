@@ -286,7 +286,7 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 		// - Ar.DetectGame();
 		this->ArVer = 0;
 		this->ArLicenseeVer = 0;
-		this->Game = GAME_UE4(26);
+		this->Game = GForceGame ? GForceGame : GAME_UE4(26); // appeared in UE4.26
 		OverrideVersion();
 		// Register package before loading, because it is possible that during
 		// loading of import table we'll load other packages to resolve dependencies,
@@ -307,6 +307,7 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	if (!Summary.Serialize(*this))
 	{
 		// Probably not a package
+		CloseReader();
 		return;
 	}
 
@@ -586,6 +587,8 @@ UnPackage::~UnPackage()
 
 	UnregisterPackage();
 
+	if (Loader) delete Loader;
+
 	if (!IsValid())
 	{
 		// The package wasn't loaded, nothing to release in destructor. Also it is possible that
@@ -594,7 +597,6 @@ UnPackage::~UnPackage()
 	}
 
 	// free tables
-	if (Loader) delete Loader;
 	delete[] NameTable;
 	delete[] ImportTable;
 	delete[] ExportTable;

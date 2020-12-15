@@ -94,7 +94,8 @@ enum
 	VER_UE4_25 = 518,
 		VER_UE4_SKINWEIGHT_PROFILE_DATA_LAYOUT_CHANGES = 519,
 		VER_UE4_NON_OUTER_PACKAGE_IMPORT = 520,
-	VER_UE4_26 = 521, //?? todo: review later
+	VER_UE4_26 = 522,
+	VER_UE4_27 = 523, //?? TODO
 	// look for NEW_ENGINE_VERSION over the code to find places where version constants should be inserted.
 	// LATEST_SUPPORTED_UE4_VERSION should be updated too.
 };

@@ -1182,68 +1182,73 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 					// UE1 and UE2 code
 					Ar << AR_INDEX(DataCount);
 				}
-#if UNREAL4
+	#if UNREAL4
 				if (Ar.Engine() >= GAME_UE4_BASE && Ar.ArVer >= VER_UE4_INNER_ARRAY_TAG_INFO)
 				{
 					// Serialize InnerTag, used for some verification
 					FPropertyTag InnerTag;
 					Ar << InnerTag;
 				}
-#endif // UNREAL4
+	#endif // UNREAL4
 
-				//!! note: some structures should be serialized using SerializeStruc() (FVector etc)
 				// Find data typeinfo
+				//!! note: some structures should be serialized using SerializeStruc() (FVector etc)
 				const CTypeInfo *ItemType = FindStructType(Prop->TypeName);
 				if (!ItemType)
-					appError("Unknown structure type %s", Prop->TypeName);
-				// Prepare array
-				Arr->Empty(DataCount, ItemType->SizeOf);
-				Arr->InsertZeroed(0, DataCount, ItemType->SizeOf);
-
-#if UNREAL4
-				// Second queue of "simple serializers", but with InnerTag in UE4.12+
-				if (!stricmp(Prop->TypeName, "FLinearColor"))
 				{
-					// Reference: FMaterialCachedParameters::VectorValues
-					FLinearColor* p = (FLinearColor*)Arr->GetData();
-					for (int i = 0; i < DataCount; i++)
-						Ar << *p++;
+					appPrintf("WARNING: structure type %s is unknown, skipping array %s::%s\n", Prop->TypeName, Name, Prop->Name);
 				}
-				else
-#endif // UNREAL4
+				else if (DataCount)
 				{
-					// Serialize items
-					byte *item = (byte*)Arr->GetData();
-					for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
-					{
-#if DEBUG_PROPS
-						appPrintf("Item[%d]:\n", i);
-#endif
-						if (ItemType->Constructor)
-							ItemType->Constructor(item);		// fill default properties
-						else
-							memset(item, 0, ItemType->SizeOf);	// no constructor, just initialize with zeros
+					// Prepare array
+					Arr->Empty(DataCount, ItemType->SizeOf);
+					Arr->InsertZeroed(0, DataCount, ItemType->SizeOf);
 
-						ItemType->SerializeUnrealProps(Ar, item);
-					}
-#if 1
-					// Fix for strange (UE?) bug - array[1] of empty structure has 1 extra byte
-					// or size is incorrect - 1 byte smaller than should be (?)
-					// Note: such properties cannot be dropped (PROP_DROP) - invalid Tag.Size !
-					int Pos = Ar.Tell();
-					if (Pos + 1 == StopPos && DataCount == 1)
+	#if UNREAL4
+					// Second queue of "simple serializers", but with InnerTag in UE4.12+
+					if (!stricmp(Prop->TypeName, "FLinearColor"))
 					{
+						// Reference: FMaterialCachedParameters::VectorValues
+						FLinearColor* p = (FLinearColor*)Arr->GetData();
+						for (int i = 0; i < DataCount; i++)
+							Ar << *p++;
+					}
+					else
+	#endif // UNREAL4
+					{
+						// Serialize items
+						byte *item = (byte*)Arr->GetData();
+						for (int i = 0; i < DataCount; i++, item += ItemType->SizeOf)
+						{
+	#if DEBUG_PROPS
+							appPrintf("Item[%d]:\n", i);
+	#endif
+							if (ItemType->Constructor)
+								ItemType->Constructor(item);		// fill default properties
+							else
+								memset(item, 0, ItemType->SizeOf);	// no constructor, just initialize with zeros
+
+							ItemType->SerializeUnrealProps(Ar, item);
+						}
+#if 1
+						// Fix for strange (UE?) bug - array[1] of empty structure has 1 extra byte
+						// or size is incorrect - 1 byte smaller than should be (?)
+						// Note: such properties cannot be dropped (PROP_DROP) - invalid Tag.Size !
+						int Pos = Ar.Tell();
+						if (Pos + 1 == StopPos && DataCount == 1)
+						{
 	#if DEBUG_PROPS
 							appNotify("%s.%s: skipping 1 byte for array property", Name, *Tag.Name);
 	#endif
-						Ar.Seek(StopPos);
-					}
-					else if (Pos > StopPos)
-					{
+							Ar.Seek(StopPos);
+						}
+						else if (Pos > StopPos)
+						{
 	#if DEBUG_PROPS
-						appNotify("%s.%s: bad size (%d byte less) for array property", Name, *Tag.Name, Pos - StopPos);
+							appNotify("%s.%s: bad size (%d byte less) for array property", Name, *Tag.Name, Pos - StopPos);
 	#endif
-						StopPos = Pos;
+							StopPos = Pos;
+						}
 					}
 #endif // 1 -- end of fix
 				}
@@ -1368,7 +1373,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 		appError("%s\'%s\'.%s: Property read error: %d unread bytes", Name, UObject::GLoadingObj->Name, *Tag.Name, StopPos - Pos);
 	}
 
-	unguardf("(%s.%s, TagPos=%X)", Name, *Tag.Name, PropTagPos);
+	unguardf("(%s.%s, Type=%d, Size=%d, TagPos=%X)", Name, *Tag.Name, Tag.Type, Tag.DataSize, PropTagPos);
 }
 
 
