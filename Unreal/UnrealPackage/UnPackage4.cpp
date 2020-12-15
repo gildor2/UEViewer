@@ -509,13 +509,27 @@ struct FScriptObjectEntry
 	FPackageObjectIndex CDOClassIndex;
 };
 
-static void LoadGraphData(const byte* Data, int DataSize, TArray<const CGameFileInfo*>& OutPackages)
+struct CImportTableErrorStats
+{
+	uint32 TotalPackages;
+	uint32 MissedPackages;
+	uint32 MissedImports;
+
+	CImportTableErrorStats()
+	: TotalPackages(0)
+	, MissedPackages(0)
+	, MissedImports(0)
+	{}
+};
+
+static void LoadGraphData(const byte* Data, int DataSize, TArray<const CGameFileInfo*>& OutPackages, CImportTableErrorStats& Stats)
 {
 	guard(LoadGraphData);
 
 	const byte* DataEnd = Data + DataSize;
 	int32 PackageCount = *(int32*)Data;
 	if (PackageCount == 0) return;
+	Stats.TotalPackages += PackageCount;
 
 	Data += sizeof(int32);
 	OutPackages.Reserve(OutPackages.Num() + PackageCount);
@@ -540,7 +554,10 @@ static void LoadGraphData(const byte* Data, int DataSize, TArray<const CGameFile
 		}
 		else
 		{
+		#if DEBUG_PACKAGE
 			appPrintf("Can't locate package with Id %llX\n", PackageId);
+		#endif
+			Stats.MissedPackages++;
 		}
 	}
 
@@ -620,13 +637,21 @@ void UnPackage::LoadPackageIoStore()
 	// Load import table
 	// Should scan graph first to get list of packages we depends on
 	TStaticArray<const CGameFileInfo*, 32> ImportPackages;
-	LoadGraphData(HeaderData + Sum.GraphDataOffset, Sum.GraphDataSize, ImportPackages);
+	CImportTableErrorStats ErrorStats;
+	LoadGraphData(HeaderData + Sum.GraphDataOffset, Sum.GraphDataSize, ImportPackages, ErrorStats);
 	int ImportMapSize = Sum.ExportMapOffset - Sum.ImportMapOffset;
 	int ImportCount = ImportMapSize / sizeof(FPackageObjectIndex);
-	LoadImportTableIoStore(HeaderData + Sum.ImportMapOffset, ImportCount, ImportPackages);
+	LoadImportTableIoStore(HeaderData + Sum.ImportMapOffset, ImportCount, ImportPackages, ErrorStats);
 
 	// All headers were processed, delete the buffer
 	delete[] HeaderData;
+
+	if (ErrorStats.MissedPackages && ErrorStats.MissedImports)
+	{
+		appPrintf("%s: missed %d imports from %d/%d unknown packages\n",
+			*GetFilename(),
+			ErrorStats.MissedImports, ErrorStats.MissedPackages, ErrorStats.TotalPackages);
+	}
 
 	// Replace loader, so we'll be able to adjust offset in UnPackage::SetupReader()
 	FArchive* NewLoader = new FReaderWrapper(Loader, 0);
@@ -821,7 +846,7 @@ struct ImportHelper
 	}
 };
 
-void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages)
+void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages, CImportTableErrorStats& ErrorStats)
 {
 	guard(UnPackage::LoadImportTableIoStore);
 
@@ -863,7 +888,10 @@ void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const 
 			}
 			else
 			{
+			#if DEBUG_PACKAGE
 				appPrintf("Unable to resolve import %llX\n", ObjectIndex);
+			#endif
+				ErrorStats.MissedImports++;
 			}
 		}
 	}

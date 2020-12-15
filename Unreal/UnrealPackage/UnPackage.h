@@ -458,7 +458,7 @@ private:
 	void LoadExportTableIoStore(
 		const byte* Data, int ExportCount, int TableSize, int PackageHeaderSize,
 		const TArray<struct FExportBundleHeader>& BundleHeaders, const TArray<struct FExportBundleEntry>& BundleEntries);
-	void LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages);
+	void LoadImportTableIoStore(const byte* Data, int ImportCount, const TArray<const CGameFileInfo*>& ImportPackages, struct CImportTableErrorStats& ErrorStats);
 #endif // UNREAL4
 
 	static TArray<UnPackage*> PackageMap;
