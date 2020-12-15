@@ -251,7 +251,8 @@ static void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte 
 	}
 
 	size_t ret = OodleLZ_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize,
-		true, false, 0, NULL, 0, NULL, NULL, NULL, 0, 0);
+		true, false, 1, NULL, 0, NULL, NULL, NULL, 0, 0);
+		// verbosity is set to 1, so any errors will be displayed in debug output (via OutputDebugString)
 	if (ret != UncompressedSize)
 		appError("OodleLZ_Decompress returned %d", ret);
 
@@ -480,7 +481,7 @@ restart_decompress:
 			if (newLen != UncompressedSize)
 			{
 				bUseDll = true;
-				appPrintf("Info: Kraken_Decompress failed, switching to oodle dll\n");
+				appPrintf("Info: Kraken_Decompress failed, switching to %s\n", OodleDllName);
 			}
 		}
 		if (bUseDll)

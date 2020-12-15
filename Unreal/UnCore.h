@@ -63,8 +63,8 @@ class UnPackage;
 #define PACKAGE_FILE_TAG_REV	0xC1832A9E
 
 #if PROFILE
-extern int GNumSerialize;
-extern int GSerializeBytes;
+extern uint32 GNumSerialize;
+extern uint32 GSerializeBytes;
 
 void appResetProfiler();
 void appPrintProfiler(const char* label = NULL);

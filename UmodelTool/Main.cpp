@@ -221,6 +221,7 @@ static void RegisterClasses(int game)
 	{
 		UnregisterClass("UnrealMaterial", true);
 		UnregisterClass("MaterialExpression", true);
+		SuppressUnknownClass("UMaterial*");
 	}
 	if (!GSettings.Startup.UseMorphTarget) UnregisterClass("MorphTarget", false);
 	if (!GSettings.Startup.UseLightmapTexture) UnregisterClass("LightMapTexture2D", true);

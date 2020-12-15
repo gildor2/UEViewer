@@ -9,8 +9,8 @@ byte GForcePlatform       = PLATFORM_UNKNOWN;
 
 #if PROFILE
 
-int GNumSerialize = 0;
-int GSerializeBytes = 0;
+uint32 GNumSerialize = 0;
+uint32 GSerializeBytes = 0;
 static int ProfileStartTime = -1;
 
 void appResetProfiler()
