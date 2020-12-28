@@ -473,16 +473,15 @@ restart_decompress:
 
 		if (!bUseDll)
 		{
-			int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
+			extern int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
 			int newLen = Kraken_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
-//			if (newLen <= 0)
-//				appError("Kraken_Decompress returned %d (magic=%02X/%02X)\n", newLen, CompressedBuffer[0], CompressedBuffer[1]);
-//			if (newLen != UncompressedSize) appError("oodle len mismatch: %d != %d", newLen, UncompressedSize);
+		#if _WIN32
 			if (newLen != UncompressedSize)
 			{
 				bUseDll = true;
 				appPrintf("Info: Kraken_Decompress failed, switching to %s\n", OodleDllName);
 			}
+		#endif
 		}
 		if (bUseDll)
 		{
