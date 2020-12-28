@@ -521,6 +521,9 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	// bone tracks ...
 	Dst->Tracks.Empty(NumTracks);
 
+	if (Seq->CompressedByteStream.Num() == 0)
+		return;
+
 	FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
 	Reader.SetupFrom(*Package);
 

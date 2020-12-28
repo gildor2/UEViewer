@@ -976,6 +976,7 @@ public:
 	:	DataPtr((const byte*)data)
 	,	DataSize(size)
 	{
+		if (!data) appError("FMemReader constructed with NULL data");
 		IsLoading = true;
 		ArStopper = size;
 	}
@@ -2249,6 +2250,7 @@ public:
 	void TrimStartAndEndInline();
 
 	FString& AppendChar(char ch);
+	FString& AppendChars(const char* s, int count);
 
 	FORCEINLINE void RemoveAt(int index, int count = 1)
 	{
@@ -2324,6 +2326,12 @@ public:
 		Data.DataPtr = (void*)&StaticData[0];
 		Data.MaxCount = N;
 		FString::operator=(src);
+	}
+	FORCEINLINE FStaticString(int count, const char* src)
+	{
+		Data.DataPtr = (void*)&StaticData[0];
+		Data.MaxCount = N;
+		AppendChars(src, count);
 	}
 	FORCEINLINE FStaticString(const FString& Other)
 	{

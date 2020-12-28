@@ -291,11 +291,13 @@ FString::FString(const char* src)
 
 FString::FString(int count, const char* src)
 {
+	// A short version of AppendChars()
 	if (count)
 	{
 		Data.AddUninitialized(count + 1);
-		memcpy(Data.GetData(), src, count);
-		Data[count] = 0;
+		char* memory = Data.GetData();
+		memcpy(memory, src, count);
+		memory[count] = 0;
 	}
 }
 
@@ -328,19 +330,7 @@ FString& FString::operator=(const char* src)
 FString& FString::operator+=(const char* text)
 {
 	int len = strlen(text);
-	int oldLen = Data.Num();
-	if (oldLen)
-	{
-		Data.AddUninitialized(len);
-		// oldLen-1 -- cut null char, len+1 -- append null char
-		memcpy(OffsetPointer(Data.GetData(), oldLen-1), text, len+1);
-	}
-	else
-	{
-		Data.AddUninitialized(len+1);	// reserve space for null char
-		memcpy(Data.GetData(), text, len+1);
-	}
-	return *this;
+	return AppendChars(text, len);
 }
 
 FString& FString::AppendChar(char ch)
@@ -357,6 +347,30 @@ FString& FString::AppendChar(char ch)
 		int nullCharIndex = Data.Num() - 1;
 		Data[nullCharIndex] = ch;
 		Data.AddZeroed(1);
+	}
+	return *this;
+}
+
+FString& FString::AppendChars(const char* s, int count)
+{
+	// Get the size of string, including null character
+	int oldLen = Data.Num();
+	if (oldLen)
+	{
+		// Already has something
+		Data.AddUninitialized(count);
+		char* memory = Data.GetData();
+		// oldLen-1 -- cut existing null char
+		memcpy(memory + oldLen - 1, s, count);
+		memory[oldLen - 1 + count] = 0;
+	}
+	else
+	{
+		// Empty string
+		Data.AddUninitialized(count+1);	// reserve space for null char
+		char* memory = Data.GetData();
+		memcpy(memory, s, count);
+		memory[count] = 0;
 	}
 	return *this;
 }
