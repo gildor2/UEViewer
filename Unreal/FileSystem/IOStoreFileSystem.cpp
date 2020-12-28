@@ -213,7 +213,8 @@ struct FIoStoreTocResource
 	~FIoStoreTocResource()
 	{}
 
-	bool Read(FArchive& Ar)
+	//todo Passing 'PakEncryptionKey' as non-const reference for possibility to detect/change the key here
+	bool Read(FArchive& Ar, FString& PakEncryptionKey)
 	{
 		guard(FIoStoreTocResource::Read);
 
@@ -266,7 +267,7 @@ struct FIoStoreTocResource
 			assert(DataPtr + Header.DirectoryIndexSize <= Buffer + BufferSize);
 			if ((Header.ContainerFlags & (int)EIoContainerFlags::Encrypted) != 0)
 			{
-				appDecryptAES(const_cast<byte*>(DataPtr), Header.DirectoryIndexSize);
+				appDecryptAES(const_cast<byte*>(DataPtr), Header.DirectoryIndexSize, &PakEncryptionKey[0], PakEncryptionKey.Len());
 			}
 			FMemReader IndexReader(DataPtr, Header.DirectoryIndexSize);
 			IndexReader.SetupFrom(Ar);
@@ -367,7 +368,7 @@ void FIOStoreFile::Serialize(void *data, int size)
 				Reader->Seek64(Block.GetOffset());
 				Reader->Serialize(CompressedData, EncryptedSize);
 				FileRequiresAesKey();
-				appDecryptAES(CompressedData, EncryptedSize);
+				Parent->DecryptDataBlock(CompressedData, EncryptedSize);
 			}
 			uint32 CompressionMethodIndex = Block.GetCompressionMethodIndex();
 			if (CompressionMethodIndex)
@@ -484,6 +485,29 @@ FIOStoreFileSystem::~FIOStoreFileSystem()
 static TArray<CGameFileInfo*> ChunkInfos;
 #endif
 
+const FString& FIOStoreFileSystem::GetPakEncryptionKey() const
+{
+	if (!PakEncryptionKey.IsEmpty())
+		return PakEncryptionKey;
+
+	// No encrypted index, so pick the first available key
+	if (GAesKeys.Num())
+		return GAesKeys[0];
+
+	static FString EmptyString;
+	return EmptyString;
+}
+
+void FIOStoreFileSystem::DecryptDataBlock(byte* Data, int DataSize)
+{
+	guard(FIOStoreFileSystem::DecryptDataBlock);
+
+	const FString& Key = GetPakEncryptionKey();
+	appDecryptAES(Data, DataSize, &Key[0], Key.Len());
+
+	unguard;
+}
+
 bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 {
 	guard(FIOStoreFileSystem::AttachReader);
@@ -503,7 +527,7 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 	}
 
 	FIoStoreTocResource Resource;
-	if (!Resource.Read(*reader))
+	if (!Resource.Read(*reader, PakEncryptionKey))
 	{
 		delete ContainerFile;
 		error = ContainerFileName;

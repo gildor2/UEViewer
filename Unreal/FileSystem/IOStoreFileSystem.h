@@ -23,7 +23,7 @@ public:
 
 	virtual void Seek(int Pos)
 	{
-		guard(FPakFile::Seek);
+		guard(FIOStoreFile::Seek);
 		assert(Pos >= 0 && Pos <= UncompressedSize);
 		ArPos = Pos;
 //		unguardf("file=%s", *Info->FileInfo->GetRelativeName());
@@ -80,7 +80,13 @@ public:
 
 	static bool LoadGlobalContainer(const char* Filename);
 
+	FString PakEncryptionKey;
+
 protected:
+	const FString& GetPakEncryptionKey() const;
+
+	void DecryptDataBlock(byte* Data, int DataSize);
+
 	void WalkDirectoryTreeRecursive(struct FIoDirectoryIndexResource& IndexResource, int DirectoryIndex, const FString& ParentDirectory);
 
 	FString Filename;

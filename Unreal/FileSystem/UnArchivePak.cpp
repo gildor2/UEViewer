@@ -337,7 +337,7 @@ void FPakFile::Serialize(void *data, int size)
 					Reader->Seek64(Block.CompressedStart);
 					Reader->Serialize(CompressedData, EncryptedSize);
 					FileRequiresAesKey();
-					appDecryptAES(CompressedData, EncryptedSize);
+					Parent->DecryptDataBlock(CompressedData, EncryptedSize);
 				}
 				appDecompress(CompressedData, CompressedBlockSize, UncompressedBuffer, UncompressedBlockSize, Info->CompressionMethod);
 				appFree(CompressedData);
@@ -384,7 +384,7 @@ void FPakFile::Serialize(void *data, int size)
 				RemainingSize = Align(RemainingSize, EncryptionAlign); // align for AES, pak contains aligned data
 				Reader->Serialize(UncompressedBuffer, RemainingSize);
 				FileRequiresAesKey();
-				appDecryptAES(UncompressedBuffer, RemainingSize);
+				Parent->DecryptDataBlock(UncompressedBuffer, RemainingSize);
 			}
 
 			// Now copy decrypted data from UncompressedBuffer (code is very similar to those used in decompression above)
@@ -612,6 +612,64 @@ static bool ValidateString(FArchive& Ar)
 	return !bFail;
 }
 
+bool FPakVFS::DecryptPakIndex(TArray<byte>& IndexData, FString& ErrorString)
+{
+	guard(FPakVFS::DecryptPakIndex);
+
+	// Find an encryption key which will match this pak file
+	for (const FString& Key : GAesKeys)
+	{
+		// Try decrypting a small amount of data with a current key
+		byte TestBuffer[256];
+		int TestLen = min(IndexData.Num(), ARRAY_COUNT(TestBuffer));
+		memcpy(TestBuffer, IndexData.GetData(), TestLen);
+		appDecryptAES(TestBuffer, TestLen, &Key[0], Key.Len());
+		FMemReader ValidatorReader(TestBuffer, TestLen);
+		if (ValidateString(ValidatorReader))
+		{
+			// Matching key
+			PakEncryptionKey = Key;
+			break;
+		}
+	}
+	if (PakEncryptionKey.IsEmpty())
+	{
+		char buf[1024];
+		appSprintf(ARRAY_ARG(buf), "WARNING: The provided encryption key doesn't work with \"%s\". Skipping.", *Filename);
+		ErrorString = buf;
+		return false;
+	}
+
+	// Decrypt the index
+	appDecryptAES(IndexData.GetData(), IndexData.Num(), &PakEncryptionKey[0], PakEncryptionKey.Len());
+	return true;
+
+	unguard;
+}
+
+const FString& FPakVFS::GetPakEncryptionKey() const
+{
+	if (!PakEncryptionKey.IsEmpty())
+		return PakEncryptionKey;
+
+	// No encrypted index, so pick the first available key
+	if (GAesKeys.Num())
+		return GAesKeys[0];
+
+	static FString EmptyString;
+	return EmptyString;
+}
+
+void FPakVFS::DecryptDataBlock(byte* Data, int DataSize)
+{
+	guard(FPakVFS::DecryptDataBlock);
+
+	const FString& Key = GetPakEncryptionKey();
+	appDecryptAES(Data, DataSize, &Key[0], Key.Len());
+
+	unguard;
+}
+
 bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString& error)
 {
 	guard(FPakVFS::LoadPakIndexLegacy);
@@ -620,35 +678,20 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 	TArray<byte> InfoBlock;
 	InfoBlock.SetNumUninitialized(info.IndexSize);
 	reader->Serialize(InfoBlock.GetData(), info.IndexSize);
-	FMemReader InfoReader(InfoBlock.GetData(), info.IndexSize);
-	InfoReader.SetupFrom(*reader);
 
 	// Manage pak files with encrypted index
 	if (info.bEncryptedIndex)
 	{
-		guard(CheckEncryptedIndex);
-
-		appDecryptAES(InfoBlock.GetData(), InfoBlock.Num());
-
-		// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
-		if (!ValidateString(InfoReader))
-		{
-			char buf[1024];
-			appSprintf(ARRAY_ARG(buf), "WARNING: The provided encryption key doesn't work with \"%s\". Skipping.", *Filename);
-			error = buf;
+		if (!DecryptPakIndex(InfoBlock, error))
 			return false;
-		}
-
-		// Data is ok, seek to data start.
-		InfoReader.Seek(0);
-
-		unguard;
 	}
 
 	// this file looks correct, store 'reader'
 	Reader = reader;
 
 	// Read pak index
+	FMemReader InfoReader(InfoBlock.GetData(), info.IndexSize);
+	InfoReader.SetupFrom(*reader);
 
 	TRY {
 		// Read MountPoint with catching error, to override error message.
@@ -747,35 +790,20 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	TArray<byte> InfoBlock;
 	InfoBlock.SetNumUninitialized(info.IndexSize);
 	reader->Serialize(InfoBlock.GetData(), info.IndexSize);
-	FMemReader InfoReader(InfoBlock.GetData(), info.IndexSize);
-	InfoReader.SetupFrom(*reader);
 
 	// Manage pak files with encrypted index
 	if (info.bEncryptedIndex)
 	{
-		guard(CheckEncryptedIndex);
-
-		appDecryptAES(InfoBlock.GetData(), InfoBlock.Num());
-
-		// Try to validate the decrypted data. The first thing going here is MountPoint which is FString.
-		if (!ValidateString(InfoReader))
-		{
-			char buf[1024];
-			appSprintf(ARRAY_ARG(buf), "WARNING: The provided encryption key doesn't work with \"%s\". Skipping.", *Filename);
-			error = buf;
+		if (!DecryptPakIndex(InfoBlock, error))
 			return false;
-		}
-
-		// Data is ok, seek to data start.
-		InfoReader.Seek(0);
-
-		unguard;
 	}
 
 	// this file looks correct, store 'reader'
 	Reader = reader;
 
 	// Read pak index
+	FMemReader InfoReader(InfoBlock.GetData(), info.IndexSize);
+	InfoReader.SetupFrom(*reader);
 
 	TRY {
 		// Read MountPoint with catching error, to override error message.
@@ -864,7 +892,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 	if (info.bEncryptedIndex)
 	{
 		// Read encrypted data and decrypt
-		appDecryptAES(InfoBlock.GetData(), InfoBlock.Num());
+		DecryptDataBlock(InfoBlock.GetData(), InfoBlock.Num());
 	}
 	unguard;
 

@@ -377,12 +377,14 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 	}
 #endif // SUPPORT_ANDROID
 #if UNREAL4
+	FPakVFS* PakVfs = NULL;
 	if (!stricmp(ext, "pak"))
 	{
 		reader = new FFileReader(FullName);
 		if (!reader) return;
 		reader->Game = GAME_UE4_BASE;
-		vfs = new FPakVFS(FullName);
+		PakVfs = new FPakVFS(FullName);
+		vfs = PakVfs;
 		GIsUE4Pak = true; // ignore non-UE4 extensions for speedup file registration
 	}
 	else if (!stricmp(ext, "utok") || !stricmp(ext, "ucas"))
@@ -420,6 +422,10 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 #if UNREAL4
 		if (GIsUE4Pak)
 		{
+			// Get the pak's encryption key, which is only assigned after vfs->AttachReader()
+			assert(PakVfs);
+			FString PakEncryptionKey = PakVfs->GetPakEncryptionKey();
+
 			// Check for presense of IOStore file system for this pak
 			guard(TokArchive);
 			char Path[MAX_PACKAGE_PATH];
@@ -446,7 +452,8 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 					FIOStoreFileSystem::LoadGlobalContainer(GlobalPath);
 				}
 
-				FVirtualFileSystem* iosVfs = new FIOStoreFileSystem(Path);
+				FIOStoreFileSystem* iosVfs = new FIOStoreFileSystem(Path);
+				iosVfs->PakEncryptionKey = PakEncryptionKey;
 				FArchive* tocReader = new FFileReader(Path);
 				tocReader->Game = GAME_UE4_BASE;
 
@@ -808,7 +815,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	}
 #endif // GEARS4
 
-	appPrintf("Found %d game files (%d skipped) in %d folders at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, GameFolders.Num() - 1, dir);
+	appPrintf("Found %d game files (%d skipped) in %d folders at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, GameFolders.Num() ? GameFolders.Num()-1 : 0, dir);
 
 #if UNREAL4
 	// Count sizes of additional files. Should process .uexp and .ubulk files, register their information for .uasset.

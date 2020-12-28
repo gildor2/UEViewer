@@ -322,10 +322,10 @@ int CUmodelApp::ShowUE4UnversionedPackageDialog(int verMin, int verMax)
 	return dialog.Show(verMin, verMax);
 }
 
-FString CUmodelApp::ShowUE4AesKeyDialog()
+bool CUmodelApp::ShowUE4AesKeyDialog(TArray<FString>& Values)
 {
 	UIUE4AesKeyDialog dialog;
-	return dialog.Show();
+	return dialog.Show(Values);
 }
 
 #endif // UNREAL4

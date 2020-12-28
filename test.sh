@@ -179,9 +179,8 @@ function paragon()
 }
 function fortnite()
 {
-	read aes < "Docs/fortnite.txt"
 	CheckDir "${launcher[@]/%/Fortnite/FortniteGame/Content/Paks}"
-	run -game=ue4.27 -aes=$aes $*
+	run -game=ue4.27 -aes=@Docs/fortnite.txt
 }
 function ue3()
 {

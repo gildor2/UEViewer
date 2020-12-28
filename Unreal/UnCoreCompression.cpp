@@ -529,9 +529,11 @@ restart_decompress:
 	AES support
 -----------------------------------------------------------------------------*/
 
+//todo: move to UnCoreDecrypt.cpp
+
 #if UNREAL4
 
-FString GAesKey;
+TArray<FString> GAesKeys;
 
 #define AES_KEYBITS		256
 

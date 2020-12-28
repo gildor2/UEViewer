@@ -169,6 +169,8 @@ public:
 
 	virtual FArchive* CreateReader(int index);
 
+	const FString& GetPakEncryptionKey() const;
+
 protected:
 	FString				Filename;
 	FArchive*			Reader;
@@ -176,6 +178,7 @@ protected:
 	FStaticString<MAX_PACKAGE_PATH> MountPoint;
 	int					NumEncryptedFiles;
 	int					NumOpenFiles;
+	FString				PakEncryptionKey;
 
 	// Called when some FPakFile has been opened
 	void FileOpened();
@@ -187,6 +190,10 @@ protected:
 	bool LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString& error);
 	// UE4.25 and newer
 	bool LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& error);
+
+	bool DecryptPakIndex(TArray<byte>& IndexData, FString& ErrorString);
+
+	void DecryptDataBlock(byte* Data, int DataSize);
 
 #if 0
 	enum { HASH_SIZE = 1024 };

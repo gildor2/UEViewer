@@ -65,7 +65,7 @@ public:
 	void ShowOptionsDialog();
 	#if UNREAL4
 	int ShowUE4UnversionedPackageDialog(int verMin, int verMax);
-	FString ShowUE4AesKeyDialog();
+	bool ShowUE4AesKeyDialog(TArray<FString>& Values);
 	#endif
 #endif // HAS_UI
 

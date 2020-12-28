@@ -216,6 +216,10 @@ ooz
 
 Changes
 ~~~~~~~
+28.12.2020
+- support for multiple AES keys provided with UI or command line; commane line systax has been extended to
+  support multiple -aes=... options, or with providing a text file with multiple keys: -aes=@filename.txt
+
 12.12.2020
 - saving .props.txt when exporting skeletal and static meshes, and for animation
 

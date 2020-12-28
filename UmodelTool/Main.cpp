@@ -399,7 +399,9 @@ static void PrintUsage()
 			"    -gui            force startup UI to appear\n" //?? debug-only option?
 #endif
 			"    -aes=key        provide AES decryption key for encrypted pak files,\n"
-			"                    key is ASCII or hex string (hex format is 0xAABBCCDD)\n"
+			"                    key is ASCII or hex string (hex format is 0xAABBCCDD),\n"
+			"                    multiple options could be provided for multi-key games\n"
+			"    -aes=@file.txt  read AES decryption key(s) from a text file\n"
 			"\n"
 			"Compatibility options:\n"
 			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
@@ -552,22 +554,23 @@ int UE4UnversionedPackage(int verMin, int verMax)
 	return -1;
 }
 
-static void CheckHexAesKey()
+// Attempts to evaluate the provided Key as hex string, does inplace replacement
+static void CheckHexAesKey(FString& Key)
 {
 #define ishex(c)		( (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') )
 #define hextodigit(c)	( (c >= 'a') ? c - 'a' + 10 : c - '0' )
 
-	if (GAesKey.Len() < 3) return;
-	const char* s = *GAesKey;
+	if (Key.Len() < 3) return;
+	const char* s = *Key;
 
 	// Hex key starts with "0x"
 	if (*s++ != '0') return;
 	if (tolower(*s++) != 'x') return;
 
-	FString NewKey;
-	NewKey.Empty(GAesKey.Len() / 2 + 1);
+	FStaticString<256> NewKey;
+	NewKey.Empty(Key.Len() / 2 + 1);
 
-	int remains = GAesKey.Len() - 2;
+	int remains = Key.Len() - 2;
 	if (remains & 1)
 	{
 		appErrorNoLog("Hexadecimal AES key contains odd number of characters");
@@ -597,7 +600,49 @@ static void CheckHexAesKey()
 		NewKey.AppendChar((char)b);
 	}
 
-	GAesKey = NewKey;
+	Key = NewKey;
+}
+
+static void HandleAesKeyOption(const char* value)
+{
+	FStaticString<256> Key = value;
+	if (Key.Len())
+	{
+		if (Key[0] == '@')
+		{
+			// Load a file with keys
+			const char* KeyFile = *Key + 1;
+			FILE* f = fopen(KeyFile, "r");
+			if (f)
+			{
+				char buffer[1024];
+				while (!feof(f))
+				{
+					if (fgets(buffer, ARRAY_COUNT(buffer), f))
+					{
+						FStaticString<256> Key = buffer;
+						Key.TrimStartAndEndInline();
+						if (!Key.IsEmpty())
+						{
+							CheckHexAesKey(Key);
+							GAesKeys.Add(Key);
+						}
+					}
+				}
+				fclose(f);
+			}
+			else
+			{
+				appPrintf("Warning: -aes option refers missing file %s\n", KeyFile);
+			}
+		}
+		else
+		{
+			Key.TrimStartAndEndInline();
+			CheckHexAesKey(Key);
+			GAesKeys.Add(Key);
+		}
+	}
 }
 
 bool UE4EncryptedPak()
@@ -608,10 +653,18 @@ bool UE4EncryptedPak()
 	if (lock) return false;
 	lock = true;
 
-	GAesKey = GApplication.ShowUE4AesKeyDialog();
-	GAesKey.TrimStartAndEndInline();
-	CheckHexAesKey();
-	return GAesKey.Len() > 0;
+	TArray<FString> Keys;
+	if (!GApplication.ShowUE4AesKeyDialog(Keys))
+	{
+		// No key(s) has been provided
+		return false;
+	}
+	for (FString& Key : Keys)
+	{
+		CheckHexAesKey(Key);
+		GAesKeys.Add(Key);
+	}
+	return true;
 #else
 	return false;
 #endif
@@ -881,9 +934,7 @@ int main(int argc, const char **argv)
 		}
 		else if (!strnicmp(opt, "aes=", 4))
 		{
-			GAesKey = opt+4;
-			GAesKey.TrimStartAndEndInline();
-			CheckHexAesKey();
+			HandleAesKeyOption(opt+4);
 		}
 		// information commands
 		else if (!stricmp(opt, "taglist"))

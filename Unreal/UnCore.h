@@ -2651,16 +2651,10 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 
 // UE4 has built-in AES encryption
 
-extern FString GAesKey;
+extern TArray<FString> GAesKeys;
 
 // Decrypt with arbitrary key
 void appDecryptAES(byte* Data, int Size, const char* Key, int KeyLen = -1);
-
-// Decrypt with GAesKey
-inline void appDecryptAES(byte* Data, int Size)
-{
-	appDecryptAES(Data, Size, *GAesKey, GAesKey.Len());
-}
 
 // Callback called when encrypted pak file is attempted to load
 bool UE4EncryptedPak();

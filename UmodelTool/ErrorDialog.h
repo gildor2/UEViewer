@@ -31,7 +31,7 @@ public:
 		[
 			NewControl(UIGroup, GROUP_NO_BORDER|GROUP_HORIZONTAL_LAYOUT)
 			.SetWidth(EncodeWidth(1.0f))
-			.SetHeight(EncodeWidth(1.0f))
+			.SetHeight(EncodeWidth(1.0f)) // allow vertical resize of contents
 			[
 				NewControl(UIBitmap)
 				.SetWidth(48)
