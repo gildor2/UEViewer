@@ -19,11 +19,12 @@ public:
 
 		// Separate multiple AES keys to FString's
 		const char* Begin = &Value[0];
-		for (int i = 0; i < Value.Len(); i++)
+		int Len = Value.Len() + 1; // include null character for simpler loop below
+		for (int i = 0; i < Len; i++)
 		{
 			const char* s = &Value[i];
 			char c = *s;
-			if (c == '\n')
+			if (c == '\n' || c == 0)
 			{
 				int len = s - Begin;
 				if (len)
