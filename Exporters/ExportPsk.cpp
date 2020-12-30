@@ -440,7 +440,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 void ExportPsk(const CSkeletalMesh *Mesh)
 {
-	UObject *OriginalMesh = Mesh->OriginalMesh;
+	const UObject *OriginalMesh = Mesh->OriginalMesh;
 	if (!Mesh->Lods.Num())
 	{
 		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);
@@ -522,7 +522,7 @@ const UObject* GetPrimaryAnimObject(const CAnimSet* Anim)
 	// otherwise we'll have multiple animations mapped to the same exported file.
 	if (Anim->Sequences.Num() && Anim->OriginalAnim->IsA("Skeleton"))
 	{
-		const USkeleton* Skeleton = static_cast<USkeleton*>(Anim->OriginalAnim);
+		const USkeleton* Skeleton = static_cast<const USkeleton*>(Anim->OriginalAnim);
 		assert(Skeleton->OriginalAnims.Num() == Anim->Sequences.Num());
 		// Allow up to 3
 		if (Skeleton->OriginalAnims.Num() <= MIN_ANIMSET_SIZE)
@@ -735,7 +735,7 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 			//todo: UE3 won't work here
 			if (Anim->OriginalAnim->IsA("Skeleton"))
 			{
-				const USkeleton* Skeleton = static_cast<USkeleton*>(Anim->OriginalAnim);
+				const USkeleton* Skeleton = static_cast<const USkeleton*>(Anim->OriginalAnim);
 				for (const UAnimSequence4* Seq : Skeleton->OriginalAnims)
 				{
 					PropAr->Printf("\n// Sequence: %s\n", Seq->Name);
@@ -768,7 +768,7 @@ void ExportPsa(const CAnimSet* Anim)
 		guard(ExportAnimsByOne);
 #if UNREAL4
 		assert(Anim->OriginalAnim->IsA("Skeleton"));
-		const USkeleton* Skeleton = static_cast<USkeleton*>(Anim->OriginalAnim);
+		const USkeleton* Skeleton = static_cast<const USkeleton*>(Anim->OriginalAnim);
 
 		// Export animations separately, this will happen only when CAnimSet has
 		// a few sequences (but more than one)

@@ -10,7 +10,7 @@
 
 #include "Exporters/Exporters.h"
 
-CObjectViewer::CObjectViewer(UObject* Obj, CApplication *Win)
+CObjectViewer::CObjectViewer(const UObject* Obj, CApplication *Win)
 :	Object(Obj)
 ,	Window(Win)
 ,	JumpAfterFrame(NULL)

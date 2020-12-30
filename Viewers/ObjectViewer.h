@@ -33,11 +33,11 @@ class UIMenuItem;
 class CObjectViewer
 {
 public:
-	UObject*		Object;
+	const UObject*	Object;
 	CApplication*	Window;
 	const UObject*	JumpAfterFrame;
 
-	CObjectViewer(UObject* Obj, CApplication* Win);
+	CObjectViewer(const UObject* Obj, CApplication* Win);
 
 	virtual ~CObjectViewer()
 	{}
@@ -93,7 +93,9 @@ public:
 
 protected:
 	void FlushProps();
-	void OutlineMaterial(UObject *Obj, int indent = 0);
+	void OutlineMaterial(const UObject *Obj, int indent = 0);
+
+	UUnrealMaterial* NonConstMaterial;
 };
 
 
@@ -110,7 +112,7 @@ public:
 	unsigned		DrawFlags;
 	bool			Wireframe;
 
-	CMeshViewer(UObject* Mesh, CApplication* Window)
+	CMeshViewer(const UObject* Mesh, CApplication* Window)
 	:	CObjectViewer(Mesh, Window)
 	,	DrawFlags(0)
 	,	Wireframe(false)

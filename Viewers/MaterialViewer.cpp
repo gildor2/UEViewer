@@ -313,8 +313,8 @@ void CMaterialViewer::Draw3D(float TimeDelta)
 	}
 
 	// bind material
-	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
-	Mat->SetMaterial();
+	const UUnrealMaterial *Mat = static_cast<const UUnrealMaterial*>(Object);
+	NonConstMaterial->SetMaterial();
 
 	// check tangent space
 	GLint aNormal = -1;
@@ -380,8 +380,8 @@ void CMaterialViewer::Draw2D()
 
 	if (IsTexture && ShowChannels)
 	{
-		UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
-		Mat->SetMaterial();
+		const UUnrealMaterial *Mat = static_cast<const UUnrealMaterial*>(Object);
+		NonConstMaterial->SetMaterial();
 		int width, height;
 		Window->GetWindowSize(width, height);
 		int w = min(width, height) / 2;
@@ -410,7 +410,7 @@ void CMaterialViewer::Draw2D()
 	// UE1 and UE2
 	if (Object->IsA("BitmapMaterial"))
 	{
-		const UBitmapMaterial *Tex = static_cast<UBitmapMaterial*>(Object);
+		const UBitmapMaterial* Tex = static_cast<const UBitmapMaterial*>(Object);
 
 		const char *fmt = EnumToName(Tex->Format);
 		DrawTextLeft(S_GREEN "Width   :" S_WHITE " %d\n"
@@ -421,7 +421,7 @@ void CMaterialViewer::Draw2D()
 
 		if (Object->IsA("Texture"))
 		{
-			const UTexture* Tex2 = static_cast<UTexture*>(Object);
+			const UTexture* Tex2 = static_cast<const UTexture*>(Object);
 			int width = 0, height = 0;
 			// There are some textures which has mips with no data, display a message about stripped texture size.
 			// Example: --ut2 DemoPlayerSkins.utx -obj=DemoSkeleton
@@ -449,7 +449,7 @@ void CMaterialViewer::Draw2D()
 	// UE3 and UE4
 	if (Object->IsA("Texture2D"))
 	{
-		const UTexture2D *Tex = static_cast<UTexture2D*>(Object);
+		const UTexture2D *Tex = static_cast<const UTexture2D*>(Object);
 
 		const char *fmt = EnumToName(Tex->Format);
 		DrawTextLeft(S_GREEN "Width   :" S_WHITE " %d\n"
@@ -502,14 +502,15 @@ CMaterialViewer::CMaterialViewer(UUnrealMaterial* Material, CApplication* Window
 :	CObjectViewer(Material, Window)
 {
 	IsTexture = Material->IsTexture();
+	NonConstMaterial = const_cast<UUnrealMaterial*>(static_cast<const UUnrealMaterial*>(Object));
+
 	Material->Lock();
 }
 
 CMaterialViewer::~CMaterialViewer()
 {
 	guard(CMaterialViewer::~);
-	UUnrealMaterial *Mat = static_cast<UUnrealMaterial*>(Object);
-	Mat->Unlock();
+	NonConstMaterial->Unlock();
 	unguard;
 }
 
@@ -696,7 +697,7 @@ static void PropEnum(int value, const char *name, const char *EnumName)
 }
 
 
-void CMaterialViewer::OutlineMaterial(UObject *Obj, int indent)
+void CMaterialViewer::OutlineMaterial(const UObject *Obj, int indent)
 {
 	guard(CMaterialViewer::OutlineMaterial);
 	assert(Obj);
@@ -722,7 +723,7 @@ void CMaterialViewer::OutlineMaterial(UObject *Obj, int indent)
 	if (Obj->IsA(#ClassName+1)) \
 	{							\
 		guard(ClassName);		\
-		ClassName *Mat = static_cast<ClassName*>(Obj);
+		const ClassName *Mat = static_cast<const ClassName*>(Obj);
 
 #define MAT_END					\
 		unguard;				\

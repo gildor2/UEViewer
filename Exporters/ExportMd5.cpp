@@ -85,7 +85,7 @@ void ExportMd5Mesh(const CSkeletalMesh *Mesh)
 
 	int i;
 
-	UObject *OriginalMesh = Mesh->OriginalMesh;
+	const UObject *OriginalMesh = Mesh->OriginalMesh;
 	if (!Mesh->Lods.Num())
 	{
 		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);
@@ -302,7 +302,7 @@ void ExportMd5Anim(const CAnimSet *Anim)
 	guard(ExportMd5Anim);
 
 	int numBones = Anim->TrackBoneNames.Num();
-	UObject *OriginalAnim = Anim->OriginalAnim;
+	const UObject *OriginalAnim = Anim->OriginalAnim;
 
 	for (int AnimIndex = 0; AnimIndex < Anim->Sequences.Num(); AnimIndex++)
 	{

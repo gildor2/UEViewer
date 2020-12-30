@@ -51,7 +51,7 @@ void CVertMeshViewer::Test()
 {
 	CMeshViewer::Test();
 
-	const UVertMesh *Mesh = static_cast<UVertMesh*>(Object);
+	const UVertMesh *Mesh = static_cast<const UVertMesh*>(Object);
 	// verify some assumptions
 // (macro broken)	VERIFY2(VertexCount, VertexCount);
 	VERIFY_NOT_NULL(VertexCount);
@@ -76,7 +76,7 @@ void CVertMeshViewer::Dump()
 {
 	CMeshViewer::Dump();
 
-	const UVertMesh *Mesh = static_cast<UVertMesh*>(Object);	// ULodMesh
+	const UVertMesh *Mesh = static_cast<const UVertMesh*>(Object);	// ULodMesh
 	appPrintf(
 		"\nLodMesh info:\n=============\n"
 		"version        %d\n"
@@ -148,7 +148,7 @@ void CVertMeshViewer::Dump()
 void CVertMeshViewer::Export()
 {
 	CMeshViewer::Export();
-	const UVertMesh *Mesh = static_cast<UVertMesh*>(Object);
+	const UVertMesh *Mesh = static_cast<const UVertMesh*>(Object);
 	assert(Mesh);
 	for (int i = 0; i < Mesh->Textures.Num(); i++)
 	{
@@ -165,7 +165,7 @@ void CVertMeshViewer::Draw2D()
 	CMeshViewer::Draw2D();
 
 	CVertMeshInstance *MeshInst = static_cast<CVertMeshInstance*>(Inst);
-	const ULodMesh *Mesh = static_cast<ULodMesh*>(Object);
+	const ULodMesh *Mesh = static_cast<const ULodMesh*>(Object);
 
 	// mesh
 	DrawTextLeft(S_GREEN "Verts   : " S_WHITE "%d\n"

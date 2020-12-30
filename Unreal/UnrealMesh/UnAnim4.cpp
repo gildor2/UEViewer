@@ -511,7 +511,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	}
 
 	// create CAnimSequence
-	CAnimSequence *Dst = new CAnimSequence;
+	CAnimSequence *Dst = new CAnimSequence(Seq);
 	AnimSet->Sequences.Add(Dst);
 	Dst->Name      = Seq->Name;
 	Dst->NumFrames = Seq->NumFrames;

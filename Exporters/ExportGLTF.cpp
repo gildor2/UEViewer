@@ -975,7 +975,7 @@ void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh)
 {
 	guard(ExportSkeletalMeshGLTF);
 
-	UObject *OriginalMesh = Mesh->OriginalMesh;
+	const UObject *OriginalMesh = Mesh->OriginalMesh;
 	if (!Mesh->Lods.Num())
 	{
 		appNotify("Mesh %s has 0 lods", OriginalMesh->Name);

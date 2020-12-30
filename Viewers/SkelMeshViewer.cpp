@@ -88,7 +88,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 	}
 	else if (Mesh->OriginalMesh->IsA("SkeletalMesh"))	// UE2 class
 	{
-		const USkeletalMesh *OriginalMesh = static_cast<USkeletalMesh*>(Mesh->OriginalMesh);
+		const USkeletalMesh *OriginalMesh = static_cast<const USkeletalMesh*>(Mesh->OriginalMesh);
 		if (OriginalMesh->Animation)
 			AttachAnim = OriginalMesh->Animation->ConvertedAnim;
 	}
@@ -96,7 +96,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 	else if (Mesh->OriginalMesh->IsA("SkeletalMesh4"))
 	{
 		// UE4 SkeletalMesh has USkeleton reference, which collects all compatible animations in its PostLoad method
-		const USkeletalMesh4* OriginalMesh = static_cast<USkeletalMesh4*>(Mesh->OriginalMesh);
+		const USkeletalMesh4* OriginalMesh = static_cast<const USkeletalMesh4*>(Mesh->OriginalMesh);
 		bIsUE4Mesh = true;
 		Skeleton = OriginalMesh->Skeleton;
 		if (Skeleton)

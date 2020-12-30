@@ -140,7 +140,7 @@ struct CSkelMeshSocket
 class CSkeletalMesh
 {
 public:
-	UObject*				OriginalMesh;			//?? make common for all mesh classes
+	const UObject*			OriginalMesh;			//?? make common for all mesh classes
 	FBox					BoundingBox;			//?? common
 	FSphere					BoundingSphere;			//?? common
 	CVec3					MeshOrigin;
@@ -152,7 +152,7 @@ public:
 	TArray<CSkelMeshSocket>	Sockets;				//?? common (UE4 has StaticMesh sockets)
 	const class CAnimSet*	Anim;
 
-	CSkeletalMesh(UObject *Original)
+	CSkeletalMesh(const UObject *Original)
 	:	OriginalMesh(Original)
 	,	Anim(NULL)
 	{}
@@ -259,12 +259,14 @@ public:
 	float					Rate;
 	TArray<CAnimTrack*>		Tracks;					// for each CAnimSet.TrackBoneNames
 	bool					bAdditive;				// used just for on-screen information
+	const UObject*			OriginalSequence;
 #if ANIM_DEBUG_INFO
 	FString					DebugInfo;
 #endif
 
-	CAnimSequence()
+	CAnimSequence(const UObject* Original = NULL)
 	: bAdditive(false)
+	, OriginalSequence(Original)
 	{}
 
 	~CAnimSequence()
@@ -292,7 +294,7 @@ enum EAnimRotationOnly
 class CAnimSet
 {
 public:
-	UObject*				OriginalAnim;			//?? make common for all mesh classes
+	const UObject*			OriginalAnim;			//?? make common for all mesh classes
 	TArray<FName>			TrackBoneNames;
 	TArray<CAnimSequence*>	Sequences;
 
@@ -303,7 +305,7 @@ public:
 	CAnimSet()
 	{}
 
-	CAnimSet(UObject *Original)
+	CAnimSet(const UObject *Original)
 	:	OriginalAnim(Original)
 	{}
 
