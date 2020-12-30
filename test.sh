@@ -180,7 +180,7 @@ function paragon()
 function fortnite()
 {
 	CheckDir "${launcher[@]/%/Fortnite/FortniteGame/Content/Paks}"
-	run -game=ue4.27 -aes=@Docs/fortnite.txt
+	run -game=ue4.27 -aes=@Docs/fortnite.txt $*
 }
 function ue3()
 {

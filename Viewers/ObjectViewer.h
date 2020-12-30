@@ -36,8 +36,9 @@ public:
 	const UObject*	Object;
 	CApplication*	Window;
 	const UObject*	JumpAfterFrame;
+	bool			bHasVisualObject;
 
-	CObjectViewer(const UObject* Obj, CApplication* Win);
+	CObjectViewer(const UObject* Obj, CApplication* Win, bool InNonVisualObject = false);
 
 	virtual ~CObjectViewer()
 	{}

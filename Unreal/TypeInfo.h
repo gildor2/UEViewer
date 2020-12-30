@@ -148,6 +148,7 @@ struct CTypeInfo
 #endif
 
 	void DumpProps(const void *Data) const;
+	void DumpProps(const void* Data, void (*Callback)(const char*)) const;
 	void SaveProps(const void *Data, FArchive& Ar) const;
 	bool LoadProps(void *Data, FArchive& Ar) const;
 };

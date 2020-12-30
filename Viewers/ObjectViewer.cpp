@@ -10,10 +10,11 @@
 
 #include "Exporters/Exporters.h"
 
-CObjectViewer::CObjectViewer(const UObject* Obj, CApplication *Win)
-:	Object(Obj)
-,	Window(Win)
-,	JumpAfterFrame(NULL)
+CObjectViewer::CObjectViewer(const UObject* Obj, CApplication *Win, bool InNonVisualObject)
+: Object(Obj)
+, Window(Win)
+, JumpAfterFrame(NULL)
+, bHasVisualObject(!InNonVisualObject)
 {
 	SetDistScale(1);
 	ResetView();
@@ -63,6 +64,49 @@ void CObjectViewer::ShowHelp()
 	DrawKeyHelp("D", "dump info");
 }
 
+static CObjectViewer* GCurrentViewer = NULL;
+
+static void DrawPropTextCallback(const char* LineText)
+{
+	guard(DrawPropTextCallback);
+
+	const char* s = strchr(LineText, '\'');
+	if (!s)
+	{
+		DrawTextLeft(S_WHITE "%s", LineText);
+		return;
+	}
+
+	// Find a space on the left, there should be a class name
+	const char* ClassName = s - 1;
+	while (ClassName > LineText && ClassName[-1] != ' ')
+		ClassName--;
+	FStaticString<64> ClassStr(s - ClassName, ClassName);
+	const char* s2 = strchr(s + 1, '\'');
+	assert(s2);
+	assert(s2[1] == 0);
+	FStaticString<256> ObjectNameStr(s2 - s - 1, s + 1);
+	FStaticString<64> Before(ClassName - LineText, LineText);
+
+	if (DrawTextH(ETextAnchor::TopLeft, NULL, S_WHITE "%s" S_HYPERLINK("%s'%s'"), *Before, *ClassStr, *ObjectNameStr))
+	{
+		// Clicked, find an object
+		for (UObject* Object : UObject::GObjObjects)
+		{
+			// The same code is used in TypeInfo.cpp, CollectProps(), UObject* property handler
+			if (strcmp(Object->GetClassName(), *ClassStr) != 0)
+				continue;
+			char ObjName[256];
+			Object->GetFullName(ARRAY_ARG(ObjName));
+			if (strcmp(ObjName, *ObjectNameStr) != 0)
+				continue;
+			GCurrentViewer->JumpTo(Object);
+			break;
+		}
+	}
+
+	unguard;
+}
 
 void CObjectViewer::Draw2D()
 {
@@ -111,6 +155,19 @@ void CObjectViewer::Draw2D()
 	}
 
 	DrawTextLeft("");
+	GCurrentViewer = this;
+
+	if (!bHasVisualObject)
+	{
+		DrawTextLeft(S_WHITE "Object Properties:\n");
+		auto DrawTextCallback = [](const char* LineText)
+		{
+			DrawTextLeft("%s", LineText);
+		};
+		Object->GetTypeinfo()->DumpProps(Object, DrawPropTextCallback);
+	}
+
+	GCurrentViewer = NULL;
 }
 
 #if HAS_UI

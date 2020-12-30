@@ -377,7 +377,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 		{											\
 			UClass *Obj2 = static_cast<UClass*>(Obj); \
 			if (!Obj2->ConvertedMesh)				\
-				Viewer = new CObjectViewer(Obj, this); \
+				Viewer = new CObjectViewer(Obj, this, true); \
 			else									\
 				Viewer = new CViewer(Obj2->ConvertedMesh, this); \
 		}											\
@@ -407,7 +407,7 @@ bool CUmodelApp::CreateVisualizer(UObject *Obj, bool test)
 	// fallback for unknown class
 	if (!test)
 	{
-		Viewer = new CObjectViewer(Obj, this);
+		Viewer = new CObjectViewer(Obj, this, true);
 	}
 	return false;
 #undef CLASS_VIEWER
