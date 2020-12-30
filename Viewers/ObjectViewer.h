@@ -209,6 +209,7 @@ private:
 	const CAnimSet*	Anim;
 	bool			bIsUE4Mesh;
 	USkeleton*		Skeleton;
+	int				HighlightMeshIndex;
 };
 
 

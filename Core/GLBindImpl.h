@@ -43,7 +43,7 @@ static const char *GLNames[NUM_GLFUNCS + NUM_EXTFUNCS] = {
 	"glGenTextures",
 	"glGetError",
 	"glGetIntegerv",
-	"glGetMaterialfv",
+	"glGetLightfv",
 	"glGetString",
 	"glIsEnabled",
 	"glIsTexture",
@@ -321,10 +321,10 @@ static void APIENTRY logGetIntegerv(GLenum pname, GLint * params)
 	lib.GetIntegerv(pname, params);
 }
 
-static void APIENTRY logGetMaterialfv(GLenum face, GLenum pname, GLfloat * params)
+static void APIENTRY logGetLightfv(GLenum light, GLenum pname, GLfloat * params)
 {
-	printf("%s\n", "glGetMaterialfv");
-	lib.GetMaterialfv(face, pname, params);
+	printf("%s\n", "glGetLightfv");
+	lib.GetLightfv(light, pname, params);
 }
 
 static const GLubyte * APIENTRY logGetString(GLenum name)
@@ -771,7 +771,7 @@ static const GL_t logFuncs = {
 	logGenTextures,
 	logGetError,
 	logGetIntegerv,
-	logGetMaterialfv,
+	logGetLightfv,
 	logGetString,
 	logIsEnabled,
 	logIsTexture,

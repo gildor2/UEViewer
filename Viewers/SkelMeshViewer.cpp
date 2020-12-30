@@ -27,15 +27,12 @@
 #define TEST_ANIMS			1
 
 //#define SHOW_BOUNDS		1
-#define HIGHLIGHT_CURRENT	1
 
 #define HIGHLIGHT_DURATION	0.5f		// seconds
-#define HIGHLIGHT_STRENGTH	4.0f
+#define HIGHLIGHT_STRENGTH	2.0f
 
 
-#if HIGHLIGHT_CURRENT
 static float TimeSinceCreate;
-#endif
 
 TArray<CSkelMeshInstance*> CSkelMeshViewer::TaggedMeshes;
 UObject *GForceAnimSet = NULL;
@@ -68,6 +65,7 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 ,	ShowAttach(false)
 ,	ShowUV(false)
 ,	bIsUE4Mesh(false)
+,	HighlightMeshIndex(-1)
 {
 	guard(CSkelMeshViewer::CSkelMeshViewer);
 
@@ -121,9 +119,8 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 		Mins = Maxs = nullVec3;
 	}
 	// extend bounds with additional meshes
-	for (int i = 0; i < TaggedMeshes.Num(); i++)
+	for (CSkelMeshInstance* Inst : TaggedMeshes)
 	{
-		CSkelMeshInstance* Inst = TaggedMeshes[i];
 		if (Inst->pMesh != SkelInst->pMesh)
 		{
 			const CSkeletalMesh *Mesh2 = Inst->pMesh;
@@ -136,13 +133,11 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 			ComputeBounds(Bounds2, 2, sizeof(CVec3), Mins, Maxs, true);	// include Bounds2 into Mins/Maxs
 		}
 		// reset animation for all meshes
-		TaggedMeshes[i]->TweenAnim(NULL, 0);
+		Inst->TweenAnim(NULL, 0);
 	}
 	InitViewerPosition(Mins, Maxs);
 
-#if HIGHLIGHT_CURRENT
 	TimeSinceCreate = -2;		// ignore first 2 frames: 1st frame will be called after mesh changing, 2nd frame could load textures etc
-#endif
 
 #if SHOW_BOUNDS
 	appPrintf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
@@ -167,8 +162,8 @@ void CSkelMeshViewer::SetAnim(const CAnimSet* AnimSet)
 	MeshInst->SetAnim(AnimSet);
 
 	// Set animation to all tagged meshes
-	for (int i = 0; i < TaggedMeshes.Num(); i++)
-		TaggedMeshes[i]->SetAnim(AnimSet);
+	for (CSkelMeshInstance* MeshInst : TaggedMeshes)
+		MeshInst->SetAnim(AnimSet);
 
 	unguard;
 }
@@ -278,8 +273,8 @@ void CSkelMeshViewer::Export()
 	Mesh->Anim = NULL;
 
 	// Export all tagged meshes
-	for (int i = 0; i < TaggedMeshes.Num(); i++)
-		ExportObject(TaggedMeshes[i]->pMesh->OriginalMesh);
+	for (CSkelMeshInstance* MeshInst : TaggedMeshes)
+		ExportObject(MeshInst->pMesh->OriginalMesh);
 }
 
 
@@ -306,10 +301,10 @@ void CSkelMeshViewer::TagMesh(CSkelMeshInstance *Inst)
 
 void CSkelMeshViewer::UntagAllMeshes()
 {
-	for (int i = 0; i < TaggedMeshes.Num(); i++)
+	for (CSkelMeshInstance* MeshInst : TaggedMeshes)
 	{
-		TaggedMeshes[i]->SetAnim(NULL);
-		delete TaggedMeshes[i];
+		MeshInst->SetAnim(NULL);
+		delete MeshInst;
 	}
 	TaggedMeshes.Empty();
 }
@@ -337,9 +332,15 @@ void CSkelMeshViewer::Draw2D()
 	if (bIsUE4Mesh)
 	{
 		if (Skeleton)
-			DrawTextLeft(S_GREEN "Skeleton: " S_WHITE "%s", Skeleton->Name);
+		{
+			bool bClicked = DrawTextH(ETextAnchor::TopLeft, NULL, S_GREEN "Skeleton: " S_WHITE S_HYPERLINK("%s"), Skeleton->Name);
+			if (bClicked)
+				JumpTo(Skeleton);
+		}
 		else
+		{
 			DrawTextBottomLeft(S_RED"WARNING: no skeleton, animation will not work!");
+		}
 	}
 #endif // UNREAL4
 
@@ -371,13 +372,32 @@ void CSkelMeshViewer::Draw2D()
 	}
 
 	// show extra meshes
+	HighlightMeshIndex = -1;
 	for (int i = 0; i < TaggedMeshes.Num(); i++)
-		DrawTextLeft("%s%d: %s", (TaggedMeshes[i]->pMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, TaggedMeshes[i]->pMesh->OriginalMesh->Name);
+	{
+		CSkeletalMesh* TaggedMesh = TaggedMeshes[i]->pMesh;
+		bool bHighlight;
+		bool bClicked = DrawTextH(ETextAnchor::TopLeft, &bHighlight, "%s%d: " S_HYPERLINK("%s"), (TaggedMesh == MeshInst->pMesh) ? S_RED : S_WHITE, i, TaggedMesh->OriginalMesh->Name);
+		if (bHighlight)
+		{
+			TimeSinceCreate = 1000.0f; // disable another highlight
+			HighlightMeshIndex = i;
+		}
+		if (bClicked && TaggedMesh != Mesh)
+		{
+			TimeSinceCreate = 1000.0f; // disable another highlight
+			JumpTo(TaggedMesh->OriginalMesh);
+		}
+	}
 
 	// show animation information
 	if (Anim)
 	{
-		DrawTextBottomLeft("\n" S_GREEN "AnimSet : " S_WHITE "%s", Anim->OriginalAnim->Name);
+		DrawTextLeft("\n"); // Add a newline. Hyperlinks can't start with '\n', it will fail to parse - so don't insert \n into the hypelink's text
+		if (DrawTextH(ETextAnchor::BottomLeft, NULL, S_GREEN "AnimSet : " S_WHITE S_HYPERLINK("%s"), Anim->OriginalAnim->Name))
+		{
+			JumpTo(Anim->OriginalAnim);
+		}
 
 		const char *OnOffStatus = NULL;
 		switch (MeshInst->RotationMode)
@@ -399,12 +419,27 @@ void CSkelMeshViewer::Draw2D()
 				Anim->UseAnimTranslation.Num(), Anim->ForceMeshTranslation.Num());
 		}
 
-		const CAnimSequence *Seq = MeshInst->GetAnim(0);
+		const CAnimSequence* Seq = MeshInst->GetAnim(0);
 		if (Seq)
 		{
-			DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " %d/%d (%s) " S_GREEN "Rate:" S_WHITE " %g " S_GREEN "Frames:" S_WHITE " %d%s",
-				AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames,
-				Seq->bAdditive ? S_RED" (additive)" : "");
+			if (Seq->OriginalSequence)
+			{
+				// Draw sequence name as hyperlink
+				bool bClicked = DrawTextH(ETextAnchor::BottomLeft, NULL, S_GREEN "Anim:" S_WHITE " %d/%d "
+					"(" S_HYPERLINK("%s") ") "
+					S_GREEN " Rate:" S_WHITE " %g " S_GREEN "Frames:" S_WHITE " %d%s",
+					AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames,
+					Seq->bAdditive ? S_RED" (additive)" : "");
+				if (bClicked)
+					JumpTo(Seq->OriginalSequence);
+			}
+			else
+			{
+				DrawTextBottomLeft(S_GREEN "Anim:" S_WHITE " %d/%d (%s)"
+					S_GREEN " Rate:" S_WHITE " %g " S_GREEN "Frames:" S_WHITE " %d%s",
+					AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames,
+					Seq->bAdditive ? S_RED" (additive)" : "");
+			}
 			DrawTextBottomRight(S_GREEN "Time:" S_WHITE " %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
 #if ANIM_DEBUG_INFO
 			const FString& DebugText = Seq->DebugInfo;
@@ -444,44 +479,55 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	// tick animations
 	MeshInst->UpdateAnimation(TimeDelta);
 
-#if HIGHLIGHT_CURRENT
+	CSkelMeshInstance* HighlightInstance = NULL;
+	if (HighlightMeshIndex >= 0)
+	{
+		HighlightInstance = TaggedMeshes[HighlightMeshIndex];
+	}
+
 	if (TimeSinceCreate < 0)
 		TimeSinceCreate += 1.0f;			// ignore this frame for highlighting
 	else
 		TimeSinceCreate += TimeDelta;
 
-	float lightAmbient[4];
-	float boost = 0;
-	float highlightTime = max(TimeSinceCreate, 0);
+	// Support for highlighting. Using 'glMaterial' for fixed pipeline implementation.
+	// Request current light parameters.
+	float savedAmbient[4];
+	float savedDiffuse[4];
+	glGetLightfv(GL_LIGHT0, GL_AMBIENT, savedAmbient);
+	glGetLightfv(GL_LIGHT0, GL_DIFFUSE, savedDiffuse);
 
-	if (TaggedMeshes.Num() && highlightTime < HIGHLIGHT_DURATION)
+	float highlightTime = max(TimeSinceCreate, 0);
+	static const float dark[4] = { 0.01f, 0.01f, 0.01f, 1.0f };
+
+	if (TaggedMeshes.Num() && (highlightTime < HIGHLIGHT_DURATION) && (HighlightInstance == NULL))
 	{
 		if (highlightTime > HIGHLIGHT_DURATION / 2)
 			highlightTime = HIGHLIGHT_DURATION - highlightTime;	// fade
-		boost = HIGHLIGHT_STRENGTH * highlightTime / (HIGHLIGHT_DURATION / 2);
+		float boost = HIGHLIGHT_STRENGTH * highlightTime / (HIGHLIGHT_DURATION / 2);
 
-		glGetMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
-		lightAmbient[0] += boost;
-		lightAmbient[1] += boost;
-		lightAmbient[2] += boost;
-		glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-		glMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
+		float newAmbient[4];
+		memcpy(newAmbient, savedAmbient, sizeof(newAmbient));
+		newAmbient[0] += boost; newAmbient[1] += boost; newAmbient[2] += boost;
+		glLightfv(GL_LIGHT0, GL_AMBIENT, newAmbient);
+		glMaterialfv(GL_FRONT, GL_AMBIENT, newAmbient);
 	}
-#endif // HIGHLIGHT_CURRENT
+
+	if (HighlightInstance != NULL && HighlightInstance->pMesh != MeshInst->pMesh)
+	{
+		// Darken the mesh
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, dark);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, dark);
+	}
 
 	// draw main mesh
 	CMeshViewer::Draw3D(TimeDelta);
 
-#if HIGHLIGHT_CURRENT
-	if (boost > 0)
-	{
-		lightAmbient[0] -= boost;
-		lightAmbient[1] -= boost;
-		lightAmbient[2] -= boost;
-		glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-		glMaterialfv(GL_FRONT, GL_AMBIENT, lightAmbient);
-	}
-#endif // HIGHLIGHT_CURRENT
+	// Restore light parameters
+	glLightfv(GL_LIGHT0, GL_AMBIENT, savedAmbient);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, savedAmbient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, savedDiffuse);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, savedDiffuse);
 
 	int i;
 
@@ -516,12 +562,30 @@ void CSkelMeshViewer::Draw3D(float TimeDelta)
 	glColor3f(1, 1, 1);
 #endif // SHOW_BOUNDS
 
-	for (i = 0; i < TaggedMeshes.Num(); i++)
+	for (CSkelMeshInstance* mesh : TaggedMeshes)
 	{
-		CSkelMeshInstance *mesh = TaggedMeshes[i];
 		if (mesh->pMesh == MeshInst->pMesh) continue;	// avoid duplicates
 		mesh->UpdateAnimation(TimeDelta);
-		DrawMesh(mesh);
+
+		if (HighlightInstance != mesh && HighlightInstance != NULL)
+		{
+			// Darken the mesh
+			glLightfv(GL_LIGHT0, GL_AMBIENT, dark);
+			glMaterialfv(GL_FRONT, GL_AMBIENT, dark);
+			glLightfv(GL_LIGHT0, GL_DIFFUSE, dark);
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, dark);
+			// Draw the mesh
+			DrawMesh(mesh);
+			// Restore light parameters
+			glLightfv(GL_LIGHT0, GL_AMBIENT, savedAmbient);
+			glMaterialfv(GL_FRONT, GL_AMBIENT, savedAmbient);
+			glLightfv(GL_LIGHT0, GL_DIFFUSE, savedDiffuse);
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, savedDiffuse);
+		}
+		else
+		{
+			DrawMesh(mesh);
+		}
 	}
 
 	//?? make this common - place into DrawMesh() ?
@@ -639,8 +703,8 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 			// note: AnimIndex changed now
 			AnimName = MeshInst->GetAnimName(AnimIndex);
 			MeshInst->TweenAnim(AnimName, 0.25);	// change animation with tweening
-			for (i = 0; i < TaggedMeshes.Num(); i++)
-				TaggedMeshes[i]->TweenAnim(AnimName, 0.25);
+			for (CSkelMeshInstance* mesh : TaggedMeshes)
+				mesh->TweenAnim(AnimName, 0.25);
 		}
 		break;
 
@@ -673,8 +737,8 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 				Frame += 0.2f;
 			Frame = bound(Frame, 0, NumFrames-1);
 			MeshInst->FreezeAnimAt(Frame);
-			for (i = 0; i < TaggedMeshes.Num(); i++)
-				TaggedMeshes[i]->FreezeAnimAt(Frame);
+			for (CSkelMeshInstance* mesh : TaggedMeshes)
+				mesh->FreezeAnimAt(Frame);
 		}
 		break;
 
@@ -682,16 +746,16 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 		if (AnimIndex >= 0)
 		{
 			MeshInst->PlayAnim(AnimName);
-			for (i = 0; i < TaggedMeshes.Num(); i++)
-				TaggedMeshes[i]->PlayAnim(AnimName);
+			for (CSkelMeshInstance* mesh : TaggedMeshes)
+				mesh->PlayAnim(AnimName);
 		}
 		break;
 	case 'x':
 		if (AnimIndex >= 0)
 		{
 			MeshInst->LoopAnim(AnimName);
-			for (i = 0; i < TaggedMeshes.Num(); i++)
-				TaggedMeshes[i]->LoopAnim(AnimName);
+			for (CSkelMeshInstance* mesh : TaggedMeshes)
+				mesh->LoopAnim(AnimName);
 		}
 		break;
 
@@ -776,8 +840,8 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 			int mode = MeshInst->RotationMode + 1;
 			if (mode > EARO_ForceDisabled) mode = 0;
 			MeshInst->RotationMode = (EAnimRotationOnly)mode;
-			for (int i = 0; i < TaggedMeshes.Num(); i++)
-				TaggedMeshes[i]->RotationMode = (EAnimRotationOnly)mode;
+			for (CSkelMeshInstance* mesh : TaggedMeshes)
+				mesh->RotationMode = (EAnimRotationOnly)mode;
 		}
 		break;
 

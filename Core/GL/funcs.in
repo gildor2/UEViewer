@@ -107,12 +107,12 @@ void GenTextures(GLsizei n, GLuint *textures);
 GLenum GetError() NOLOG
 //void GetFloatv(GLenum pname, GLfloat *params);
 void GetIntegerv(GLenum pname, GLint *params);
-//void GetLightfv(GLenum light, GLenum pname, GLfloat *params);
+void GetLightfv(GLenum light, GLenum pname, GLfloat *params);
 //void GetLightiv(GLenum light, GLenum pname, GLint *params);
 //void GetMapdv(GLenum target, GLenum query, GLdouble *v);
 //void GetMapfv(GLenum target, GLenum query, GLfloat *v);
 //void GetMapiv(GLenum target, GLenum query, GLint *v);
-void GetMaterialfv(GLenum face, GLenum pname, GLfloat *params);
+//void GetMaterialfv(GLenum face, GLenum pname, GLfloat *params);
 //void GetMaterialiv(GLenum face, GLenum pname, GLint *params);
 //void GetPixelMapfv(GLenum map, GLfloat *values);
 //void GetPixelMapuiv(GLenum map, GLuint *values);
