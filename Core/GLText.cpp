@@ -151,6 +151,7 @@ struct CRText : public CTextRec
 static TTextContainer<CRText, 65536> GTextContainer;
 
 static int nextText_y[int(ETextAnchor::Last)];
+static int lastText_y[int(ETextAnchor::Last)];
 static int textOffset = 0;
 
 #define I 255
@@ -175,6 +176,7 @@ static const unsigned colorTable[8] =
 
 void ClearTexts()
 {
+	memcpy(lastText_y, nextText_y, sizeof(lastText_y));
 	nextText_y[int(ETextAnchor::TopLeft)] = nextText_y[int(ETextAnchor::TopRight)] = TOP_TEXT_POS + textOffset;
 	nextText_y[int(ETextAnchor::BottomLeft)] = nextText_y[int(ETextAnchor::BottomRight)] = 0;
 	GTextContainer.Clear();
@@ -212,15 +214,22 @@ static void GetTextExtents(const char* s, int &width, int &height, bool bHyperli
 }
 
 
+inline int OffsetYForAnchor(ETextAnchor anchor, int y, bool usePreviousFrameData = false)
+{
+	if (anchor == ETextAnchor::BottomLeft || anchor == ETextAnchor::BottomRight)
+	{
+		const int* offsets = usePreviousFrameData ? lastText_y : nextText_y;
+		return y + Viewport::Size.Y - offsets[int(anchor)] - BOTTOM_TEXT_POS;
+	}
+	return y;
+}
+
 static void DrawText(const CRText *rec)
 {
 	int y = rec->y;
 	const char *text = rec->text;
 
-	if (rec->anchor == ETextAnchor::BottomLeft || rec->anchor == ETextAnchor::BottomRight)
-	{
-		y = y + Viewport::Size.Y - nextText_y[int(rec->anchor)] - BOTTOM_TEXT_POS;
-	}
+	y = OffsetYForAnchor(rec->anchor, y);
 
 	unsigned color = rec->color;
 	unsigned color2 = color;
@@ -369,8 +378,13 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 
 	if (bHyperlink)
 	{
+		int real_y = pos_y;
+		// Make hyperlinks working for bottom anchors. We'll use previous frame offset, so
+		// there will be a 1 frame delay if text will be changed.
+		real_y = OffsetYForAnchor(anchor, real_y, true);
+
 		// Do the rough estimation of having mouse in the whole text's bounds
-		if (pos_y <= Viewport::MousePos.Y && Viewport::MousePos.Y < pos_y + h &&
+		if (real_y <= Viewport::MousePos.Y && Viewport::MousePos.Y < real_y + h &&
 			pos_x <= Viewport::MousePos.X && Viewport::MousePos.X <= pos_x + w)
 		{
 			// Check if we'll get into exact hyperlink bounds, verify only X coordinate now
