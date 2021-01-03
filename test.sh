@@ -17,6 +17,7 @@ Options:
     --<game>                choose predefined game path; <game> = ut2|ut3|gow2 etc
     --debug                 build with -debug option
     --profile               build with --profile option
+    --clip					do not start umodel, copy the startup command to clipboard (Windows only)
     --help                  display this help message
     --path=<path>			use instead of -path=... when path has spaces
     -path=<path>            set game path; will disable default game substitution
@@ -58,6 +59,7 @@ debugOpt=
 #   (this will append "Some Game Name" to all variants of steam path)
 launcher=("C:/3-UnrealEngine/" "D:/EpicGames/")
 steam=("C:/Program Files (x86)/Steam/SteamApps/common/" "D:/Steam/steamapps/common/")
+launch_string_to_clipboard=0
 
 function CheckDir()
 {
@@ -100,12 +102,24 @@ function run()
 {
 	if [ "$foundPath" ]; then
 		console_title "$exe -path="$foundPath" $@"
-		echo -e "${S_GREEN}Starting $exe -path="$foundPath" $@${S_DEFAULT}"
-		./$exe -path="$foundPath" $debugOpt "$@"
+		if [ $launch_string_to_clipboard -eq 0 ]; then
+			echo -e "${S_GREEN}Starting $exe -path="$foundPath" $@${S_DEFAULT}"
+			# Warning: the execution will replace starting '/Game' with 'C:/Root/Dir/Game'
+			# https://stackoverflow.com/questions/7250130/how-to-stop-mingw-and-msys-from-mangling-path-names-given-at-the-command-line
+			./$exe -path="$foundPath" $debugOpt "$@"
+		else
+			echo Execution string copied to clipboard
+			echo $exe -path="$foundPath" $debugOpt "$@" | clip.exe
+		fi
 	else
 		console_title "$exe $debugOpt $@"
-		echo -e "${S_GREEN}Starting $exe $debugOpt $@${S_DEFAULT}"
-		./$exe $debugOpt "$@"
+		if [ $launch_string_to_clipboard -eq 0 ]; then
+			echo -e "${S_GREEN}Starting $exe $debugOpt $@${S_DEFAULT}"
+			./$exe $debugOpt "$@"
+		else
+			echo Execution string copied to clipboard
+			echo $exe $debugOpt "$@" | clip.exe
+		fi
 	fi
 }
 
@@ -180,7 +194,7 @@ function paragon()
 function fortnite()
 {
 	CheckDir "${launcher[@]/%/Fortnite/FortniteGame/Content/Paks}"
-	run -game=ue4.27 -aes=@Docs/fortnite.txt $*
+	run -game=ue4.27 -aes=@Docs/fortnite.txt "$@"
 }
 function ue3()
 {
@@ -282,6 +296,9 @@ for arg in "$@"; do		# using quoted $@ will allow to correctly separate argument
 		;;
 	--profile)
 		buildopt="$buildopt --profile"
+		;;
+	--clip)
+		launch_string_to_clipboard=1
 		;;
 	--path=*)
 		path=1
