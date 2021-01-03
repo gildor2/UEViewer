@@ -666,8 +666,17 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 	delete Ar0;
 
 	// generate configuration file with extended attributes
+
+	// Get statistics of each bone retargetting mode to see if we need a config or not
+	int ModeCounts[(int)EBoneRetargettingMode::Count];
+	memset(ModeCounts, 0, sizeof(ModeCounts));
+	for (EBoneRetargettingMode Mode : Anim->BoneModes)
+	{
+		ModeCounts[(int)Mode]++;
+	}
+
 	bool bSaveConfig = true;
-	if (!Anim->AnimRotationOnly && !Anim->UseAnimTranslation.Num() && !Anim->ForceMeshTranslation.Num() && !requireConfig)
+	if (ModeCounts[(int)EBoneRetargettingMode::Animation] != Anim->BoneModes.Num() && !requireConfig)
 	{
 		// nothing to write
 		bSaveConfig = false;
@@ -683,18 +692,29 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 	{
 		// we are using UE3 property names here
 
-		// AnimRotationOnly
-		Ar1->Printf("[AnimSet]\nbAnimRotationOnly=%d\n", Anim->AnimRotationOnly);
-		// UseTranslationBoneNames
-		Ar1->Printf("\n[UseTranslationBoneNames]\n");
-		for (i = 0; i < Anim->UseAnimTranslation.Num(); i++)
-			if (Anim->UseAnimTranslation[i])
-				Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
-		// ForceMeshTranslationBoneNames
-		Ar1->Printf("\n[ForceMeshTranslationBoneNames]\n");
-		for (i = 0; i < Anim->ForceMeshTranslation.Num(); i++)
-			if (Anim->ForceMeshTranslation[i])
-				Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
+		// Just optimization of the config file size: use AnimRotationOnly when most of bones use translation
+		// from the mesh.
+		bool AnimRotationOnly = (ModeCounts[(int)EBoneRetargettingMode::Animation]
+			+ ModeCounts[(int)EBoneRetargettingMode::Mesh]) == numBones;
+
+		if (AnimRotationOnly)
+		{
+			// Old mode
+			// AnimRotationOnly: this will reset all bones to use translation from the mesh
+			Ar1->Printf("[AnimSet]\nbAnimRotationOnly=%d\n", AnimRotationOnly);
+			// UseTranslationBoneNames: allow animated translation
+			Ar1->Printf("\n[UseTranslationBoneNames]\n");
+			for (i = 0; i < Anim->BoneModes.Num(); i++)
+				if (Anim->BoneModes[i] == EBoneRetargettingMode::Animation)
+					Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
+			// ForceMeshTranslationBoneNames: this will revert a bone back to translation from the mesh.
+			// It is no longer used. In UE3, it was possible to set up AnimRotationOnly per mesh, or from
+			// AnimTree, so this setting wasn't global.
+			/* Ar1->Printf("\n[ForceMeshTranslationBoneNames]\n");
+			for (i = 0; i < Anim->ForceMeshTranslation.Num(); i++)
+				if (Anim->ForceMeshTranslation[i])
+					Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]); */
+		}
 
 		if (requireConfig)
 		{

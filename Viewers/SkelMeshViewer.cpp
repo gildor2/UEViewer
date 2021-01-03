@@ -400,24 +400,19 @@ void CSkelMeshViewer::Draw2D()
 		}
 
 		const char *OnOffStatus = NULL;
-		switch (MeshInst->RotationMode)
+		switch ((EAnimRotationOnly)MeshInst->RotationMode)
 		{
-		case EARO_AnimSet:
-			OnOffStatus = (Anim->AnimRotationOnly) ? "on" : "off";
+		case EAnimRotationOnly::AnimSet:
+			OnOffStatus = "use AnimSet data";
 			break;
-		case EARO_ForceEnabled:
+		case EAnimRotationOnly::ForceEnabled:
 			OnOffStatus = S_RED "force on";
 			break;
-		case EARO_ForceDisabled:
+		case EAnimRotationOnly::ForceDisabled:
 			OnOffStatus = S_RED "force off";
 			break;
 		}
 		DrawTextBottomLeft(S_GREEN "RotationOnly:" S_WHITE " %s", OnOffStatus);
-		if (Anim->UseAnimTranslation.Num() || Anim->ForceMeshTranslation.Num())
-		{
-			DrawTextBottomLeft(S_GREEN "UseAnimBones:" S_WHITE " %d " S_GREEN "ForceMeshBones:" S_WHITE " %d",
-				Anim->UseAnimTranslation.Num(), Anim->ForceMeshTranslation.Num());
-		}
 
 		const CAnimSequence* Seq = MeshInst->GetAnim(0);
 		if (Seq)
@@ -838,10 +833,10 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 	case 'r'|KEY_CTRL:
 		{
 			int mode = MeshInst->RotationMode + 1;
-			if (mode > EARO_ForceDisabled) mode = 0;
-			MeshInst->RotationMode = (EAnimRotationOnly)mode;
+			if (mode >= (int)EAnimRotationOnly::Count) mode = 0;
+			MeshInst->RotationMode = mode;
 			for (CSkelMeshInstance* mesh : TaggedMeshes)
-				mesh->RotationMode = (EAnimRotationOnly)mode;
+				mesh->RotationMode = mode;
 		}
 		break;
 

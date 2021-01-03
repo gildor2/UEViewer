@@ -280,16 +280,30 @@ public:
 
 
 // taken from UE3/SkeletalMeshComponent
-enum EAnimRotationOnly
+enum class EAnimRotationOnly
 {
-	/** Use settings defined in each AnimSet (default) */
-	EARO_AnimSet,
-	/** Force AnimRotationOnly enabled on all AnimSets, but for this SkeletalMesh only */
-	EARO_ForceEnabled,
-	/** Force AnimRotationOnly disabled on all AnimSets, but for this SkeletalMesh only */
-	EARO_ForceDisabled
+	// Use settings defined in each AnimSet (default)
+	AnimSet,
+	// Force AnimRotationOnly enabled on all AnimSets, but for this SkeletalMesh only
+	ForceEnabled,
+	// Force AnimRotationOnly disabled on all AnimSets, but for this SkeletalMesh only
+	ForceDisabled,
+
+	Count
 };
 
+
+enum class EBoneRetargettingMode : uint8
+{
+	// Use translation from animation
+	Animation,
+	// Use translation from mesh
+	Mesh,
+	// Recompute translation from difference between mesh and animation skeletons
+	OrientAndScale,
+
+	Count
+};
 
 class CAnimSet
 {
@@ -298,9 +312,7 @@ public:
 	TArray<FName>			TrackBoneNames;
 	TArray<CAnimSequence*>	Sequences;
 
-	bool					AnimRotationOnly;
-	TArray<bool>			UseAnimTranslation;		// per bone; used with AnimRotationOnly mode
-	TArray<bool>			ForceMeshTranslation;	// pre bone; used regardless of AnimRotationOnly
+	TArray<EBoneRetargettingMode> BoneModes;
 
 	CAnimSet()
 	{}
@@ -314,9 +326,7 @@ public:
 	{
 		OriginalAnim = Other.OriginalAnim;
 		CopyArray(TrackBoneNames, Other.TrackBoneNames);
-		AnimRotationOnly = Other.AnimRotationOnly;
-		CopyArray(UseAnimTranslation, Other.UseAnimTranslation);
-		CopyArray(ForceMeshTranslation, Other.ForceMeshTranslation);
+		CopyArray(BoneModes, Other.BoneModes);
 	}
 
 	~CAnimSet()
@@ -325,22 +335,38 @@ public:
 			delete Sequences[i];
 	}
 
-	bool ShouldAnimateTranslation(int BoneIndex, EAnimRotationOnly RotationMode = EARO_AnimSet) const
+	bool ShouldAnimateTranslation(int BoneIndex, EAnimRotationOnly RotationMode = EAnimRotationOnly::AnimSet) const
 	{
 		if (BoneIndex == 0)							// root bone is always fully animated
 			return true;
+#if 0
+		// OLD code
 		if (ForceMeshTranslation.Num() && ForceMeshTranslation[BoneIndex])
 			return false;
 		bool AnimRotationOnly2 = AnimRotationOnly;
-		if (RotationMode == EARO_ForceEnabled)
+		if (RotationMode == EAnimRotationOnly::ForceEnabled)
 			AnimRotationOnly2 = true;
-		else if (RotationMode == EARO_ForceDisabled)
+		else if (RotationMode == EAnimRotationOnly::ForceDisabled)
 			AnimRotationOnly2 = false;
 		if (!AnimRotationOnly2)
 			return true;
 		if (UseAnimTranslation.Num() && UseAnimTranslation[BoneIndex])
 			return true;
 		return false;
+#else
+		// Global override
+		if (RotationMode == EAnimRotationOnly::ForceEnabled)
+			return false;
+		else if (RotationMode == EAnimRotationOnly::ForceDisabled)
+			return true;
+
+		// Per-bone settings
+		if (BoneModes.IsValidIndex(BoneIndex))
+		{
+			return BoneModes[BoneIndex] == EBoneRetargettingMode::Animation;
+		}
+		return true;
+#endif
 	}
 };
 

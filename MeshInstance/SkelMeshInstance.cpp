@@ -93,7 +93,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 :	LodIndex(0)
 ,	MorphIndex(-1)
 ,	UVIndex(0)
-,	RotationMode(EARO_AnimSet)
+,	RotationMode((int)EAnimRotationOnly::AnimSet)
 ,	LastLodIndex(-2)				// initialize with value which differs from LodNum and from all other values
 ,	LastMorphIndex(-1)
 ,	MaxAnimChannel(-1)
@@ -527,7 +527,11 @@ void CSkelMeshInstance::UpdateSkeleton()
 				}
 				// process AnimRotationOnly
 				if (!Animation->ShouldAnimateTranslation(BoneIndex, (EAnimRotationOnly)RotationMode))
+				{
 					BP = Bone.Position;
+					// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
+					BoneUpdateCounts[i] += 3;
+				}
 			}
 			else
 			{
@@ -863,9 +867,16 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 //			Color.Set(1,1,0.3);
 #if SHOW_BONE_UPDATES
 			int t = BoneUpdateCounts[i];
-			Color[0] = t & 1;
-			Color[1] = (t >> 1) & 1;
-			Color[2] = (t >> 2) & 1;
+			if (t)
+			{
+				Color[0] = t & 1;
+				Color[1] = (t >> 1) & 1;
+				Color[2] = (t >> 2) & 1;
+			}
+			else
+			{
+				Color[0] = Color[1] = Color[2] = 0.5f;
+			}
 #endif
 			v1 = BoneData[B.ParentIndex].Coords.origin;
 		}

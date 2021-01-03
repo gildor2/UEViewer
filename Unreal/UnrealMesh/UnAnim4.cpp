@@ -428,14 +428,33 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		ConvertedAnim = AnimSet;
 
 		// Copy bone names
-		AnimSet->TrackBoneNames.Empty(ReferenceSkeleton.RefBoneInfo.Num());
-		for (int i = 0; i < ReferenceSkeleton.RefBoneInfo.Num(); i++)
+		int NumBones = ReferenceSkeleton.RefBoneInfo.Num();
+		assert(BoneTree.Num() == NumBones);
+
+		AnimSet->TrackBoneNames.Empty(NumBones);
+		AnimSet->BoneModes.AddZeroed(NumBones);
+
+		for (int i = 0; i < NumBones; i++)
 		{
 			AnimSet->TrackBoneNames.Add(ReferenceSkeleton.RefBoneInfo[i].Name);
+			EBoneRetargettingMode BoneMode =EBoneRetargettingMode::Animation;
+			switch (BoneTree[i].TranslationRetargetingMode)
+			{
+			case EBoneTranslationRetargetingMode::Skeleton:
+				BoneMode = EBoneRetargettingMode::Mesh;
+				break;
+			case EBoneTranslationRetargetingMode::Animation:
+				BoneMode = EBoneRetargettingMode::Animation;
+				break;
+			case EBoneTranslationRetargetingMode::OrientAndScale:
+				BoneMode = EBoneRetargettingMode::OrientAndScale;
+				break;
+			default:
+				//todo: other modes?
+				BoneMode = EBoneRetargettingMode::OrientAndScale;
+			}
+			AnimSet->BoneModes[i] = BoneMode;
 		}
-
-		//TODO: verify if UE4 has AnimRotationOnly stuff
-		AnimSet->AnimRotationOnly = false;
 	}
 
 	if (!Seq) return; // allow calling ConvertAnims(NULL) to create empty AnimSet

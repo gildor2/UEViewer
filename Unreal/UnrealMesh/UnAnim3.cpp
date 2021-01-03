@@ -622,25 +622,31 @@ void UAnimSet::ConvertAnims()
 #endif
 	int NumTracks = TrackBoneNames.Num();
 
-	AnimSet->AnimRotationOnly = bAnimRotationOnly;
-	if (UseTranslationBoneNames.Num())
+	if (UseTranslationBoneNames.Num() || ForceMeshTranslationBoneNames.Num())
 	{
-		AnimSet->UseAnimTranslation.AddZeroed(NumTracks);
-		for (i = 0; i < UseTranslationBoneNames.Num(); i++)
+		// Setup animation retargetting
+		AnimSet->BoneModes.Init(EBoneRetargettingMode::Mesh, NumTracks);
+		if (UseTranslationBoneNames.Num() && bAnimRotationOnly)
 		{
-			for (j = 0; j < TrackBoneNames.Num(); j++)
-				if (UseTranslationBoneNames[i] == TrackBoneNames[j])
-					AnimSet->UseAnimTranslation[j] = true;
+			for (i = 0; i < UseTranslationBoneNames.Num(); i++)
+			{
+				for (j = 0; j < TrackBoneNames.Num(); j++)
+					if (UseTranslationBoneNames[i] == TrackBoneNames[j])
+						AnimSet->BoneModes[j] = EBoneRetargettingMode::Animation;
+			}
 		}
-	}
-	if (ForceMeshTranslationBoneNames.Num())
-	{
-		AnimSet->ForceMeshTranslation.AddZeroed(NumTracks);
-		for (i = 0; i < ForceMeshTranslationBoneNames.Num(); i++)
+		if (ForceMeshTranslationBoneNames.Num())
 		{
-			for (j = 0; j < TrackBoneNames.Num(); j++)
-				if (ForceMeshTranslationBoneNames[i] == TrackBoneNames[j])
-					AnimSet->ForceMeshTranslation[j] = true;
+			// This array overrides bones set as "EBoneRetargettingMode::Animation" to use "Mesh" mode again.
+			// We're no longer storing this array in CAnimSet separately. Probably it is not good (for UE3 games),
+			// because in UE3 it was possible to set up AnimRotationOnly per mesh, or from AnimTree, so this
+			// setting wasn't global.
+			for (i = 0; i < ForceMeshTranslationBoneNames.Num(); i++)
+			{
+				for (j = 0; j < TrackBoneNames.Num(); j++)
+					if (ForceMeshTranslationBoneNames[i] == TrackBoneNames[j])
+						AnimSet->BoneModes[j] = EBoneRetargettingMode::Mesh;
+			}
 		}
 	}
 
