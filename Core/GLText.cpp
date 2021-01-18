@@ -357,6 +357,7 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 	if (GDumpTexts) pos_y = Viewport::Size.Y / 2;		// trick to avoid text culling
 #endif
 
+	if (pHover) *pHover = false;						// initialize in a case of early return
 	if (!isBottom && pos_y >= Viewport::Size.Y && !GDumpTexts)	// out of screen
 		return bClicked;
 
