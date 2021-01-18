@@ -101,6 +101,8 @@ protected:
 	TArray<FIoStoreTocCompressedBlockEntry> CompressionBlocks;
 	int NumCompressionMethods;
 	int CompressionMethods[MAX_COMPRESSION_METHODS];
+	uint64 PartitionSize;
+	uint32 PartitionCount;
 };
 
 const CGameFileInfo* FindPackageById(FPackageId PackageId);

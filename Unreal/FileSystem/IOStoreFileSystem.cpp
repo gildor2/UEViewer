@@ -16,6 +16,7 @@ enum class EIoStoreTocVersion : uint8
 	Invalid = 0,
 	Initial,
 	DirectoryIndex,
+	PartitionSize,		// UE4.27, allows to use multi-volume (partitioned) ucas files
 	LatestPlusOne,
 	Latest = LatestPlusOne - 1
 };
@@ -124,10 +125,13 @@ struct FIoStoreTocHeader
 	uint32 CompressionMethodNameLength;
 	uint32 CompressionBlockSize;
 	uint32 DirectoryIndexSize;
+	uint32 PartitionCount;
 	uint64 ContainerId;		// FIoContainerId
 	FGuid EncryptionKeyGuid;
-	uint32 ContainerFlags;	// EIoContainerFlags (uint8) + padding
-	uint8 Pad[60];
+	uint8 ContainerFlags;	// EIoContainerFlags (uint8) + padding
+	uint8 Pad1[7];			// pad to uint64
+	uint64 PartitionSize;
+	uint8 Pad[48];
 
 	bool Read(FArchive& Ar)
 	{
@@ -140,6 +144,11 @@ struct FIoStoreTocHeader
 			return false;
 		if (TocCompressedBlockEntrySize != sizeof(FIoStoreTocCompressedBlockEntry))
 			return false;
+		if (Version < (int)EIoStoreTocVersion::PartitionSize)
+		{
+			PartitionCount = 1;
+			PartitionSize = (uint64)-1;
+		}
 		return true;
 	}
 };
@@ -325,6 +334,17 @@ void FIOStoreFile::Serialize(void *data, int size)
 	guard(FIOStoreFile::Serialize);
 	if (ArStopper > 0 && ArPos + size > ArStopper)
 		appError("Serializing behind stopper (%X+%X > %X)", ArPos, size, ArStopper);
+
+	// TODO: partitions. When PartitionCount is greater than 1, then we should read
+	// data from a different file. Multiple files has suffices in their names: name_s2.ucas,
+	// name_c3.ucas (the very first file has no name suffix) ... They behave like a single file.
+	// Each file should have size equals to PartitionSize, number of files equals to PartitionCount.
+	// The compressed offset should be divided by PartitionSize: the quetent is index of archive,
+	// the remainder is a compressed data position in a file. Requests may pass through file
+	// boundaries, so it's worth adding the checks inside a loop "while (size > 0)". File handles
+	// should be precached at FS startup time.
+	// Can't implement this logic right now as there's no games using it.
+	assert(Parent->PartitionCount == 1);
 
 	// (Re-)open pak file if needed
 	if (!IsFileOpen)
@@ -550,6 +570,8 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 	ContainerFlags = Resource.Header.ContainerFlags;
 	CompressionBlockSize = Resource.Header.CompressionBlockSize;
 	NumCompressionMethods = Resource.Header.CompressionMethodNameCount;
+	PartitionCount = Resource.Header.PartitionCount;
+	PartitionSize = Resource.Header.PartitionSize;
 	memcpy(CompressionMethods, Resource.CompressionMethods, sizeof(CompressionMethods));
 	Exchange(ChunkIds, Resource.ChunkIds);
 
