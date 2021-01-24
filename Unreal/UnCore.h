@@ -2028,7 +2028,7 @@ public:
 	}
 
 protected:
-	T		StaticData[N];
+	byte	StaticData[N * sizeof(T)];
 };
 
 #ifndef UMODEL_LIB_IN_NAMESPACE
