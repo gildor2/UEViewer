@@ -807,7 +807,7 @@ struct ImportHelper
 		return Index;
 	}
 
-	bool FindObjectInPackages(FPackageObjectIndex ObjectIndex, int& OutPackageIndex, const FObjectExport*& OutExportEntry)
+	bool FindObjectInPackages(FPackageObjectIndex ObjectIndex, int& OutPackageIndex, const FObjectExport*& OutExportEntry) const
 	{
 		for (int PackageIndex = 0; PackageIndex < Packages.Num(); PackageIndex++)
 		{
@@ -827,6 +827,7 @@ struct ImportHelper
 		return false;
 	}
 
+protected:
 	// Find unused import map entry - there are always exists because IsStore generator
 	// is making import map with same entries as in original cooked files, just replacing
 	// non-object entries with Null.

@@ -1343,9 +1343,6 @@ struct MotionChunk
 
 
 // Named bone for the animating skeleton data.
-// Note: bone set may slightly differ in USkeletalMesh and UMeshAnimation objects (missing bones, different order)
-// - should compute a map from one bone set to another; skeleton hierarchy should be taken from mesh (may differ
-// too)
 struct FNamedBone
 {
 	FName			Name;					// Bone's name (== single 32-bit index to name)

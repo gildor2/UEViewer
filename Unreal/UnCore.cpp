@@ -6,6 +6,9 @@ int  GForceGame           = GAME_UNKNOWN;
 int  GForcePackageVersion = 0;
 byte GForcePlatform       = PLATFORM_UNKNOWN;
 
+#if THREADING
+#include "Parallel.h"
+#endif
 
 #if PROFILE
 
@@ -505,6 +508,10 @@ struct CStringPoolEntry
 static CStringPoolEntry* StringHashTable[STRING_HASH_SIZE];
 static CMemoryChain* StringPool;
 
+#if THREADING
+static CMutex GStrdupPoolMutex;
+#endif
+
 const char* appStrdupPool(const char* str)
 {
 	int len = strlen(str);
@@ -530,6 +537,11 @@ const char* appStrdupPool(const char* str)
 
 #endif
 	hash &= (STRING_HASH_SIZE - 1);
+
+#if THREADING
+	// Make appStrdupPool thread-safe
+	CMutex::ScopedLock Lock(GStrdupPoolMutex);
+#endif
 
 	// Find existing string in a pool
 	CStringPoolEntry** prevPoint = &StringHashTable[hash];

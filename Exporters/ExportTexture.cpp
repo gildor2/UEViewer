@@ -518,12 +518,10 @@ void ExportTexture(const UUnrealMaterial* Tex)
 		ThreadPool::TryExecuteInThread(MoveTemp(Worker), NULL, true);
 	}
 	else
+#endif
 	{
 		Worker();
 	}
-#else
-	Worker();
-#endif
 
 	unguard;
 }
@@ -577,12 +575,10 @@ void ExportCubemap(const UUnrealMaterial* Tex)
 				ThreadPool::TryExecuteInThread(MoveTemp(Worker), NULL, true);
 			}
 			else
+	#endif
 			{
 				Worker();
 			}
-	#else
-			Worker();
-	#endif
 		}
 	}
 #endif // UNREAL4

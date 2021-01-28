@@ -242,7 +242,7 @@ static void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte 
 		}
 
 		if (!hOodleDll)
-			appError("Internal Oodle decompressor failed, %s not found", OodleDllName);
+			appErrorNoLog("Internal Oodle decompressor failed, %s not found", OodleDllName);
 
 		OodleLZ_Decompress = (OodleDecompress_t)GetProcAddress(hOodleDll, OodleFuncName);
 		assert(OodleLZ_Decompress != NULL);

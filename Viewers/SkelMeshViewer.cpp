@@ -394,7 +394,7 @@ void CSkelMeshViewer::Draw2D()
 	if (Anim)
 	{
 		DrawTextLeft("\n"); // Add a newline. Hyperlinks can't start with '\n', it will fail to parse - so don't insert \n into the hypelink's text
-		if (DrawTextH(ETextAnchor::BottomLeft, NULL, S_GREEN "AnimSet : " S_WHITE S_HYPERLINK("%s"), Anim->OriginalAnim->Name))
+		if (DrawTextH(ETextAnchor::BottomLeft, NULL, S_GREEN "AnimSet: " S_WHITE S_HYPERLINK("%s"), Anim->OriginalAnim->Name))
 		{
 			JumpTo(Anim->OriginalAnim);
 		}

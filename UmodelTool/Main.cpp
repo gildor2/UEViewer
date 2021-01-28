@@ -1304,11 +1304,12 @@ int main(int argc, const char **argv)
 		appPrintf("\nThe specified package(s) has no objects to display.\n\n");
 		goto no_objects;
 	}
+	assert(GApplication.Viewer != NULL);
 
+#if TEST_FILES
 	// print mesh info
-#	if TEST_FILES
 	GApplication.Viewer->Test();
-#	endif
+#endif
 
 	if (mainCmd == CMD_View)
 	{
