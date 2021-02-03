@@ -11,6 +11,7 @@ sources(MAIN) = {
 	$R/Unreal/UnCoreDecrypt.cpp
 	$R/Unreal/UnCoreSerialize.cpp
 	$R/Unreal/UnObject.cpp
+	$R/Unreal/UnObject4.cpp
 	$R/Unreal/UnrealPackage/*.cpp
 	$R/Unreal/GameDatabase.cpp
 	$R/Unreal/FileSystem/*.cpp

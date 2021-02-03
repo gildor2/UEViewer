@@ -75,6 +75,8 @@ int32 StringToCompressionMethod(const char* Name)
 	return 0;
 }
 
+#if UNREAL4
+
 bool FileRequiresAesKey(bool fatal)
 {
 	if ((GAesKeys.Num() == 0) && !UE4EncryptedPak())
@@ -85,3 +87,5 @@ bool FileRequiresAesKey(bool fatal)
 	}
 	return true;
 }
+
+#endif // UNREAL4

@@ -1,7 +1,7 @@
 #include "Core.h"
 #include "UnCore.h"
 #include "UnObject.h"
-#include "UnPackage.h"
+#include "UnrealPackage/UnPackage.h"
 #include "UnTypeinfo.h"
 
 //!! NOTE: UE3 has comments for properties, stored in package.UMetaData'MetaData'
