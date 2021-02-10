@@ -32,7 +32,11 @@ template<class T> inline T Lerp(const T& A, const T& B, float Alpha)
 
 struct CVec3
 {
-	float	v[3];
+	union
+	{
+		float v[3];
+		struct { float x, y, z; };
+	};
 	// access to data
 	inline float& operator[](int index)
 	{
@@ -281,6 +285,11 @@ struct CQuat
 	void FromAxis(const CAxis &src);
 	void ToAxis(CAxis &dst) const;
 	float GetLength() const;
+
+	// Build a unit quaternion representing the rotation from v1 to v2. The input vectors need not be normalized.
+	void FromTwoVectors(const CVec3& v1, const CVec3& v2);
+
+	void RotateVector(const CVec3& src, CVec3& dst) const;
 
 	inline void Conjugate()
 	{

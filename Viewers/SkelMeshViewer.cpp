@@ -400,19 +400,19 @@ void CSkelMeshViewer::Draw2D()
 		}
 
 		const char *OnOffStatus = NULL;
-		switch ((EAnimRotationOnly)MeshInst->RotationMode)
+		switch ((EAnimRetargetingMode)MeshInst->RetargetingMode)
 		{
-		case EAnimRotationOnly::AnimSet:
-			OnOffStatus = "use AnimSet data";
+		case EAnimRetargetingMode::AnimSet:
+			OnOffStatus = "default";
 			break;
-		case EAnimRotationOnly::ForceEnabled:
-			OnOffStatus = S_RED "force on";
+		case EAnimRetargetingMode::AnimRotationOnly:
+			OnOffStatus = S_YELLOW "force mesh translation";
 			break;
-		case EAnimRotationOnly::ForceDisabled:
-			OnOffStatus = S_RED "force off";
+		case EAnimRetargetingMode::NoRetargeting:
+			OnOffStatus = S_RED "disabled";
 			break;
 		}
-		DrawTextBottomLeft(S_GREEN "RotationOnly:" S_WHITE " %s", OnOffStatus);
+		DrawTextBottomLeft(S_GREEN "Retargeting:" S_WHITE " %s", OnOffStatus);
 
 		const CAnimSequence* Seq = MeshInst->GetAnim(0);
 		if (Seq)
@@ -625,7 +625,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("F",      "focus camera on mesh");
 	DrawKeyHelp("Ctrl+B", "dump skeleton to console");
 	DrawKeyHelp("Ctrl+A", bIsUE4Mesh ? "find animations (UE4)" : "cycle mesh animation sets");
-	DrawKeyHelp("Ctrl+R", "toggle animation translaton mode");
+	DrawKeyHelp("Ctrl+R", "toggle animation retargeting mode");
 	DrawKeyHelp("Ctrl+T", "tag/untag mesh");
 	DrawKeyHelp("Ctrl+U", "display UV");
 }
@@ -832,11 +832,11 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 
 	case 'r'|KEY_CTRL:
 		{
-			int mode = MeshInst->RotationMode + 1;
-			if (mode >= (int)EAnimRotationOnly::Count) mode = 0;
-			MeshInst->RotationMode = mode;
+			int mode = MeshInst->RetargetingMode + 1;
+			if (mode >= (int)EAnimRetargetingMode::Count) mode = 0;
+			MeshInst->RetargetingMode = mode;
 			for (CSkelMeshInstance* mesh : TaggedMeshes)
-				mesh->RotationMode = mode;
+				mesh->RetargetingMode = mode;
 		}
 		break;
 

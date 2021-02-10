@@ -141,7 +141,7 @@ public:
 	int			LodIndex;
 	int			MorphIndex;
 	int			UVIndex;
-	int			RotationMode;				// EAnimRotationOnly
+	int			RetargetingMode;			// EAnimRetargetingMode
 
 	CSkelMeshInstance();
 	virtual ~CSkelMeshInstance();

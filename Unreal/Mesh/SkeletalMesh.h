@@ -250,6 +250,12 @@ struct CAnimTrack
 	void CopyFrom(const CAnimTrack &Src);
 };
 
+// Local analog of FTransform
+struct CSkeletonBonePosition
+{
+	CVec3 Position;
+	CQuat Orientation;
+};
 
 class CAnimSequence
 {
@@ -260,6 +266,7 @@ public:
 	TArray<CAnimTrack*>		Tracks;					// for each CAnimSet.TrackBoneNames
 	bool					bAdditive;				// used just for on-screen information
 	const UObject*			OriginalSequence;
+	TArray<CSkeletonBonePosition> RetargetBasePose;
 #if ANIM_DEBUG_INFO
 	FString					DebugInfo;
 #endif
@@ -279,21 +286,20 @@ public:
 };
 
 
-// taken from UE3/SkeletalMeshComponent
-enum class EAnimRotationOnly
+enum class EAnimRetargetingMode
 {
 	// Use settings defined in each AnimSet (default)
 	AnimSet,
 	// Force AnimRotationOnly enabled on all AnimSets, but for this SkeletalMesh only
-	ForceEnabled,
-	// Force AnimRotationOnly disabled on all AnimSets, but for this SkeletalMesh only
-	ForceDisabled,
+	AnimRotationOnly,
+	// Always pick data from the animation, no retargeting
+	NoRetargeting,
 
 	Count
 };
 
 
-enum class EBoneRetargettingMode : uint8
+enum class EBoneRetargetingMode : uint8
 {
 	// Use translation from animation
 	Animation,
@@ -310,9 +316,10 @@ class CAnimSet
 public:
 	const UObject*			OriginalAnim;			//?? make common for all mesh classes
 	TArray<FName>			TrackBoneNames;
+	TArray<CSkeletonBonePosition> BonePositions;	// may be empty (for pre-UE4), position in array matches TrackBoneNames
 	TArray<CAnimSequence*>	Sequences;
 
-	TArray<EBoneRetargettingMode> BoneModes;
+	TArray<EBoneRetargetingMode> BoneModes;
 
 	CAnimSet()
 	{}
@@ -335,12 +342,15 @@ public:
 			delete Sequences[i];
 	}
 
-	bool ShouldAnimateTranslation(int BoneIndex, EAnimRotationOnly RotationMode = EAnimRotationOnly::AnimSet) const
+	EBoneRetargetingMode GetBoneTranslationMode(int BoneIndex, EAnimRetargetingMode RetargetingMode = EAnimRetargetingMode::AnimSet) const
 	{
-		if (BoneIndex == 0)							// root bone is always fully animated
-			return true;
+		if (BoneIndex == 0)
+		{
+			// Root bone is always fully animated
+			return EBoneRetargetingMode::Animation;
+		}
 #if 0
-		// OLD code
+		// OLD code, returns just true for animated translation and false for non-animated
 		if (ForceMeshTranslation.Num() && ForceMeshTranslation[BoneIndex])
 			return false;
 		bool AnimRotationOnly2 = AnimRotationOnly;
@@ -355,17 +365,17 @@ public:
 		return false;
 #else
 		// Global override
-		if (RotationMode == EAnimRotationOnly::ForceEnabled)
-			return false;
-		else if (RotationMode == EAnimRotationOnly::ForceDisabled)
-			return true;
+		if (RetargetingMode == EAnimRetargetingMode::AnimRotationOnly)
+			return EBoneRetargetingMode::Mesh;
+		else if (RetargetingMode == EAnimRetargetingMode::NoRetargeting)
+			return EBoneRetargetingMode::Animation;
 
 		// Per-bone settings
 		if (BoneModes.IsValidIndex(BoneIndex))
 		{
-			return BoneModes[BoneIndex] == EBoneRetargettingMode::Animation;
+			return BoneModes[BoneIndex];
 		}
-		return true;
+		return EBoneRetargetingMode::Animation;
 #endif
 	}
 };

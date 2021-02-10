@@ -7,6 +7,7 @@
 
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/StaticMesh.h"
+#include "TypeConvert.h"
 
 #include "Psk.h"
 #include "Exporters.h"
@@ -565,7 +566,16 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 		B.Flags       = 0;						// reserved
 		B.NumChildren = 0;						// unknown here
 		B.ParentIndex = (i > 0) ? 0 : -1;		// unknown for UAnimSet
-//		B.BonePos     =							// unknown here
+		B.BonePos.Length = 1.0f;
+		if (Anim->BonePositions.IsValidIndex(i))
+		{
+			// The AnimSet has bone transform information, store it in psa file (UE4+)
+			FQuat Q1;
+			CQuat Q2 = CVT(Q1);
+			Q1 = CVT(Q2);
+			B.BonePos.Position = CVT(Anim->BonePositions[i].Position);
+			B.BonePos.Orientation = CVT(Anim->BonePositions[i].Orientation);
+		}
 		Ar << B;
 	}
 
@@ -667,16 +677,16 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 
 	// generate configuration file with extended attributes
 
-	// Get statistics of each bone retargetting mode to see if we need a config or not
-	int ModeCounts[(int)EBoneRetargettingMode::Count];
+	// Get statistics of each bone retargeting mode to see if we need a config or not
+	int ModeCounts[(int)EBoneRetargetingMode::Count];
 	memset(ModeCounts, 0, sizeof(ModeCounts));
-	for (EBoneRetargettingMode Mode : Anim->BoneModes)
+	for (EBoneRetargetingMode Mode : Anim->BoneModes)
 	{
 		ModeCounts[(int)Mode]++;
 	}
 
 	bool bSaveConfig = true;
-	if (ModeCounts[(int)EBoneRetargettingMode::Animation] != Anim->BoneModes.Num() && !requireConfig)
+	if (ModeCounts[(int)EBoneRetargetingMode::Animation] != Anim->BoneModes.Num() && !requireConfig)
 	{
 		// nothing to write
 		bSaveConfig = false;
@@ -694,8 +704,8 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 
 		// Just optimization of the config file size: use AnimRotationOnly when most of bones use translation
 		// from the mesh.
-		bool AnimRotationOnly = (ModeCounts[(int)EBoneRetargettingMode::Animation]
-			+ ModeCounts[(int)EBoneRetargettingMode::Mesh]) == numBones;
+		bool AnimRotationOnly = (ModeCounts[(int)EBoneRetargetingMode::Animation]
+			+ ModeCounts[(int)EBoneRetargetingMode::Mesh]) == numBones;
 
 		if (AnimRotationOnly)
 		{
@@ -705,7 +715,7 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 			// UseTranslationBoneNames: allow animated translation
 			Ar1->Printf("\n[UseTranslationBoneNames]\n");
 			for (i = 0; i < Anim->BoneModes.Num(); i++)
-				if (Anim->BoneModes[i] == EBoneRetargettingMode::Animation)
+				if (Anim->BoneModes[i] == EBoneRetargetingMode::Animation)
 					Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
 			// ForceMeshTranslationBoneNames: this will revert a bone back to translation from the mesh.
 			// It is no longer used. In UE3, it was possible to set up AnimRotationOnly per mesh, or from

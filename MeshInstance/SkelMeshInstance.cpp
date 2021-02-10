@@ -93,7 +93,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 :	LodIndex(0)
 ,	MorphIndex(-1)
 ,	UVIndex(0)
-,	RotationMode((int)EAnimRotationOnly::AnimSet)
+,	RetargetingMode((int)EAnimRetargetingMode::AnimSet)
 ,	LastLodIndex(-2)				// initialize with value which differs from LodNum and from all other values
 ,	LastMorphIndex(-1)
 ,	MaxAnimChannel(-1)
@@ -472,11 +472,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 				continue;
 			}
 
-			CVec3 BP;
-			CQuat BO;
 			const CSkelMeshBone &Bone = pMesh->RefSkeleton[i];
-			BP = Bone.Position;					// default position - from bind pose
-			BO = Bone.Orientation;				// ...
+			CVec3 NewBonePosition = Bone.Position;				// default position - from mesh bind pose
+			CQuat NewBoneRotation = Bone.Orientation;			// ...
 
 			int BoneIndex = data->BoneMap;
 
@@ -486,82 +484,120 @@ void CSkelMeshInstance::UpdateSkeleton()
 				// get bone position from track
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
 				{
-					AnimSeq1->Tracks[BoneIndex]->GetBonePosition(Chn->Time, AnimSeq1->NumFrames, Chn->Looped, BP, BO);
-//const char *bname = *Bone.Name;
-//CQuat BOO = BO;
-//if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
+					AnimSeq1->Tracks[BoneIndex]->GetBonePosition(
+						Chn->Time, AnimSeq1->NumFrames, Chn->Looped, NewBonePosition, NewBoneRotation);
 #if SHOW_ANIM
-//if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
 					DrawTextLeft("%s%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
 						AnimSeq1->Tracks[BoneIndex]->HasKeys() ? S_GREEN : S_BLUE,
-						i, *Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
-//if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
+						i, *Bone.Name, VECTOR_ARG(NewBonePosition), QUAT_ARG(NewBoneRotation));
 #endif
-//BO.Normalize();
 #if SHOW_BONE_UPDATES
 					if (AnimSeq1->Tracks[BoneIndex]->HasKeys())
 						BoneUpdateCounts[i]++;
 #endif
 				}
-				// blend secondary animation
+				// Blend with the second animation at the same animation channel
 				if (AnimSeq2)
 				{
-					CVec3 BP2;
-					CQuat BO2;
-					BP2 = Bone.Position;		// default position - from bind pose
-					BO2 = Bone.Orientation;		// ...
-					AnimSeq2->Tracks[BoneIndex]->GetBonePosition(Time2, AnimSeq2->NumFrames, Chn->Looped, BP2, BO2);
+					CVec3 AnimBonePositionBlend = Bone.Position;	// default position - from bind pose
+					CQuat AnimBoneRotationBlend = Bone.Orientation; // ...
+					AnimSeq2->Tracks[BoneIndex]->GetBonePosition(
+						Time2, AnimSeq2->NumFrames, Chn->Looped, AnimBonePositionBlend, AnimBoneRotationBlend);
 					if (Chn->SecondaryBlend == 1.0f)
 					{
-						BO = BO2;
-						BP = BP2;
+						// Fully override the animation
+						NewBoneRotation = AnimBoneRotationBlend;
+						NewBonePosition = AnimBonePositionBlend;
 					}
 					else
 					{
-						Lerp (BP, BP2, Chn->SecondaryBlend, BP);
-						Slerp(BO, BO2, Chn->SecondaryBlend, BO);
+						// Interpolate between 2 animations
+						Lerp (NewBonePosition, AnimBonePositionBlend, Chn->SecondaryBlend, NewBonePosition);
+						Slerp(NewBoneRotation, AnimBoneRotationBlend, Chn->SecondaryBlend, NewBoneRotation);
 					}
 #if SHOW_BONE_UPDATES
 					BoneUpdateCounts[i]++;
 #endif
 				}
-				// process AnimRotationOnly
-				if (!Animation->ShouldAnimateTranslation(BoneIndex, (EAnimRotationOnly)RotationMode))
+				// Process bone translation mode (animation retargeting).
+				// Current state:
+				switch (Animation->GetBoneTranslationMode(BoneIndex, (EAnimRetargetingMode)RetargetingMode))
 				{
-					BP = Bone.Position;
+				case EBoneRetargetingMode::Animation:
+					// Already set, do nothing
+					break;
+				case EBoneRetargetingMode::Mesh:
+					// Restore bone position from reference pose
+					NewBonePosition = Bone.Position;
 					// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
 					BoneUpdateCounts[i] += 3;
+					break;
+				//todo: EBoneTranslationRetargetingMode::Skeleton - simply copy translation from target skeleton - == ::Mesh mode (UE4 uses RetargetSources for that)
+				//todo:: EBoneTranslationRetargetingMode::AnimationScaled - like ::OrientAndScale, but no rotation
+				case EBoneRetargetingMode::OrientAndScale:
+					{
+						// Reference skeleton bone data is required here
+						assert(Animation->BonePositions.Num() != 0);
+						// Reference: FBoneContainer::GetRetargetSourceCachedData()
+						CVec3 SourceTransDir = AnimSeq1->RetargetBasePose.Num()
+							? AnimSeq1->RetargetBasePose[BoneIndex].Position
+							: Animation->BonePositions[BoneIndex].Position;
+						CVec3 TargetTransDir = Bone.Position;
+
+						//todo: optimization: can compare SourceTransDir and TargetTransDir, just copy animated position if same
+						float SourceTransDirLength = SourceTransDir.Normalize();
+						float TargetTransDirLength = TargetTransDir.Normalize();
+						if (fabs(SourceTransDirLength * TargetTransDirLength) > 0.001f)
+						{
+							float Scale = TargetTransDirLength / SourceTransDirLength;
+							CQuat TransRotation;
+							TransRotation.FromTwoVectors(SourceTransDir, TargetTransDir);
+							// Reference: FAnimationRuntime::RetargetBoneTransform()
+							TransRotation.RotateVector(NewBonePosition, NewBonePosition);
+							NewBonePosition.Scale(Scale);
+						}
+						else //??
+						{
+							// Skip this bone, it has missing bone in a source skeleton.
+							// This happens if source skeleton bone has identity transform (zero translation),
+							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
+							continue;
+						}
+//			if (Bone.Name == "L_brow_outer")
+				}
+			}
+					break;
 				}
 			}
 			else
 			{
 				// get default bone position
-//				BP = Bone.Position; -- already set above
-//				BO = Bone.Orientation;
+//				NewBonePosition = Bone.Position; -- already set above
+//				NewBoneRotation = Bone.Orientation;
 #if SHOW_ANIM
 				DrawTextLeft(S_YELLOW"%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-					i, *Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
+					i, *Bone.Name, VECTOR_ARG(NewBonePosition), QUAT_ARG(NewBoneRotation));
 #endif
 			}
-			if (!i) BO.Conjugate();
+			if (!i) NewBoneRotation.Conjugate();
 
-			// tweening
+			// Tweening: "ease-in" playback of the animation.
 			if (Chn->TweenTime > 0)
 			{
-				// interpolate orientation using AnimTweenStep
-				// current orientation -> {BP,BO}
-				Lerp (data->Pos,  BP, Chn->TweenStep, BP);
-				Slerp(data->Quat, BO, Chn->TweenStep, BO);
+				// Interpolate bone transform from current bone state to NewBone[Position|Rotation].
+				Lerp (data->Pos,  NewBonePosition, Chn->TweenStep, NewBonePosition);
+				Slerp(data->Quat, NewBoneRotation, Chn->TweenStep, NewBoneRotation);
 			}
 			// blending with previous channels
 			if (Chn->BlendAlpha < 1.0f)
 			{
-				Lerp (data->Pos,  BP, Chn->BlendAlpha, BP);
-				Slerp(data->Quat, BO, Chn->BlendAlpha, BO);
+				Lerp (data->Pos,  NewBonePosition, Chn->BlendAlpha, NewBonePosition);
+				Slerp(data->Quat, NewBoneRotation, Chn->BlendAlpha, NewBoneRotation);
 			}
 
-			data->Quat = BO;
-			data->Pos  = BP;
+			// Store computed bone transform
+			data->Quat = NewBoneRotation;
+			data->Pos  = NewBonePosition;
 		}
 	}
 
@@ -1155,6 +1191,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 	// sort sections by material opacity
 	int SectionMap[MAX_MESHMATERIALS];
 	int secPlace = 0;
+	assert(NumSections <= MAX_MESHMATERIALS);
 	for (int opacity = 0; opacity < 2; opacity++)
 	{
 		for (i = 0; i < NumSections; i++)

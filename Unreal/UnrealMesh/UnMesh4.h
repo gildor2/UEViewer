@@ -126,12 +126,13 @@ struct FVirtualBone
 	END_PROP_TABLE
 };
 
+// TODO: this should be an "enum class", however this will break _ENUM() macro
 enum EBoneTranslationRetargetingMode
 {
 	Animation,				// use translation from animation
-	Skeleton,				// use translation from skeleton
-	AnimationScaled,
-	AnimationRelative,
+	Skeleton,				// use translation from target skeleton
+	AnimationScaled,		// translation from animation, scale it with TargetBoneTranslation.Size / SourceBoneTranslation.Size
+	AnimationRelative,		// translation from animation, plus additive part (not just "translation" mode)
 	OrientAndScale,
 };
 
@@ -200,6 +201,7 @@ public:
 	virtual void Serialize(FArchive &Ar);
 	virtual void PostLoad();
 
+	// Convert a single UAnimSequence to internal animation format
 	void ConvertAnims(UAnimSequence4* Seq);
 };
 

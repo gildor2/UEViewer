@@ -2133,6 +2133,23 @@ template<typename TK, typename TV>
 class TMap : public TArray<TMapPair<TK, TV> >
 {
 public:
+	TV* Find(const TK& Key)
+	{
+		for (auto& It : *this)
+		{
+			if (It.Key == Key)
+			{
+				return &It.Value;
+			}
+		}
+		return NULL;
+	}
+
+	FORCEINLINE const TV* Find(const TK& Key) const
+	{
+		return const_cast<TMap*>(this)->Find(Key);
+	}
+
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TMap &Map)
 	{
 		return Ar << (TArray<TMapPair<TK, TV> >&)Map;

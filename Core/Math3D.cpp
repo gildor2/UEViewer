@@ -434,6 +434,45 @@ float CQuat::GetLength() const
 }
 
 
+// References:
+// - UE4: UnrealMath.cpp, FindBetween_Helper()
+// - http://lolengine.net/blog/2014/02/24/quaternion-from-two-vectors-final
+void CQuat::FromTwoVectors(const CVec3& v1, const CVec3& v2)
+{
+	float norm_u_norm_v = sqrt(dot(v1, v1) * dot(v2, v2));
+	float w = norm_u_norm_v + dot(v1, v1);
+
+	CQuat& result = *this;
+	if (w < 1e-6f * norm_u_norm_v)
+	{
+		// If u and v are exactly opposite, rotate 180 degrees
+		// around an arbitrary orthogonal axis. Axis normalisation
+		// can happen later, when we normalise the quaternion.
+		w = 0.0f;
+		if (fabs(v1.x) > fabs(v1.y))
+			result.Set(-v1.z, 0.0f, v1.x, w);
+		else
+			result.Set(0.0f, -v1.z, v1.y, w);
+    }
+    else
+    {
+		// Otherwise, build quaternion the standard way.
+		cross(v1, v2, (CVec3&)result.x);
+		result.w = w;
+    }
+
+	result.Normalize();
+}
+
+
+void CQuat::RotateVector(const CVec3& src, CVec3& dst) const
+{
+	CAxis axis;
+	ToAxis(axis);
+	axis.TransformVector(src, dst);
+}
+
+
 void CQuat::Normalize()
 {
 	float len = GetLength();

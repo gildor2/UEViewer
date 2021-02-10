@@ -221,6 +221,7 @@ void USkeleton::Serialize(FArchive &Ar)
 	}
 	else
 	{
+		// Pre-UE4.0 code
 		appPrintf("USkeleton has old AnimRetargetSources format, skipping\n");
 		DROP_REMAINING_DATA(Ar);
 		return;
@@ -432,36 +433,65 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		assert(BoneTree.Num() == NumBones);
 
 		AnimSet->TrackBoneNames.Empty(NumBones);
+		AnimSet->BonePositions.Empty(NumBones);
 		AnimSet->BoneModes.AddZeroed(NumBones);
 
+#if DEBUG_ANIM
+		char SkelFullName[256];
+		GetFullName(ARRAY_ARG(SkelFullName));
+		appPrintf("------------\nSkeleton: %s\n", SkelFullName);
+#endif
 		for (int i = 0; i < NumBones; i++)
 		{
+			// Store bone name
 			AnimSet->TrackBoneNames.Add(ReferenceSkeleton.RefBoneInfo[i].Name);
-			EBoneRetargettingMode BoneMode =EBoneRetargettingMode::Animation;
+			// Store skeleton's bone transform
+			CSkeletonBonePosition BonePosition;
+			BonePosition.Position = CVT(ReferenceSkeleton.RefBonePose[i].Translation);
+			BonePosition.Orientation = CVT(ReferenceSkeleton.RefBonePose[i].Rotation);
+			AnimSet->BonePositions.Add(BonePosition);
+			// Process bone retargeting mode
+			EBoneRetargetingMode BoneMode =EBoneRetargetingMode::Animation;
 			switch (BoneTree[i].TranslationRetargetingMode)
 			{
 			case EBoneTranslationRetargetingMode::Skeleton:
-				BoneMode = EBoneRetargettingMode::Mesh;
+				BoneMode = EBoneRetargetingMode::Mesh;
 				break;
 			case EBoneTranslationRetargetingMode::Animation:
-				BoneMode = EBoneRetargettingMode::Animation;
+				BoneMode = EBoneRetargetingMode::Animation;
 				break;
 			case EBoneTranslationRetargetingMode::OrientAndScale:
-				BoneMode = EBoneRetargettingMode::OrientAndScale;
+				BoneMode = EBoneRetargetingMode::OrientAndScale;
 				break;
 			default:
 				//todo: other modes?
-				BoneMode = EBoneRetargettingMode::OrientAndScale;
+				BoneMode = EBoneRetargetingMode::OrientAndScale;
 			}
 			AnimSet->BoneModes[i] = BoneMode;
+#if DEBUG_ANIM
+			appPrintf("  %d: %s: (%g %g %g) mode=%d\n", i, *ReferenceSkeleton.RefBoneInfo[i].Name,
+				FVECTOR_ARG(ReferenceSkeleton.RefBonePose[i].Translation), BoneTree[i].TranslationRetargetingMode);
+#endif
 		}
+
+#if DEBUG_ANIM
+		appPrintf("  .. CAnimSet for %s has been created\n", Name);
+#endif
 	}
 
-	if (!Seq) return; // allow calling ConvertAnims(NULL) to create empty AnimSet
+	// Check for NULL 'Seq' only after CAnimSet is created: we're doing ConvertAnims(NULL) to create an empty AnimSet
+	if (!Seq)
+	{
+		return;
+	}
+#if DEBUG_ANIM
+	appPrintf("Processing Skeleton %s / AnimSequence %s\n", Name, Seq->Name);
+#endif
 
 //	DBG("----------- Skeleton %s: %d seq, %d bones -----------\n", Name, Anims.Num(), ReferenceSkeleton.RefBoneInfo.Num());
 
 	int NumTracks = Seq->GetNumTracks();
+	// Store UAnimSequence in 'OriginalAnims' array, we just need it from time to time
 	OriginalAnims.Add(Seq);
 
 #if DEBUG_DECOMPRESS
@@ -480,14 +510,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		int ScaleKeys = 0, ScaleOffset = 0;
 		if (Seq->CompressedScaleOffsets.IsValid())
 		{
-		#if 0 //?? disabled at 11.04.2017: it takes strip 1 if strip size > 1 - not sure why
-			int ScaleStripSize = Seq->CompressedScaleOffsets.StripSize;
-			ScaleOffset = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize];
-			if (ScaleStripSize > 1)
-				ScaleKeys = Seq->CompressedScaleOffsets.OffsetData[localTrackIndex * ScaleStripSize + 1];
-		#else
 			ScaleOffset = Seq->CompressedScaleOffsets.GetOffsetData(localTrackIndex);
-		#endif
 		}
 		// bone name
 		int BoneTrackIndex = Seq->GetTrackBoneIndex(localTrackIndex);
@@ -517,11 +540,11 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	}
 #endif // DEBUG_DECOMPRESS
 
-	// some checks
 	int offsetsPerBone = 4;
 	if (Seq->KeyEncodingFormat == AKF_PerTrackCompression)
 		offsetsPerBone = 2;
 
+	// Check for valid data to avoid crash if it's something wrong there
 	if (Seq->CompressedTrackOffsets.Num() != NumTracks * offsetsPerBone && !Seq->RawAnimationData.Num())
 	{
 		appNotify("AnimSequence %s has wrong CompressedTrackOffsets size (has %d, expected %d), removing track",
@@ -529,13 +552,63 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 		return;
 	}
 
-	// create CAnimSequence
+	// Create CAnimSequence
 	CAnimSequence *Dst = new CAnimSequence(Seq);
 	AnimSet->Sequences.Add(Dst);
 	Dst->Name      = Seq->Name;
 	Dst->NumFrames = Seq->NumFrames;
 	Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
 	Dst->bAdditive = Seq->AdditiveAnimType != AAT_None;
+
+	// Store information for animation retargeting.
+	// Reference: UAnimSequence::GetRetargetTransforms()
+	const TArray<FTransform>* RetargetTransforms = NULL;
+	if (Seq->RetargetSource == "None" && Seq->RetargetSourceAssetReferencePose.Num())
+	{
+		// We'll use RetargetSourceAssetReferencePose as a retarget base
+		RetargetTransforms = &Seq->RetargetSourceAssetReferencePose;
+#if DEBUG_ANIM
+		appPrintf("  .. %s: Use RetargetSourceAssetReferencePose\n", Seq->Name);
+#endif
+	}
+	else
+	{
+		// Use USkeleton pose for retarget base.
+		// Reference: USkeleton::GetRefLocalPoses()
+#if DEBUG_ANIM
+		appPrintf("  .. %s: Use RetargetSource '%s'\n", Name, *Seq->RetargetSource);
+#endif
+		if (Seq->RetargetSource != "None")
+		{
+			const FReferencePose* RefPose = AnimRetargetSources.Find(Seq->RetargetSource);
+			// The result might be NULL if there's no RetargetSource for this animation
+			if (RefPose)
+			{
+				RetargetTransforms = &RefPose->ReferencePose;
+#if DEBUG_ANIM
+				appPrintf("  .. Found RefPose for '%s'\n", *Seq->RetargetSource);
+#endif
+			}
+		}
+		if (!RetargetTransforms)
+		{
+			// Animation will use ReferenceSkeleton for retargeting, we've already copied the
+			// information into CAnimSet::BonePositions array/
+		}
+	}
+
+	if (RetargetTransforms)
+	{
+//		assert(RetargetTransforms->Num() == ReferenceSkeleton.RefBoneInfo.Num());
+		Dst->RetargetBasePose.Empty(RetargetTransforms->Num());
+		for (const FTransform& BoneTransform : *RetargetTransforms)
+		{
+			CSkeletonBonePosition BonePosition;
+			BonePosition.Position = CVT(BoneTransform.Translation);
+			BonePosition.Orientation = CVT(BoneTransform.Rotation);
+			Dst->RetargetBasePose.Add(BonePosition);
+		}
+	}
 
 	// bone tracks ...
 	Dst->Tracks.Empty(NumTracks);
