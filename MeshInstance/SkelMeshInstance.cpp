@@ -479,7 +479,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 			int BoneIndex = data->BoneMap;
 
 			// compute bone orientation
-			if (AnimSeq1 && BoneIndex != INDEX_NONE)
+			if (AnimSeq1 && BoneIndex != INDEX_NONE && AnimSeq1->Tracks[BoneIndex]->HasKeys())
 			{
 				// get bone position from track
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
@@ -487,8 +487,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 					AnimSeq1->Tracks[BoneIndex]->GetBonePosition(
 						Chn->Time, AnimSeq1->NumFrames, Chn->Looped, NewBonePosition, NewBoneRotation);
 #if SHOW_ANIM
-					DrawTextLeft("%s%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-						AnimSeq1->Tracks[BoneIndex]->HasKeys() ? S_GREEN : S_BLUE,
+					DrawTextLeft("%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
 						i, *Bone.Name, VECTOR_ARG(NewBonePosition), QUAT_ARG(NewBoneRotation));
 #endif
 #if SHOW_BONE_UPDATES
@@ -556,7 +555,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 							TransRotation.RotateVector(NewBonePosition, NewBonePosition);
 							NewBonePosition.Scale(Scale);
 						}
-						else //??
+						else
 						{
 							// Skip this bone, it has missing bone in a source skeleton.
 							// This happens if source skeleton bone has identity transform (zero translation),
@@ -575,7 +574,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 //				NewBonePosition = Bone.Position; -- already set above
 //				NewBoneRotation = Bone.Orientation;
 #if SHOW_ANIM
-				DrawTextLeft(S_YELLOW"%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
+				DrawTextLeft("%s%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
+					BoneIndex != INDEX_NONE ? S_BLUE : S_YELLOW, // empty track or unmapped bone
 					i, *Bone.Name, VECTOR_ARG(NewBonePosition), QUAT_ARG(NewBoneRotation));
 #endif
 			}

@@ -447,8 +447,10 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			AnimSet->TrackBoneNames.Add(ReferenceSkeleton.RefBoneInfo[i].Name);
 			// Store skeleton's bone transform
 			CSkeletonBonePosition BonePosition;
-			BonePosition.Position = CVT(ReferenceSkeleton.RefBonePose[i].Translation);
-			BonePosition.Orientation = CVT(ReferenceSkeleton.RefBonePose[i].Rotation);
+			const FTransform& Transform = ReferenceSkeleton.RefBonePose[i];
+			BonePosition.Position = CVT(Transform.Translation);
+			BonePosition.Orientation = CVT(Transform.Rotation);
+			//??
 			AnimSet->BonePositions.Add(BonePosition);
 			// Process bone retargeting mode
 			EBoneRetargetingMode BoneMode =EBoneRetargetingMode::Animation;
@@ -633,11 +635,9 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 		if (TrackIndex < 0)
 		{
-			// this track has no animation, use static pose from ReferenceSkeleton
-			const FTransform& RefPose = ReferenceSkeleton.RefBonePose[BoneIndex];
-			A->KeyPos.Add(CVT(RefPose.Translation));
-			A->KeyQuat.Add(CVT(RefPose.Rotation));
-			//!! RefPose.Scale3D
+			// This bone is not animated with this UAnimSequence (but it may be animated with other
+			// ones which shares the same USkeleton). Just use an empty track, it should be properly
+			// handled by our animation system.
 			continue;
 		}
 
