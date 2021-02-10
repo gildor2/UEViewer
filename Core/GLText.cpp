@@ -79,55 +79,151 @@ void PrepareFontTexture()
 	}
 }
 
-static void DrawChar(char c, unsigned color, int textX, int textY)
+class CTextVertexBuffer
 {
-	if (textX <= -CHAR_WIDTH || textY <= -CHAR_HEIGHT ||
-		textX > Viewport::Size.X || textY > Viewport::Size.Y)
-		return;				// outside of screen
+public:
+	static const int MaxCharsInBuffer = 128;
+	static const int ShadowCount = 1; // use 0 for rendering without a shadow
 
-	glBegin(GL_QUADS);
+	static const int MaxVertexCount = MaxCharsInBuffer * 4 * (ShadowCount + 1);
+	static const int MaxAttributeCount = MaxCharsInBuffer * 6 * (ShadowCount + 1);
 
-	c -= FONT_FIRST_CHAR;
+	bool bStateIsSet;
+	int CharacterCount;
+	CVec3 VertexPositions[MaxVertexCount];
+	float VertexTextureCoordinates[MaxVertexCount * 2];
+	uint32 VertexColors[MaxVertexCount];
+	int Indices[MaxAttributeCount];
 
-	// screen coordinates
-	int x1 = textX;
-	int y1 = textY;
-	int x2 = textX + CHAR_WIDTH - FONT_SPACING;
-	int y2 = textY + CHAR_HEIGHT - FONT_SPACING;
+	CTextVertexBuffer()
+	: bStateIsSet(false)
+	, CharacterCount(0)
+	{}
 
-	// texture coordinates
-	int line = c / CHARS_PER_LINE;
-	int col  = c - line * CHARS_PER_LINE;
-
-	float s0 = col * CHAR_WIDTH;
-	float s1 = s0 + CHAR_WIDTH - FONT_SPACING;
-	float t0 = line * CHAR_HEIGHT;
-	float t1 = t0 + CHAR_HEIGHT - FONT_SPACING;
-
-	s0 /= TEX_WIDTH;
-	s1 /= TEX_WIDTH;
-	t0 /= TEX_HEIGHT;
-	t1 /= TEX_HEIGHT;
-
-	unsigned color2 = color & 0xFF000000;	// RGB=0, keep alpha
-	for (int s = 1; s >= 0; s--)
+	~CTextVertexBuffer()
 	{
-		// s=1 -> shadow, s=0 -> char
-		glColor4ubv((GLubyte*)&color2);
-		glTexCoord2f(s1, t0);
-		glVertex2f(x2+s, y1+s);
-		glTexCoord2f(s0, t0);
-		glVertex2f(x1+s, y1+s);
-		glTexCoord2f(s0, t1);
-		glVertex2f(x1+s, y2+s);
-		glTexCoord2f(s1, t1);
-		glVertex2f(x2+s, y2+s);
-		color2 = color;
+		Flush();
+
+		if (bStateIsSet)
+		{
+			glDisableClientState(GL_VERTEX_ARRAY);
+			glDisableClientState(GL_COLOR_ARRAY);
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		}
 	}
 
-	glEnd();
-}
+	void RenderChar(char Ch, unsigned Color, int TextX, int TextY)
+	{
+		if (TextX <= -CHAR_WIDTH || TextY <= -CHAR_HEIGHT ||
+			TextX > Viewport::Size.X || TextY > Viewport::Size.Y)
+		{
+			// Outside of the screen
+			return;
+		}
 
+		Ch -= FONT_FIRST_CHAR;
+
+		// Compute the screen coordinate
+		int x1 = TextX;
+		int y1 = TextY;
+		int x2 = TextX + CHAR_WIDTH - FONT_SPACING;
+		int y2 = TextY + CHAR_HEIGHT - FONT_SPACING;
+
+		// Get the texture coordinates
+		int line = Ch / CHARS_PER_LINE;
+		int col  = Ch - line * CHARS_PER_LINE;
+
+		// Texture coordinates of the character
+		float s0 = col * CHAR_WIDTH;
+		float s1 = s0 + CHAR_WIDTH - FONT_SPACING;
+		float t0 = line * CHAR_HEIGHT;
+		float t1 = t0 + CHAR_HEIGHT - FONT_SPACING;
+		s0 /= TEX_WIDTH;
+		s1 /= TEX_WIDTH;
+		t0 /= TEX_HEIGHT;
+		t1 /= TEX_HEIGHT;
+
+		// Fill the vertex buffers
+		int CurrentVertex = CharacterCount * 4 * (ShadowCount + 1);
+		int CurrentIndex = CharacterCount * 6 * (ShadowCount + 1);
+
+		CVec3* pPositionData = VertexPositions + CurrentVertex;
+		float* pTexcoordData = VertexTextureCoordinates + CurrentVertex * 2;
+		uint32* pColorData = VertexColors + CurrentVertex;
+		int* pIndexData = Indices + CurrentIndex;
+
+		for (int IsShadow = ShadowCount; IsShadow >= 0; IsShadow--)
+		{
+			unsigned ShadowColor = Color & 0xFF000000;	// RGB=0, keep alpha
+
+			float x1a = x1, x2a = x2, y1a = y1, y2a = y2;
+			if (IsShadow)
+			{
+				x1a += 1; x2a += 1; y1a += 1; y2a += 1;
+			}
+
+			pPositionData->Set(x2a, y1a, 0);
+			pPositionData++;
+			pPositionData->Set(x1a, y1a, 0);
+			pPositionData++;
+			pPositionData->Set(x1a, y2a, 0);
+			pPositionData++;
+			pPositionData->Set(x2a, y2a, 0);
+			pPositionData++;
+
+			*pTexcoordData++ = s1; *pTexcoordData++ = t0;
+			*pTexcoordData++ = s0; *pTexcoordData++ = t0;
+			*pTexcoordData++ = s0; *pTexcoordData++ = t1;
+			*pTexcoordData++ = s1; *pTexcoordData++ = t1;
+
+			uint32 ActiveColor = IsShadow ? Color & 0xFF000000 : Color;
+			*pColorData++ = ActiveColor;
+			*pColorData++ = ActiveColor;
+			*pColorData++ = ActiveColor;
+			*pColorData++ = ActiveColor;
+
+			// Set up the index buffer for 2 triangles
+			pIndexData[0] = CurrentVertex; pIndexData[1] = CurrentVertex + 1; pIndexData[2] = CurrentVertex + 2;
+			pIndexData[3] = CurrentVertex; pIndexData[4] = CurrentVertex + 2; pIndexData[5] = CurrentVertex + 3;
+			pIndexData += 6;
+
+			CurrentVertex += 4;
+		}
+
+		CharacterCount++;
+
+		if (CharacterCount == MaxCharsInBuffer)
+		{
+			// The buffer is at full capacity, flush data to the screen
+			Flush();
+		}
+	}
+
+protected:
+	void Flush()
+	{
+		if (!CharacterCount)
+		{
+			// There's nothing to render
+			return;
+		}
+
+		if (!bStateIsSet)
+		{
+			glEnableClientState(GL_VERTEX_ARRAY);
+			glEnableClientState(GL_COLOR_ARRAY);
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+			bStateIsSet = true;
+		}
+
+		glVertexPointer(3, GL_FLOAT, sizeof(CVec3), VertexPositions);
+		glTexCoordPointer(2, GL_FLOAT, 0, VertexTextureCoordinates);
+		glColorPointer(4, GL_UNSIGNED_BYTE, 0, VertexColors);
+		glDrawElements(GL_TRIANGLES, CharacterCount * 6 * (ShadowCount + 1), GL_UNSIGNED_INT, Indices);
+
+		CharacterCount = 0;
+	}
+};
 
 //-----------------------------------------------------------------------------
 // Text buffer
@@ -234,6 +330,8 @@ static void DrawText(const CRText *rec)
 	unsigned color = rec->color;
 	unsigned color2 = color;
 
+	CTextVertexBuffer TextBuffer;
+
 	while (true)
 	{
 		const char* s = strchr(text, '\n');
@@ -270,10 +368,10 @@ static void DrawText(const CRText *rec)
 				}
 			}
 
-			DrawChar(c, color, x, y);
+			TextBuffer.RenderChar(c, color, x, y);
 			x += CHAR_WIDTH - FONT_SPACING;
 		}
-		if (!s) return;							// all done
+		if (!s) break;							// all done
 
 		y += CHAR_HEIGHT - FONT_SPACING;
 		text = s + 1;
