@@ -56,7 +56,7 @@ alternative it is possible to create a batch file which will temporarily modify 
 Here's an example of such file:
 
     @echo off
-    set PATH=%PATH%;C:\BuildTools\bin
+    set PATH=C:\BuildTools\bin;%PATH%
     bash build.sh
 
 To launch a build process without a batch, simply execute
