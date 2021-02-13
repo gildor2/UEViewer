@@ -30,19 +30,49 @@ USkeleton::~USkeleton()
 	if (ConvertedAnim) delete ConvertedAnim;
 }
 
-static CVec3 GetBoneScale(FReferenceSkeleton& Skel, int BoneIndex)
+// Get the effective scale of the particular bone, with taking into account scales of the bone's parents
+static CVec3 GetBoneScale(const FReferenceSkeleton& Skel, const TArray<FTransform>& BoneTransforms, int BoneIndex)
 {
+	guard(GetBoneScale);
+
 	CVec3 Scale;
 	Scale.Set(1, 1, 1);
 
 	while (BoneIndex >= 0)
 	{
-		FVector BoneScale = Skel.RefBonePose[BoneIndex].Scale3D;
+		FVector BoneScale = BoneTransforms[BoneIndex].Scale3D;
+		// Accumulate the scale
 		Scale.Scale(CVT(BoneScale));
+		// Get the bone's parent
 		BoneIndex = Skel.RefBoneInfo[BoneIndex].ParentIndex;
 	}
 
 	return Scale;
+
+	unguard;
+}
+
+// Adjust array of bone transforms. Note that 'Transforms' array will be modified here, however only
+// 'Translation' part will be changed. Its 'Scale3D' field is used to compute the scale.
+static bool AdjustBoneScales(const FReferenceSkeleton& SkeletonHierarchy, TArray<FTransform>& Transforms)
+{
+	guard(AdjustBoneScales);
+
+	if (SkeletonHierarchy.RefBoneInfo.Num() != Transforms.Num())
+	{
+		return false;
+	}
+
+	for (int BoneIndex = 0; BoneIndex < Transforms.Num(); BoneIndex++)
+	{
+		CVec3 Scale = GetBoneScale(SkeletonHierarchy, Transforms, BoneIndex);
+		FTransform& Transform = Transforms[BoneIndex];
+		CVT(Transform.Translation).Scale(Scale);
+	}
+
+	return true;
+
+	unguard;
 }
 
 FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
@@ -88,16 +118,7 @@ FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 #endif // DEBUG_SKELMESH
 
 	// Adjust skeleton's scale, if any. Use scale of the root bone.
-	if (NumBones > 0)
-	{
-		// Adjust other bones
-		for (int BoneIndex = 0; BoneIndex < NumBones; BoneIndex++)
-		{
-			FTransform& Transform = S.RefBonePose[BoneIndex];
-			CVec3 Scale = GetBoneScale(S, BoneIndex);
-			CVT(Transform.Translation).Scale(Scale);
-		}
-	}
+	AdjustBoneScales(S, S.RefBonePose);
 
 	return Ar;
 
@@ -219,6 +240,19 @@ void USkeleton::Serialize(FArchive &Ar)
 	{
 		Ar << AnimRetargetSources;
 	}
+		// Adjust scales of retarget pose bones
+		for (auto& It : AnimRetargetSources)
+		{
+			FReferencePose& Pose = It.Value;
+			guard(AdjustScalesForRetargetSource);
+			if (!AdjustBoneScales(ReferenceSkeleton, Pose.ReferencePose))
+			{
+				appPrintf("WARNING: AnimRetargetSources[%s] has wrong bone count %d (should be %d)",
+					*It.Key, Pose.ReferencePose.Num(), ReferenceSkeleton.RefBoneInfo.Num());
+			}
+			unguardf("%s", *It.Key);
+		}
+	}
 	else
 	{
 		// Pre-UE4.0 code
@@ -268,35 +302,8 @@ void USkeleton::Serialize(FArchive &Ar)
 
 void USkeleton::PostLoad()
 {
-	guard(USkeleton::PostLoad);
-
-	// Create empty AnimSet if not yet created
+	// Create an empty AnimSet if not yet created
 	ConvertAnims(NULL);
-
-/*
-	// Gather all loaded UAnimSequence objects referencing this skeleton
-	const TArray<UnPackage*>& PackageMap = UnPackage::GetPackageMap();
-
-	for (int i = 0; i < PackageMap.Num(); i++)
-	{
-		UnPackage* p = PackageMap[i];
-		for (int j = 0; j < p->Summary.ExportCount; j++)
-		{
-			FObjectExport& Exp = p->ExportTable[j];
-			if (Exp.Object && Exp.Object->IsA("AnimSequence4"))
-			{
-				UAnimSequence4* Seq = (UAnimSequence4*)Exp.Object;
-				if (Seq->Skeleton == this)
-				{
-					Anims.Add(Seq);
-				}
-			}
-		}
-	}
-
-	ConvertAnims();
-*/
-	unguard;
 }
 
 
@@ -389,24 +396,29 @@ static void FixRotationKeys(CAnimSequence* Anim)
 	{
 		if (TrackIndex == 0) continue;	// don't fix root track
 		CAnimTrack* Track = Anim->Tracks[TrackIndex];
-		for (int KeyIndex = 0; KeyIndex < Track->KeyQuat.Num(); KeyIndex++)
+		for (CQuat& Key : Track->KeyQuat)
 		{
-			Track->KeyQuat[KeyIndex].Conjugate();
+			Key.Conjugate();
 		}
 	}
 }
 
 // Use skeleton's bone settings to adjust animation sequences
-void AdjustSequenceBySkeleton(USkeleton* Skel, CAnimSequence* Anim)
+static void AdjustSequenceBySkeleton(USkeleton* Skeleton, const TArray<FTransform>& Transforms, CAnimSequence* Anim)
 {
 	guard(AdjustSequenceBySkeleton);
 
-	if (Skel->ReferenceSkeleton.RefBoneInfo.Num() == 0) return;
+	if (Skeleton->ReferenceSkeleton.RefBoneInfo.Num() == 0) return;
+	if (Skeleton->ReferenceSkeleton.RefBoneInfo.Num() != Transforms.Num())
+	{
+		// Bad retarget skeleton, the situation is already signalled in USkeleton::Serialize.
+		return;
+	}
 
 	for (int TrackIndex = 0; TrackIndex < Anim->Tracks.Num(); TrackIndex++)
 	{
 		CAnimTrack* Track = Anim->Tracks[TrackIndex];
-		CVec3 BoneScale = GetBoneScale(Skel->ReferenceSkeleton, TrackIndex);
+		CVec3 BoneScale = GetBoneScale(Skeleton->ReferenceSkeleton, Transforms, TrackIndex);
 		for (int KeyIndex = 0; KeyIndex < Track->KeyPos.Num(); KeyIndex++)
 		{
 			// Scale translation by accumulated bone scale value
@@ -601,7 +613,10 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 	if (RetargetTransforms)
 	{
-//		assert(RetargetTransforms->Num() == ReferenceSkeleton.RefBoneInfo.Num());
+		//todo: Solve this: RetargetTransforms size may not match ReferenceSkeleton and sequence's track count.
+		//todo: UE4 does some remapping "track to skeleton bone index map". Without assertion things works, seems
+		//todo: because RetargetTransforms array is smaller (or of the same size).
+		//assert(RetargetTransforms->Num() == ReferenceSkeleton.RefBoneInfo.Num());
 		Dst->RetargetBasePose.Empty(RetargetTransforms->Num());
 		for (const FTransform& BoneTransform : *RetargetTransforms)
 		{
@@ -953,7 +968,8 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 	// Now should invert all imported rotations
 	FixRotationKeys(Dst);
-	AdjustSequenceBySkeleton(this, Dst);
+	// And apply scales to positions, when skeleton has any
+	AdjustSequenceBySkeleton(this, RetargetTransforms ? *RetargetTransforms : ReferenceSkeleton.RefBonePose, Dst);
 
 	unguardf("Skel=%s Anim=%s", Name, Seq->Name);
 }
@@ -1491,6 +1507,13 @@ void UAnimSequence4::PostLoad()
 		appPrintf("WARNING: unable to load animation %s, missing Skeleton\n", Name);
 		return;
 	}
+
+	// Scale RetargetSourceAssetReferencePose
+	if (RetargetSourceAssetReferencePose.Num())
+	{
+		AdjustBoneScales(Skeleton->ReferenceSkeleton, RetargetSourceAssetReferencePose);
+	}
+
 	Skeleton->ConvertAnims(this);
 
 	// Release original animation data to save memory
