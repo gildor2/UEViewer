@@ -239,7 +239,7 @@ void USkeleton::Serialize(FArchive &Ar)
 	if (Ar.ArVer >= VER_UE4_FIX_ANIMATIONBASEPOSE_SERIALIZATION)
 	{
 		Ar << AnimRetargetSources;
-	}
+
 		// Adjust scales of retarget pose bones
 		for (auto& It : AnimRetargetSources)
 		{

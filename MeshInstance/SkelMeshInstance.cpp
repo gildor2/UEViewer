@@ -562,9 +562,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
 							continue;
 						}
-//			if (Bone.Name == "L_brow_outer")
-				}
-			}
+					}
 					break;
 				}
 			}
