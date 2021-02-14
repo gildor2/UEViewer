@@ -14,6 +14,7 @@
 //#define DEBUG_DECOMPRESS	1
 //#define DEBUG_SKELMESH	1
 //#define DEBUG_ANIM		1
+//#define DEBUG_RETARGET	1
 
 // References in UE4 code: Engine/Public/AnimationCompression.h
 // - FAnimationCompression_PerTrackUtils
@@ -239,7 +240,13 @@ void USkeleton::Serialize(FArchive &Ar)
 	if (Ar.ArVer >= VER_UE4_FIX_ANIMATIONBASEPOSE_SERIALIZATION)
 	{
 		Ar << AnimRetargetSources;
-
+#if DEBUG_RETARGET
+		appPrintf("Retarget sources: %d\n", AnimRetargetSources.Num());
+		for (int i = 0; i < AnimRetargetSources.Num(); i++)
+		{
+			appPrintf("  %d: %s\n", i, *AnimRetargetSources[i].Key);
+		}
+#endif
 		// Adjust scales of retarget pose bones
 		for (auto& It : AnimRetargetSources)
 		{
@@ -412,6 +419,9 @@ static void AdjustSequenceBySkeleton(USkeleton* Skeleton, const TArray<FTransfor
 	if (Skeleton->ReferenceSkeleton.RefBoneInfo.Num() != Transforms.Num())
 	{
 		// Bad retarget skeleton, the situation is already signalled in USkeleton::Serialize.
+#if DEBUG_RETARGET
+		appPrintf("Adjust by scale: skip due to bad bone count\n");
+#endif
 		return;
 	}
 
@@ -419,10 +429,16 @@ static void AdjustSequenceBySkeleton(USkeleton* Skeleton, const TArray<FTransfor
 	{
 		CAnimTrack* Track = Anim->Tracks[TrackIndex];
 		CVec3 BoneScale = GetBoneScale(Skeleton->ReferenceSkeleton, Transforms, TrackIndex);
-		for (int KeyIndex = 0; KeyIndex < Track->KeyPos.Num(); KeyIndex++)
+		if (BoneScale.x != 1.0f || BoneScale.y != 1.0f || BoneScale.z != 1.0f)
 		{
-			// Scale translation by accumulated bone scale value
-			Track->KeyPos[KeyIndex].Scale(BoneScale);
+#if DEBUG_RETARGET
+			appPrintf("Adjust %d by scale %g %g %g\n", TrackIndex, VECTOR_ARG(BoneScale));
+#endif
+			for (int KeyIndex = 0; KeyIndex < Track->KeyPos.Num(); KeyIndex++)
+			{
+				// Scale translation by accumulated bone scale value
+				Track->KeyPos[KeyIndex].Scale(BoneScale);
+			}
 		}
 	}
 
@@ -462,7 +478,10 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			const FTransform& Transform = ReferenceSkeleton.RefBonePose[i];
 			BonePosition.Position = CVT(Transform.Translation);
 			BonePosition.Orientation = CVT(Transform.Rotation);
-			//??
+#if DEBUG_RETARGET
+			if (Transform.Scale3D.X != 1.0f || Transform.Scale3D.Y != 1.0f || Transform.Scale3D.Z != 1.0f)
+				appPrintf("RefPose: bone %d (%s) has scale %g %g %g\n", i, *ReferenceSkeleton.RefBoneInfo[i].Name, FVECTOR_ARG(Transform.Scale3D));
+#endif
 			AnimSet->BonePositions.Add(BonePosition);
 			// Process bone retargeting mode
 			EBoneRetargetingMode BoneMode =EBoneRetargetingMode::Animation;
@@ -581,7 +600,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	{
 		// We'll use RetargetSourceAssetReferencePose as a retarget base
 		RetargetTransforms = &Seq->RetargetSourceAssetReferencePose;
-#if DEBUG_ANIM
+#if DEBUG_RETARGET
 		appPrintf("  .. %s: Use RetargetSourceAssetReferencePose\n", Seq->Name);
 #endif
 	}
@@ -589,7 +608,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 	{
 		// Use USkeleton pose for retarget base.
 		// Reference: USkeleton::GetRefLocalPoses()
-#if DEBUG_ANIM
+#if DEBUG_RETARGET
 		appPrintf("  .. %s: Use RetargetSource '%s'\n", Name, *Seq->RetargetSource);
 #endif
 		if (Seq->RetargetSource != "None")
@@ -599,7 +618,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			if (RefPose)
 			{
 				RetargetTransforms = &RefPose->ReferencePose;
-#if DEBUG_ANIM
+#if DEBUG_RETARGET
 				appPrintf("  .. Found RefPose for '%s'\n", *Seq->RetargetSource);
 #endif
 			}
@@ -624,6 +643,10 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			BonePosition.Position = CVT(BoneTransform.Translation);
 			BonePosition.Orientation = CVT(BoneTransform.Rotation);
 			Dst->RetargetBasePose.Add(BonePosition);
+#if DEBUG_RETARGET
+			if (BoneTransform.Scale3D.X != 1.0f || BoneTransform.Scale3D.Y != 1.0f || BoneTransform.Scale3D.Z != 1.0f)
+				appPrintf("Retarget: bone %d (%s) has scale %g %g %g\n", &BoneTransform - RetargetTransforms->GetData(), "?", FVECTOR_ARG(BoneTransform.Scale3D));
+#endif
 		}
 	}
 
@@ -1533,7 +1556,6 @@ int UAnimSequence4::GetNumTracks() const
 	return CompressedTrackToSkeletonMapTable.Num() ? CompressedTrackToSkeletonMapTable.Num() : TrackToSkeletonMapTable.Num();
 }
 
-
 int UAnimSequence4::GetTrackBoneIndex(int TrackIndex) const
 {
 	if (CompressedTrackToSkeletonMapTable.Num())
@@ -1541,7 +1563,6 @@ int UAnimSequence4::GetTrackBoneIndex(int TrackIndex) const
 	else
 		return TrackToSkeletonMapTable[TrackIndex].BoneTreeIndex;
 }
-
 
 int UAnimSequence4::FindTrackForBoneIndex(int BoneIndex) const
 {
