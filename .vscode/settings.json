@@ -48,6 +48,7 @@
 		"unversioned",
 		"recurse",
 		"uv",
+		"retargeting",
 		"retarget"
 	]
 }

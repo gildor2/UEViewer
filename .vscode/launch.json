@@ -14,7 +14,6 @@
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],
-			"externalConsole": false,
 			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		},
@@ -25,7 +24,6 @@
 			"program": "${workspaceFolder}/umodel.exe",
 			"args": [ "@${workspaceFolder}/docs/cmdline.cfg" ],
 			"cwd": "${workspaceFolder}",
-			"externalConsole": false,
 			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		},
@@ -37,7 +35,6 @@
 			"program": "${workspaceFolder}/Tools/UITest/uitest.exe",
 			"args": [],
 			"cwd": "${workspaceFolder}",
-			"externalConsole": false,
 			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		}
