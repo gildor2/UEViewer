@@ -13,15 +13,14 @@
 #include "UnrealMesh/UnMathTools.h"
 
 
-// debugging
-//#define SHOW_INFLUENCES		1
-#define SHOW_TANGENTS			1
-//#define SHOW_ANIM				1
-#define SHOW_BONE_UPDATES		1
-//#define PROFILE_MESH			1
-//#define TICK_SECTIONS			1
+// Debug stuff
+//#define SHOW_INFLUENCES		1	// show lines between bones and affected vertices
+//#define SHOW_ANIM				1	// show decompressed animation info
+#define SHOW_BONE_UPDATES		1	// colorize bones depending on number of playing animations
+//#define PROFILE_MESH			1	// profile mesh drawing, probably an outdated thing
+//#define TICK_SECTIONS			1	// isolate rendering mesh section, change its number every 2 seconds (outdated?)
 
-#define SORT_BY_OPACITY			1
+#define SORT_BY_OPACITY			1	// sort rendering order of mesh sections by opacity
 
 #if TICK_SECTIONS
 #undef SORT_BY_OPACITY				// to not obfuscate section indices
@@ -93,7 +92,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 :	LodIndex(0)
 ,	MorphIndex(-1)
 ,	UVIndex(0)
-,	RetargetingMode((int)EAnimRetargetingMode::AnimSet)
+,	RetargetingModeOverride((int)EAnimRetargetingMode::AnimSet)
 ,	LastLodIndex(-2)				// initialize with value which differs from LodNum and from all other values
 ,	LastMorphIndex(-1)
 ,	MaxAnimChannel(-1)
@@ -520,7 +519,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 				}
 				// Process bone translation mode (animation retargeting).
 				// Current state:
-				switch (Animation->GetBoneTranslationMode(BoneIndex, (EAnimRetargetingMode)RetargetingMode))
+				switch (Animation->GetBoneTranslationMode(BoneIndex, (EAnimRetargetingMode)RetargetingModeOverride))
 				{
 				case EBoneRetargetingMode::Animation:
 					// Already set, do nothing
@@ -543,6 +542,11 @@ void CSkelMeshInstance::UpdateSkeleton()
 							: Animation->BonePositions[BoneIndex].Position;
 						CVec3 TargetTransDir = Bone.Position;
 
+//#define TEMP_SHOW_BONES	1	// temporary code, added for debugging of retargeting problems
+#if TEMP_SHOW_BONES
+						CVec3 SourcePosition = SourceTransDir;
+						CVec3 AnimPos = NewBonePosition;
+#endif
 						//todo: optimization: can compare SourceTransDir and TargetTransDir, just copy animated position if same
 						float SourceTransDirLength = SourceTransDir.Normalize();
 						float TargetTransDirLength = TargetTransDir.Normalize();
@@ -560,8 +564,19 @@ void CSkelMeshInstance::UpdateSkeleton()
 							// Skip this bone, it has missing bone in a source skeleton.
 							// This happens if source skeleton bone has identity transform (zero translation),
 							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
-							continue;
+							NewBonePosition = Bone.Position;
+							break;
 						}
+#if TEMP_SHOW_BONES
+						if (Bone.Name == "L_brow_outer")
+						{
+							DrawTextLeft("%s: NewPosition (%g %g %g)", *Bone.Name, VECTOR_ARG(NewBonePosition));
+							DrawTextLeft("  Source (%g %g %g) Target (%g %g %g)",
+								VECTOR_ARG(SourcePosition),
+								VECTOR_ARG(Bone.Position));
+							DrawTextLeft("  AnimPos: (%g %g %g) Scale: %g", VECTOR_ARG(AnimPos), TargetTransDirLength / SourceTransDirLength);
+						}
+#endif // TEMP_SHOW_BONES
 					}
 					break;
 				}
@@ -1363,7 +1378,6 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 			VectorMA(vert.Position, VisualLength, vert.Normal, tmp);
 			glVertex3fv(tmp.v);
 		}
-#if SHOW_TANGENTS
 		glColor3f(1, 0, 0.5f);
 		for (i = 0; i < NumVerts; i++)
 		{
@@ -1388,7 +1402,6 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 			VectorMA(v, VisualLength, binormal, tmp);
 			glVertex3fv(tmp.v);
 		}
-#endif // SHOW_TANGENTS
 		glEnd();
 	}
 

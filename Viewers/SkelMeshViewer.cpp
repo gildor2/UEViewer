@@ -400,7 +400,7 @@ void CSkelMeshViewer::Draw2D()
 		}
 
 		const char *OnOffStatus = NULL;
-		switch ((EAnimRetargetingMode)MeshInst->RetargetingMode)
+		switch ((EAnimRetargetingMode)MeshInst->RetargetingModeOverride)
 		{
 		case EAnimRetargetingMode::AnimSet:
 			OnOffStatus = "default";
@@ -832,11 +832,11 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 
 	case 'r'|KEY_CTRL:
 		{
-			int mode = MeshInst->RetargetingMode + 1;
+			int mode = MeshInst->RetargetingModeOverride + 1;
 			if (mode >= (int)EAnimRetargetingMode::Count) mode = 0;
-			MeshInst->RetargetingMode = mode;
+			MeshInst->RetargetingModeOverride = mode;
 			for (CSkelMeshInstance* mesh : TaggedMeshes)
-				mesh->RetargetingMode = mode;
+				mesh->RetargetingModeOverride = mode;
 		}
 		break;
 

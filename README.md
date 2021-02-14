@@ -56,7 +56,7 @@ alternative it is possible to create a batch file which will temporarily modify 
 Here's an example of such file:
 
     @echo off
-    set PATH=%PATH%;C:\BuildTools\bin
+    set C:\BuildTools\bin;PATH=%PATH%
     bash build.sh
 
 To launch a build process without a batch, simply execute
@@ -89,7 +89,7 @@ UE Viewer is provided with initial support for macOS platform. I'm using VMWare 
 full testing. Therefore, some features are disabled:
 - no OpenGL support (no visualization) - it is explicitly disabled in *UmodelTool/Build.h*
 - no multithreading support - it's disabled in the same place
-  
+
 In other words, UE Viewer on macOS works just like a simple command-line exporter utility.
 
 
