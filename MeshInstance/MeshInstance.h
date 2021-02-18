@@ -123,14 +123,15 @@ class CSkelMeshInstance : public CMeshInstance
 	{
 		const CAnimSequence	*Anim1;			// current animation sequence; NULL for default pose
 		const CAnimSequence	*Anim2;			// secondary animation for blending with; NULL = not used
-		float				Time;			// current animation frame for primary animation
+		float				CurrentFrame;	// current animation frame for primary animation
 		float				SecondaryBlend;	// value = 0 (use primary animation) .. 1 (use secondary animation)
 		float				BlendAlpha;		// blend with previous channels; 0 = not affected, 1 = fully affected
 		int					RootBone;		// root animation bone
 		float				Rate;			// animation rate multiplier for Anim.Rate
 		float				TweenTime;		// time to stop tweening; 0 when no tweening at all
 		float				TweenStep;		// fraction between current pose and desired pose; updated in UpdateAnimation()
-		bool				Looped;
+		bool				bLooped;		// true when animation is looped
+		bool				bReverse;		// true when animation is played in reverse direction
 	};
 
 public:
@@ -175,9 +176,9 @@ public:
 	}
 	void AnimStopLooping(int Channel)
 	{
-		GetStage(Channel).Looped = false;
+		GetStage(Channel).bLooped = false;
 	}
-	void FreezeAnimAt(float Time, int Channel = 0);
+	void FreezeAnimAt(float Frame, int Channel = 0);
 
 	// animation state
 
@@ -186,9 +187,9 @@ public:
 		return GetStage(Channel).Anim1;
 	}
 
-	float GetAnimTime(int Channel) const
+	float GetAnimFrame(int Channel) const
 	{
-		return GetStage(Channel).Time;
+		return GetStage(Channel).CurrentFrame;
 	}
 
 	// get current animation information:

@@ -435,7 +435,7 @@ void CSkelMeshViewer::Draw2D()
 					AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames,
 					Seq->bAdditive ? S_RED" (additive)" : "");
 			}
-			DrawTextBottomRight(S_GREEN "Time:" S_WHITE " %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
+			DrawTextBottomRight(S_GREEN "Frame:" S_WHITE " %4.1f/%d", MeshInst->GetAnimFrame(0), Seq->NumFrames);
 #if ANIM_DEBUG_INFO
 			const FString& DebugText = Seq->DebugInfo;
 			if (DebugText.Num())

@@ -439,14 +439,14 @@ void CSkelMeshInstance::UpdateSkeleton()
 
 		const CAnimSequence *AnimSeq1 = Chn->Anim1;
 		const CAnimSequence *AnimSeq2 = NULL;
-		float Time2;
+		float Frame2;
 		if (AnimSeq1)
 		{
 			if (Chn->Anim2 && Chn->SecondaryBlend)
 			{
 				AnimSeq2 = Chn->Anim2;
 				// compute time for secondary channel; always in sync with primary channel
-				Time2 = Chn->Time / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
+				Frame2 = Chn->CurrentFrame / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
 			}
 		}
 
@@ -484,7 +484,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
 				{
 					AnimSeq1->Tracks[BoneIndex]->GetBonePosition(
-						Chn->Time, AnimSeq1->NumFrames, Chn->Looped, NewBonePosition, NewBoneRotation);
+						Chn->CurrentFrame, AnimSeq1->NumFrames, Chn->bLooped, NewBonePosition, NewBoneRotation);
 #if SHOW_ANIM
 					DrawTextLeft("%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
 						i, *Bone.Name, VECTOR_ARG(NewBonePosition), QUAT_ARG(NewBoneRotation));
@@ -500,7 +500,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 					CVec3 AnimBonePositionBlend = Bone.Position;	// default position - from bind pose
 					CQuat AnimBoneRotationBlend = Bone.Orientation; // ...
 					AnimSeq2->Tracks[BoneIndex]->GetBonePosition(
-						Time2, AnimSeq2->NumFrames, Chn->Looped, AnimBonePositionBlend, AnimBoneRotationBlend);
+						Frame2, AnimSeq2->NumFrames, Chn->bLooped, AnimBonePositionBlend, AnimBoneRotationBlend);
 					if (Chn->SecondaryBlend == 1.0f)
 					{
 						// Fully override the animation
@@ -703,7 +703,6 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 				TimeDelta = -Chn->TweenTime;
 				Chn->TweenTime = 0;
 			}
-			assert(Chn->Time == 0);
 		}
 		// note: TweenTime may be changed now, check again
 		if (!Chn->TweenTime && Chn->Anim1)
@@ -713,32 +712,57 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 			const CAnimSequence *Seq2 = Chn->Anim2;
 			if (!Chn->SecondaryBlend) Seq2 = NULL;
 
-			float Rate1 = Chn->Rate * Seq1->Rate;
+			float EffectiveRate = fabs(Chn->Rate * Seq1->Rate);
 			if (Seq2)
 			{
 				// if blending 2 channels, should adjust animation rate
-				Rate1 = Lerp(Seq1->Rate / Seq1->NumFrames, Seq2->Rate / Seq2->NumFrames, Chn->SecondaryBlend)
+				EffectiveRate = Lerp(fabs(Seq1->Rate) / Seq1->NumFrames, fabs(Seq2->Rate) / Seq2->NumFrames, Chn->SecondaryBlend)
 					* Seq1->NumFrames;
 			}
-			Chn->Time += TimeDelta * Rate1;
 
-			if (Chn->Looped)
+			// Increment the time
+			if (!Chn->bReverse)
+				Chn->CurrentFrame += TimeDelta * EffectiveRate;
+			else
+				Chn->CurrentFrame -= TimeDelta * EffectiveRate;
+
+			if (Chn->bLooped)
 			{
-				if (Chn->Time >= Seq1->NumFrames)
+				// Wrap time for looped channels
+				if (!Chn->bReverse)
 				{
-					// wrap time
-					int numSkip = appFloor(Chn->Time / Seq1->NumFrames);
-					Chn->Time -= numSkip * Seq1->NumFrames;
+					if (Chn->CurrentFrame >= Seq1->NumFrames)
+					{
+						int numSkip = appFloor(Chn->CurrentFrame / Seq1->NumFrames);
+						Chn->CurrentFrame -= numSkip * Seq1->NumFrames;
+					}
+				}
+				else
+				{
+					if (Chn->CurrentFrame < 0)
+					{
+						int numSkip = appFloor(-Chn->CurrentFrame / Seq1->NumFrames) + 1;
+						Chn->CurrentFrame += numSkip * Seq1->NumFrames;
+					}
 				}
 			}
 			else
 			{
-				if (Chn->Time >= Seq1->NumFrames-1)
+				// Clamp time for non-looped playback
+				if (!Chn->bReverse)
 				{
-					// clamp time
-					Chn->Time = Seq1->NumFrames-1;
-					if (Chn->Time < 0)
-						Chn->Time = 0;
+					if (Chn->CurrentFrame >= Seq1->NumFrames-1)
+					{
+						// clamp time in a case NumFrames == 0
+						Chn->CurrentFrame = max(Seq1->NumFrames-1, 0);
+					}
+				}
+				else
+				{
+					if (Chn->CurrentFrame < 0.0f)
+					{
+						Chn->CurrentFrame = 0.0f;
+					}
 				}
 			}
 		}
@@ -772,16 +796,22 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 		// show default pose
 		Chn.Anim1          = NULL;
 		Chn.Anim2          = NULL;
-		Chn.Time           = 0;
+		Chn.CurrentFrame   = 0;
 		Chn.Rate           = 0;
-		Chn.Looped         = false;
+		Chn.bLooped        = false;
+		Chn.bReverse       = false;
 		Chn.TweenTime      = TweenTime;
 		Chn.SecondaryBlend = 0;
 		return;
 	}
 
-	Chn.Rate   = Rate;
-	Chn.Looped = Looped;
+	Chn.Rate = Rate;
+	Chn.bLooped = Looped;
+
+	if (Rate != 0.0f)
+		Chn.bReverse = NewAnim->Rate * Rate < 0.0f;
+	else
+		Chn.bReverse = NewAnim->Rate < 0.0f;
 
 	if (NewAnim == Chn.Anim1 && Looped)
 	{
@@ -791,7 +821,7 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 
 	Chn.Anim1          = NewAnim;
 	Chn.Anim2          = NULL;
-	Chn.Time           = 0;
+	Chn.CurrentFrame   = Chn.bReverse && !Chn.bLooped ? max(NewAnim->NumFrames - 1, 0) : 0;
 	Chn.SecondaryBlend = 0;
 	Chn.TweenTime      = TweenTime;
 
@@ -827,11 +857,11 @@ void CSkelMeshInstance::SetSecondaryAnim(int Channel, const char *AnimName)
 }
 
 
-void CSkelMeshInstance::FreezeAnimAt(float Time, int Channel)
+void CSkelMeshInstance::FreezeAnimAt(float Frame, int Channel)
 {
 	guard(CSkelMeshInstance::FreezeAnimAt);
 	CAnimChan &Chn = GetStage(Channel);
-	Chn.Time = Time;
+	Chn.CurrentFrame = Frame;
 	Chn.Rate = 0;
 	unguard;
 }
@@ -852,7 +882,7 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName, float 
 	}
 	const CAnimSequence *Seq = Chn.Anim1;
 	AnimName  = Seq->Name;
-	Frame     = Chn.Time;
+	Frame     = Chn.CurrentFrame;
 	NumFrames = Seq->NumFrames;
 	Rate      = Seq->Rate * Chn.Rate;
 

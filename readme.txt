@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+18.02.2021
+- added support for playing back animations with negative rates (playing in opposite direction)
+
 30.12.2020
 - hyperlinks for SkeletalMesh sub-objects: Skeleton, AnimSet, AnimSequence, tagged meshes
 - highlighting tagges skeletal mesh when mouse points at its name
