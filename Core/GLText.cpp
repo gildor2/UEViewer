@@ -423,7 +423,8 @@ void FlushTexts()
 }
 
 
-void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink, bool bHighlightLink, ETextAnchor anchor)
+// Internal function for drawing text at arbitrary 2D position
+static void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink, bool bHighlightLink, ETextAnchor anchor)
 {
 	if (!GShowDebugInfo) return;
 
@@ -437,6 +438,50 @@ void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink
 	rec->color  = color;
 }
 
+static void CheckHyperlink(int textPosX, int textPosY, int textWidth, int textHeight, const char* msg,
+	bool& bHighlightLink, bool& bClicked)
+{
+		// Do the rough estimation of having mouse in the whole text's bounds
+		if (textPosY <= Viewport::MousePos.Y && Viewport::MousePos.Y < textPosY + textHeight &&
+			textPosX <= Viewport::MousePos.X && Viewport::MousePos.X <= textPosX + textWidth)
+		{
+			// Check if we'll get into exact hyperlink bounds, verify only X coordinate now
+			int offset = 0;
+			int linkStart = -1;
+			const char* s = msg;
+			while (char c = *s++)
+			{
+				if (c == '\n' || c == S_HYPER_END)
+					break;
+				if (c == COLOR_ESCAPE && *s)
+				{
+					s++;
+					continue;
+				}
+				if (c == S_HYPER_START)
+				{
+					linkStart = offset;
+					continue;
+				}
+				// Count a character as printable
+				offset++;
+			}
+			if (linkStart >= 0 &&
+				textPosX + (CHAR_WIDTH - FONT_SPACING) * linkStart <= Viewport::MousePos.X &&
+				Viewport::MousePos.X < textPosX + (CHAR_WIDTH - FONT_SPACING) * offset)
+			{
+				bHighlightLink = true;
+				// Check if hyperlink has been clicked this frame
+				// We're catching "click" event. Can't do that with "release button" because
+				// mouse capture (SDL_SetRelativeMouseMode) generates extra events on Windows,
+				// so mouse position will jump between actual one and window center.
+				if ((Viewport::MouseButtonsDelta & 1) && (Viewport::MouseButtons & 1))
+				{
+					bClicked = true;
+				}
+			}
+		}
+}
 
 static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink, bool* pHover, const char* fmt, va_list argptr)
 {
@@ -481,46 +526,8 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 		// there will be a 1 frame delay if text will be changed.
 		int realTextPosY = OffsetYForAnchor(anchor, textPosY, true);
 
-		// Do the rough estimation of having mouse in the whole text's bounds
-		if (realTextPosY <= Viewport::MousePos.Y && Viewport::MousePos.Y < realTextPosY + textHeight &&
-			textPosX <= Viewport::MousePos.X && Viewport::MousePos.X <= textPosX + textWidth)
-		{
-			// Check if we'll get into exact hyperlink bounds, verify only X coordinate now
-			int offset = 0;
-			int linkStart = -1;
-			const char* s = msg;
-			while (char c = *s++)
-			{
-				if (c == '\n' || c == S_HYPER_END)
-					break;
-				if (c == COLOR_ESCAPE && *s)
-				{
-					s++;
-					continue;
-				}
-				if (c == S_HYPER_START)
-				{
-					linkStart = offset;
-					continue;
-				}
-				// Count a character as printable
-				offset++;
-			}
-			if (linkStart >= 0 &&
-				textPosX + (CHAR_WIDTH - FONT_SPACING) * linkStart <= Viewport::MousePos.X &&
-				Viewport::MousePos.X < textPosX + (CHAR_WIDTH - FONT_SPACING) * offset)
-			{
-				bHighlightLink = true;
-				// Check if hyperlink has been clicked this frame
-				// We're catching "click" event. Can't do that with "release button" because
-				// mouse capture (SDL_SetRelativeMouseMode) generates extra events on Windows,
-				// so mouse position will jump between actual one and window center.
-				if ((Viewport::MouseButtonsDelta & 1) && (Viewport::MouseButtons & 1))
-				{
-					bClicked = true;
-				}
-			}
-		}
+		// Compare mouse position agains the hyperlink text
+		CheckHyperlink(textPosX, realTextPosY, textWidth, textHeight, msg, bHighlightLink, bClicked);
 
 		if (pHover) *pHover = bHighlightLink;
 	}
@@ -637,7 +644,11 @@ bool DrawTextH(ETextAnchor anchor, bool* isHover, unsigned color, const char* te
 void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
 {
 	int coords[2];
-	if (!Viewport::ProjectToScreen(pos, coords)) return;
+	if (!Viewport::ProjectToScreen(pos, coords))
+	{
+		// The 'pos' is outside of the screen
+		return;
+	}
 
 	va_list	argptr;
 	va_start(argptr, text);
@@ -645,7 +656,37 @@ void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
 	vsnprintf(ARRAY_ARG(msg), text, argptr);
 	va_end(argptr);
 
-	DrawTextPos(coords[0], coords[1], msg, color);
+	DrawTextPos(coords[0], coords[1], msg, color, false, false, ETextAnchor::None);
+}
+
+bool DrawText3DH(const CVec3 &pos, bool* isHover, unsigned color, const char *text, ...)
+{
+	int coords[2];
+	if (!Viewport::ProjectToScreen(pos, coords))
+	{
+		// The 'pos' is outside of the screen
+		return false;
+	}
+
+	va_list	argptr;
+	va_start(argptr, text);
+	char msg[4096];
+	vsnprintf(ARRAY_ARG(msg), text, argptr);
+	va_end(argptr);
+
+	int textWidth, textHeight;
+	GetTextExtents(msg, textWidth, textHeight, true);
+
+	// Compare mouse position agains the hyperlink text
+	bool bHighlightLink = false;
+	bool bClicked = false;
+	CheckHyperlink(coords[0], coords[1], textWidth, textHeight, msg, bHighlightLink, bClicked);
+
+	if (isHover) *isHover = bHighlightLink;
+
+	DrawTextPos(coords[0], coords[1], msg, color, true, bHighlightLink, ETextAnchor::None);
+
+	return bClicked;
 }
 
 void ScrollText(int Amount)
