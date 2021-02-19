@@ -671,12 +671,18 @@ static void ExportAnimations(GLTFExportContext& Context, FArchive& Ar)
 
 		// Prepare channels array
 		Ar.Printf("      \"channels\" : [\n");
+		bool bHasOutput = false;
 		for (int BoneIndex = 0; BoneIndex < AnimBones.Num(); BoneIndex++)
 		{
 			int MeshBoneIndex = AnimBones[BoneIndex];
 			int AnimBoneIndex = BoneMap[MeshBoneIndex];
 
 			const CAnimTrack* Track = Seq.Tracks[AnimBoneIndex];
+			if (!Track->HasKeys())
+			{
+				//todo: may be store a reference pose position then?
+				continue;
+			}
 
 			int TranslationSamplerIndex = Samplers.Num();
 			AnimSampler* Sampler = new (Samplers) AnimSampler;
@@ -690,15 +696,26 @@ static void ExportAnimations(GLTFExportContext& Context, FArchive& Ar)
 			Sampler->BoneNodeIndex = MeshBoneIndex + FIRST_BONE_NODE;
 			Sampler->Track = Track;
 
+			if (bHasOutput)
+			{
+				Ar.Printf(",\n");
+			}
+
 			// Print glTF information. Not using usual formatting here to make output a little bit more compact.
 			Ar.Printf(
 				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } },\n",
 				TranslationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "translation"
 			);
 			Ar.Printf(
-				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } }%s\n",
-				RotationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "rotation", BoneIndex == AnimBones.Num()-1 ? "" : ","
+				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } }",
+				RotationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "rotation"
 			);
+			bHasOutput = true;
+		}
+
+		if (bHasOutput)
+		{
+			Ar.Printf("\n");
 		}
 		Ar.Printf("      ],\n");
 
