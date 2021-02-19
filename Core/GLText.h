@@ -77,6 +77,8 @@ void FlushTexts();
 // Internal function for drawing text at arbitrary 2D position
 void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink = false, bool bHighlightLink = false, ETextAnchor anchor = ETextAnchor::None);
 
+// Draw text at 3D space, with arbitrary color
+void DrawText3D(const CVec3 &pos, unsigned color, const char* text, ...);
 
 // Allows to disable rendering of any texts on screen
 extern bool GShowDebugInfo;

@@ -461,30 +461,29 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 
 	char msg[4096];
 	vsnprintf(ARRAY_ARG(msg), fmt, argptr);
-	int w, h;
-	GetTextExtents(msg, w, h, bHyperlink);
+	int textWidth, textHeight;
+	GetTextExtents(msg, textWidth, textHeight, bHyperlink);
 
-	nextText_y[int(anchor)] = textPosY + h;
+	nextText_y[int(anchor)] = textPosY + textHeight;
 
-	if (!isBottom && textPosY + h <= 0 && !GDumpTexts)		// out of screen
+	if (!isBottom && textPosY + textHeight <= 0 && !GDumpTexts)		// out of screen
 		return bClicked;
 
 	// Determine X position depending on anchor
-	int textPosX = isLeft ? LEFT_BORDER : Viewport::Size.X - RIGHT_BORDER - w;
+	int textPosX = isLeft ? LEFT_BORDER : Viewport::Size.X - RIGHT_BORDER - textWidth;
 
 	// Check if mouse points at hyperlink
 	bool bHighlightLink = false;
 
 	if (bHyperlink)
 	{
-		int real_y = textPosY;
 		// Make hyperlinks working for bottom anchors. We'll use previous frame offset, so
 		// there will be a 1 frame delay if text will be changed.
-		real_y = OffsetYForAnchor(anchor, real_y, true);
+		int realTextPosY = OffsetYForAnchor(anchor, textPosY, true);
 
 		// Do the rough estimation of having mouse in the whole text's bounds
-		if (real_y <= Viewport::MousePos.Y && Viewport::MousePos.Y < real_y + h &&
-			textPosX <= Viewport::MousePos.X && Viewport::MousePos.X <= textPosX + w)
+		if (realTextPosY <= Viewport::MousePos.Y && Viewport::MousePos.Y < realTextPosY + textHeight &&
+			textPosX <= Viewport::MousePos.X && Viewport::MousePos.X <= textPosX + textWidth)
 		{
 			// Check if we'll get into exact hyperlink bounds, verify only X coordinate now
 			int offset = 0;
@@ -553,7 +552,7 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 		*d = 0;
 		appNotify("%s", msg);
 	}
-#endif
+#endif // DUMP_TEXTS
 
 	return bClicked;
 
@@ -633,6 +632,20 @@ bool DrawTextH(ETextAnchor anchor, bool* isHover, unsigned color, const char* te
 {
 	DRAW_TEXT(anchor, color, true, isHover, text);
 	return bClicked;
+}
+
+void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
+{
+	int coords[2];
+	if (!Viewport::ProjectToScreen(pos, coords)) return;
+
+	va_list	argptr;
+	va_start(argptr, text);
+	char msg[4096];
+	vsnprintf(ARRAY_ARG(msg), text, argptr);
+	va_end(argptr);
+
+	DrawTextPos(coords[0], coords[1], msg, color);
 }
 
 void ScrollText(int Amount)
