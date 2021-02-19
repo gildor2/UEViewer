@@ -244,6 +244,8 @@ protected:
 	CVec3*				InfColors;			// debug: color-by-influence for vertices
 	int					LastLodIndex;		// used to detect requirement to rebuild InfColors[]
 	int					LastMorphIndex;		// used to detect requirement to rebuild MorphedVerts[]
+	int					HighlightBoneIndex;
+	int					LastHighlightBoneIndex; // used to determine if InfColors should be rebuilt
 	// animation state
 	CAnimChan	Channels[MAX_SKELANIMCHANNELS];
 	int			MaxAnimChannel;

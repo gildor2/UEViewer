@@ -101,6 +101,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 ,	BoneData(NULL)
 ,	Skinned(NULL)
 ,	InfColors(NULL)
+,	HighlightBoneIndex(-1)
 {
 	ClearSkelAnims();
 }
@@ -931,6 +932,7 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 	glDisable(GL_ALPHA_TEST);
 
 	glBegin(GL_LINES);
+	HighlightBoneIndex = -1;
 	for (int i = 0; i < pMesh->RefSkeleton.Num(); i++)
 	{
 		const CSkelMeshBone &B  = pMesh->RefSkeleton[i];
@@ -970,17 +972,33 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 			GetBoneInfColor(i, Color);
 			TextColor = RGBAS(Color[0], Color[1], Color[2], 0.7);
 		}
-		glColor4fv(Color);
-		glVertex3fv(v1.v);
-		glVertex3fv(BC.origin.v);
 
 		if (ShowLabels)
 		{
 			// show bone label
-			v1.Add(BC.origin);
-			v1.Scale(0.5f);
-			DrawText3D(v1, TextColor, "(%d)%s", i, *B.Name);
+			CVec3 TextPos = v1;
+			TextPos.Add(BC.origin);
+			TextPos.Scale(0.5f);
+			if (HighlightBoneIndex < 0)
+			{
+				bool bHighlight = false;
+				DrawText3DH(TextPos, &bHighlight, TextColor, S_HYPERLINK("(%d)%s"), i, *B.Name);
+				if (bHighlight)
+				{
+					HighlightBoneIndex = i;
+					Color[0] = Color[1] = Color[2] = 10.0f;
+				}
+			}
+			else
+			{
+				// Do not highlight multiple bone names
+				DrawText3D(TextPos, TextColor, "(%d)%s", i, *B.Name);
+			}
 		}
+
+		glColor4fv(Color);
+		glVertex3fv(v1.v);
+		glVertex3fv(BC.origin.v);
 	}
 	glColor3f(1,1,1);
 	glEnd();
@@ -1275,7 +1293,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 	if (flags & DF_SHOW_INFLUENCES)
 	{
 		// in this mode mesh is displayed colorized instead of textured
-		if (!InfColors) BuildInfColors();
+		BuildInfColors();
 		assert(InfColors);
 #if !SHOW_INFLUENCES
 		glEnableClientState(GL_COLOR_ARRAY);
@@ -1479,6 +1497,14 @@ void CSkelMeshInstance::BuildInfColors()
 {
 	guard(CSkelMeshInstance::BuildInfColors);
 
+	if (InfColors && HighlightBoneIndex == LastHighlightBoneIndex)
+	{
+		// Already built
+		return;
+	}
+
+	LastHighlightBoneIndex = HighlightBoneIndex;
+
 	int i;
 
 	const CSkelMeshLod &Lod = pMesh->Lods[LodIndex];
@@ -1486,22 +1512,44 @@ void CSkelMeshInstance::BuildInfColors()
 	if (InfColors) delete[] InfColors;
 	InfColors = new CVec3[Lod.NumVerts];
 
-	// get colors for bones
-	int NumBones = pMesh->RefSkeleton.Num();
-	CVec3 BoneColors[MAX_MESHBONES];
-	for (i = 0; i < NumBones; i++)
-		GetBoneInfColor(i, BoneColors[i].v);
-
-	// process influences
-	for (i = 0; i < Lod.NumVerts; i++)
+	if (HighlightBoneIndex < 0)
 	{
-		const CSkelMeshVertex &V = Lod.Verts[i];
-		CVec4 UnpackedWeights;
-		V.UnpackWeights(UnpackedWeights);
-		for (int j = 0; j < NUM_INFLUENCES; j++)
+		// Get colors for bones
+		int NumBones = pMesh->RefSkeleton.Num();
+		CVec3 BoneColors[MAX_MESHBONES];
+		for (i = 0; i < NumBones; i++)
+			GetBoneInfColor(i, BoneColors[i].v);
+
+		// Process influences
+		for (i = 0; i < Lod.NumVerts; i++)
 		{
-			if (V.Bone[j] < 0) break;
-			VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j]]);
+			const CSkelMeshVertex &V = Lod.Verts[i];
+			CVec4 UnpackedWeights;
+			V.UnpackWeights(UnpackedWeights);
+			for (int j = 0; j < NUM_INFLUENCES; j++)
+			{
+				if (V.Bone[j] < 0) break;
+				VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j]]);
+			}
+		}
+	}
+	else
+	{
+		// Highlight a single bone influences
+		static const CVec3 BoneColors[2] = {
+			{ 0.1f, 0.1f, 0.1f },	// not highlighted
+			{ 0.7f, 2.0f, 0.7f }	// highlighted
+		};
+		for (i = 0; i < Lod.NumVerts; i++)
+		{
+			const CSkelMeshVertex &V = Lod.Verts[i];
+			CVec4 UnpackedWeights;
+			V.UnpackWeights(UnpackedWeights);
+			for (int j = 0; j < NUM_INFLUENCES; j++)
+			{
+				if (V.Bone[j] < 0) break;
+				VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j] == HighlightBoneIndex]);
+			}
 		}
 	}
 
