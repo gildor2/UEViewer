@@ -449,14 +449,14 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 	bool isBottom = (anchor >= ETextAnchor::BottomLeft);
 	bool isLeft   = (anchor == ETextAnchor::TopLeft || anchor == ETextAnchor::BottomLeft);
 
-	int pos_y = nextText_y[int(anchor)];
+	int textPosY = nextText_y[int(anchor)];
 
 #if DUMP_TEXTS
-	if (GDumpTexts) pos_y = Viewport::Size.Y / 2;		// trick to avoid text culling
+	if (GDumpTexts) textPosY = Viewport::Size.Y / 2;		// trick to avoid text culling
 #endif
 
 	if (pHover) *pHover = false;						// initialize in a case of early return
-	if (!isBottom && pos_y >= Viewport::Size.Y && !GDumpTexts)	// out of screen
+	if (!isBottom && textPosY >= Viewport::Size.Y && !GDumpTexts)	// out of screen
 		return bClicked;
 
 	char msg[4096];
@@ -464,27 +464,27 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 	int w, h;
 	GetTextExtents(msg, w, h, bHyperlink);
 
-	nextText_y[int(anchor)] = pos_y + h;
+	nextText_y[int(anchor)] = textPosY + h;
 
-	if (!isBottom && pos_y + h <= 0 && !GDumpTexts)		// out of screen
+	if (!isBottom && textPosY + h <= 0 && !GDumpTexts)		// out of screen
 		return bClicked;
 
 	// Determine X position depending on anchor
-	int pos_x = isLeft ? LEFT_BORDER : Viewport::Size.X - RIGHT_BORDER - w;
+	int textPosX = isLeft ? LEFT_BORDER : Viewport::Size.X - RIGHT_BORDER - w;
 
 	// Check if mouse points at hyperlink
 	bool bHighlightLink = false;
 
 	if (bHyperlink)
 	{
-		int real_y = pos_y;
+		int real_y = textPosY;
 		// Make hyperlinks working for bottom anchors. We'll use previous frame offset, so
 		// there will be a 1 frame delay if text will be changed.
 		real_y = OffsetYForAnchor(anchor, real_y, true);
 
 		// Do the rough estimation of having mouse in the whole text's bounds
 		if (real_y <= Viewport::MousePos.Y && Viewport::MousePos.Y < real_y + h &&
-			pos_x <= Viewport::MousePos.X && Viewport::MousePos.X <= pos_x + w)
+			textPosX <= Viewport::MousePos.X && Viewport::MousePos.X <= textPosX + w)
 		{
 			// Check if we'll get into exact hyperlink bounds, verify only X coordinate now
 			int offset = 0;
@@ -494,8 +494,11 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 			{
 				if (c == '\n' || c == S_HYPER_END)
 					break;
-				if (c == COLOR_ESCAPE)
+				if (c == COLOR_ESCAPE && *s)
+				{
+					s++;
 					continue;
+				}
 				if (c == S_HYPER_START)
 				{
 					linkStart = offset;
@@ -504,9 +507,9 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 				// Count a character as printable
 				offset++;
 			}
-			if (linkStart > 0 &&
-				pos_x + (CHAR_WIDTH - FONT_SPACING) * linkStart <= Viewport::MousePos.X &&
-				Viewport::MousePos.X < pos_x + (CHAR_WIDTH - FONT_SPACING) * offset)
+			if (linkStart >= 0 &&
+				textPosX + (CHAR_WIDTH - FONT_SPACING) * linkStart <= Viewport::MousePos.X &&
+				Viewport::MousePos.X < textPosX + (CHAR_WIDTH - FONT_SPACING) * offset)
 			{
 				bHighlightLink = true;
 				// Check if hyperlink has been clicked this frame
@@ -524,12 +527,12 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 	}
 
 	// Put the text into queue
-	DrawTextPos(pos_x, pos_y, msg, color, bHyperlink, bHighlightLink, anchor);
+	DrawTextPos(textPosX, textPosY, msg, color, bHyperlink, bHighlightLink, anchor);
 
 #if DUMP_TEXTS
 	if (GDumpTexts)
 	{
-		// drop color escape characters
+		// Drop escape characters
 		char *d = msg;
 		char *s = msg;
 		while (char c = *s++)
@@ -539,6 +542,12 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 				s++;
 				continue;
 			}
+			if (bHyperlink)
+			{
+				if (c == S_HYPER_START || c == S_HYPER_END)
+					continue;
+			}
+			// This is a text, copy it
 			*d++ = c;
 		}
 		*d = 0;
