@@ -1200,7 +1200,7 @@ int main(int argc, const char **argv)
 	// register exporters and classes
 	InitClassAndExportSystems(Packages[0]->Game);
 
-	if (mainCmd == CMD_PkgInfo)
+	if (mainCmd == CMD_PkgInfo || mainCmd == CMD_List) //DHK was //if (mainCmd == CMD_PkgInfo)
 	{
 		DisplayPackageStats(Packages);
 		//DHK after List we want to actually process
