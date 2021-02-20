@@ -415,6 +415,16 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 						char ObjName[256];
 						obj->GetFullName(ARRAY_ARG(ObjName));
 						PD2->PrintValue("%s'%s'", obj->GetClassName(), ObjName);
+
+						//DHK nested components, if child is UObject*
+						FString sObjClassName = obj->GetClassName();
+
+						if (!sObjClassName.StartsWith("StaticMesh4"))//TODO ugly!!!
+						{
+							appPrintf(" ComponentClassName: %s, ComponentObjectName: %s\n", obj->GetClassName(), obj->Name);
+							obj->GetTypeinfo()->DumpProps(obj);
+						}
+						//end
 					}
 					else
 					{

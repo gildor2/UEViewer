@@ -1200,7 +1200,17 @@ static bool FindPackageWildcardCallback(const CGameFileInfo *file, FindPackageWi
 	if (data.WildcardContainsPath)
 	{
 		file->GetRelativeName(Name);
-		useThisPackage = appMatchWildcard(*Name, *data.Wildcard, true);
+
+		//DHK
+		/*useThisPackage = appMatchWildcard(*Name, *data.Wildcard, true);*/
+
+		useThisPackage = Name.EndsWith(".umap");
+
+		if (!useThisPackage)
+		{
+			useThisPackage = appMatchWildcard(*Name, *data.Wildcard, true);
+		}
+		//end
 	}
 	else
 	{

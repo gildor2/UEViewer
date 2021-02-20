@@ -139,7 +139,9 @@ BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U4
 	REGISTER_MATERIAL_CLASSES_U4
 	REGISTER_EXPRESSION_CLASSES
+	REGISTER_3RDP_CLASSES4 //DHK Add
 END_CLASS_TABLE
+	REGISTER_LIGHT_ENUMS_U4 //DHK Add
 	REGISTER_MATERIAL_ENUMS_U4
 	REGISTER_MESH_ENUMS_U4
 #endif // UNREAL4
@@ -174,7 +176,7 @@ static void RegisterUnreal3rdPartyClasses()
 {
 #if UNREAL3
 BEGIN_CLASS_TABLE
-	REGISTER_3RDP_CLASSES
+	REGISTER_3RDP_CLASSES3 //DHK was REGISTER_3RDP_CLASSES
 END_CLASS_TABLE
 #endif
 }
@@ -1074,7 +1076,28 @@ int main(int argc, const char **argv)
 	for (int i = 0; i < packagesToLoad.Num(); i++)
 	{
 		TStaticArray<const CGameFileInfo*, 32> Files;
-		appFindGameFiles(packagesToLoad[i], Files);
+		//was appFindGameFiles(packagesToLoad[i], Files);
+
+		//DHK
+		//if using wildcard for maps, enable these
+		FString sPattern = "/PD2/Content/PD2/MAPS/MS_2F";
+		const char* c = "*.umap";
+
+		//if NOT using wildcard for maps, enable these
+		//FString sPattern = "";
+		//const char* c = "";
+
+		bool bWildcard = c != "" ? appMatchWildcard(argPkgName, c, true) : false;
+
+		if (!bWildcard)
+		{
+			appFindGameFiles(packagesToLoad[i], Files);
+		}
+		else
+		{
+			appFindGameFiles(argPkgName, Files);
+		}
+		//end
 
 		if (!Files.Num())
 		{
@@ -1097,6 +1120,14 @@ int main(int argc, const char **argv)
 			for (int j = 0; j < Files.Num(); j++)
 			{
 				bool failed = false;
+
+				//DHK
+				if (sPattern != "")
+				{
+					bShouldLoadPackages = Files[j]->GetRelativeName().StartsWith(*sPattern);
+				}
+				//end
+
 				if (bShouldLoadPackages)
 				{
 					UnPackage* Package = UnPackage::LoadPackage(Files[j]);
@@ -1157,7 +1188,7 @@ int main(int argc, const char **argv)
 			}
 		}
 		unguard;
-		return 0;
+		//return 0;//DHK after List we want to actually process
 	}
 
 	if (mainCmd == CMD_Save)
@@ -1172,7 +1203,8 @@ int main(int argc, const char **argv)
 	if (mainCmd == CMD_PkgInfo)
 	{
 		DisplayPackageStats(Packages);
-		return 0;					// already displayed when loaded package; extend it?
+		//DHK after List we want to actually process
+		//return 0; // already displayed when loaded package; extend it?
 	}
 
 	bool bShouldLoadObjects = (mainCmd != CMD_Export) || (objectsToLoad.Num() > 0);
@@ -1277,7 +1309,7 @@ int main(int argc, const char **argv)
 	}
 
 #if RENDERING
-	if (mainCmd == CMD_Dump)
+	if (mainCmd == CMD_Dump || mainCmd == CMD_List)//DHK was if (mainCmd == CMD_Dump)
 	{
 		// dump object(s)
 		for (int idx = 0; idx < UObject::GObjObjects.Num(); idx++)

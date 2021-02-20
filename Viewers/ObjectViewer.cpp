@@ -26,9 +26,21 @@ void CObjectViewer::Dump()
 {
 	if (Object)
 	{
-		appPrintf("\nObject info:\n============\n");
+		//DHK
+		/*appPrintf("\nObject info:\n============\n");
 		appPrintf("ClassName: %s ObjectName: %s\n", Object->GetClassName(), Object->Name);
-		Object->GetTypeinfo()->DumpProps(Object);
+		Object->GetTypeinfo()->DumpProps(Object);*/
+
+		FString sClassName = Object->GetClassName();
+
+		if (sClassName.StartsWith("AudioComponent") || !sClassName.EndsWith("Component"))//TODO ugly!!!
+		{
+			appPrintf("\nObject info:\n============\n");
+			appPrintf("ClassName: %s, ObjectName: %s\n", Object->GetClassName(), Object->Name);
+
+			Object->GetTypeinfo()->DumpProps(Object);
+		}	
+		//end
 	}
 }
 

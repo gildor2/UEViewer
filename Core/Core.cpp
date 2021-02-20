@@ -24,7 +24,7 @@ static CMutex GLogMutex;
 
 #endif // THREADING
 
-static FILE *GLogFile = NULL;
+static FILE* GLogFile = fopen("log.txt", "w+");//DHK //was NULL;
 
 void appOpenLogFile(const char *filename)
 {
