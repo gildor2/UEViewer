@@ -102,6 +102,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 ,	Skinned(NULL)
 ,	InfColors(NULL)
 ,	HighlightBoneIndex(-1)
+,	bLockBoneHighlight(false)
 {
 	ClearSkelAnims();
 }
@@ -932,7 +933,12 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 	glDisable(GL_ALPHA_TEST);
 
 	glBegin(GL_LINES);
+
+	int ClickedOnBoneIndex = -1;
+	int LastHighlightBone = bLockBoneHighlight ? HighlightBoneIndex : -1;
+	// Reset the highlight bone index. We'll do the remaining logic in the end of this function.
 	HighlightBoneIndex = -1;
+
 	for (int i = 0; i < pMesh->RefSkeleton.Num(); i++)
 	{
 		const CSkelMeshBone &B  = pMesh->RefSkeleton[i];
@@ -945,7 +951,6 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 		Color[3] = 0.5f;
 		if (i > 0)
 		{
-//			Color.Set(1,1,0.3);
 #if SHOW_BONE_UPDATES
 			int t = BoneUpdateCounts[i];
 			if (t)
@@ -975,18 +980,35 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 
 		if (ShowLabels)
 		{
-			// show bone label
+			if (LastHighlightBone == i)
+			{
+				volatile static int nnn = 0;
+				nnn++;
+			}
+			// Draw the bone's label
 			CVec3 TextPos = v1;
 			TextPos.Add(BC.origin);
 			TextPos.Scale(0.5f);
 			if (HighlightBoneIndex < 0)
 			{
 				bool bHighlight = false;
-				DrawText3DH(TextPos, &bHighlight, TextColor, S_HYPERLINK("(%d)%s"), i, *B.Name);
+				if (i == LastHighlightBone)
+				{
+					TextColor = RGBA(1,1,1,1);
+				}
+				bool bClicked = DrawText3DH(TextPos, &bHighlight, TextColor, S_HYPERLINK("(%d)%s"), i, *B.Name);
+				if (bClicked && ClickedOnBoneIndex < 0)
+				{
+					ClickedOnBoneIndex = i;
+				}
+				if (bHighlight || LastHighlightBone == i)
+				{
+					// Show current and locked highlight, both
+					Color[0] = Color[1] = Color[2] = 10.0f;
+				}
 				if (bHighlight)
 				{
 					HighlightBoneIndex = i;
-					Color[0] = Color[1] = Color[2] = 10.0f;
 				}
 			}
 			else
@@ -1000,6 +1022,7 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 		glVertex3fv(v1.v);
 		glVertex3fv(BC.origin.v);
 	}
+
 	glColor3f(1,1,1);
 	glEnd();
 
@@ -1007,6 +1030,33 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 	glDisable(GL_BLEND);
 	glDisable(GL_LINE_SMOOTH);
 	glEnable(GL_DEPTH_TEST);
+
+	// Logick of bone highlight locks
+	if (ClickedOnBoneIndex >= 0)
+	{
+		if (LastHighlightBone == HighlightBoneIndex)
+		{
+			// Toggle highlight when clicked on the same bone twice
+			bLockBoneHighlight = !bLockBoneHighlight;
+		}
+		else
+		{
+			// Clicked on a different bone
+			bLockBoneHighlight = true;
+		}
+		if (bLockBoneHighlight)
+		{
+			HighlightBoneIndex = ClickedOnBoneIndex;
+		}
+	}
+	else
+	{
+		// Not clicked, preserve highlight when needed
+		if (bLockBoneHighlight)
+		{
+			HighlightBoneIndex = LastHighlightBone;
+		}
+	}
 
 	unguard;
 }
