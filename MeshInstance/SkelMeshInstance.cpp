@@ -597,7 +597,9 @@ void CSkelMeshInstance::UpdateSkeleton()
 							// Skip this bone, it has missing bone in a source skeleton.
 							// This happens if source skeleton bone has identity transform (zero translation),
 							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
+							// Note: bone translation and rotation should be skipped.
 							NewBonePosition = Bone.Position;
+							NewBoneRotation = Bone.Orientation;
 #if SHOW_ANIM
 							BoneDebug.bSkippedOnRetargetting = true;
 #endif
