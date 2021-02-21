@@ -754,6 +754,22 @@ _ENUM(EAdditiveAnimationType)
 	_E(AAT_RotationOffsetMeshSpace),
 };
 
+enum EAdditiveBasePoseType
+{
+	ABPT_None,
+	ABPT_RefPose,
+	ABPT_AnimScaled,
+	ABPT_AnimFrame,
+};
+
+_ENUM(EAdditiveBasePoseType)
+{
+	_E(ABPT_None),
+	_E(ABPT_RefPose),
+	_E(ABPT_AnimScaled),
+	_E(ABPT_AnimFrame),
+};
+
 struct FCompressedSegment
 {
 	int32					StartFrame;
@@ -938,6 +954,7 @@ public:
 	FRawCurveTracks			CompressedCurveData;
 	EAnimInterpolationType	Interpolation;
 	EAdditiveAnimationType	AdditiveAnimType;
+	EAdditiveBasePoseType	RefPoseType;
 	UAnimSequence4*			RefPoseSeq;
 	int32					RefFrameIndex;
 	FName					RetargetSource;
@@ -960,6 +977,7 @@ public:
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 		PROP_ENUM2(Interpolation, EAnimInterpolationType)
 		PROP_ENUM2(AdditiveAnimType, EAdditiveAnimationType)
+		PROP_ENUM2(RefPoseType, EAdditiveBasePoseType)
 		PROP_NAME(RetargetSource)
 		PROP_OBJ(RefPoseSeq)
 		PROP_INT(RefFrameIndex)
@@ -1057,7 +1075,8 @@ public:
 #define REGISTER_MESH_ENUMS_U4 \
 	REGISTER_ENUM(EAnimInterpolationType) \
 	REGISTER_ENUM(EBoneTranslationRetargetingMode) \
-	REGISTER_ENUM(EAdditiveAnimationType)
+	REGISTER_ENUM(EAdditiveAnimationType) \
+	REGISTER_ENUM(EAdditiveBasePoseType)
 
 
 #endif // UNREAL4
