@@ -550,3 +550,42 @@ void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
 	dst.z = scaleA * A.z + scaleB * B.z;
 	dst.w = scaleA * A.w + scaleB * B.w;
 }
+
+// Convert angle to -180...+180 range
+static float NormalizeAxis(float angle)
+{
+	angle = fmod(angle, 360.0f);
+	if (angle > 180.0f)
+		angle -= 360.0f;
+	return angle;
+}
+
+void Quat2Euler(const CQuat& quat, CVec3& angles)
+{
+	// Reference: FQuat::Rotator() in UE4
+	const float SingularityTest = quat.z * quat.x- quat.w * quat.y;
+	const float YawY = 2.0f * (quat.w * quat.z + quat.x * quat.y);
+	const float YawX = 1.0f - 2.0f * (quat.y * quat.y + quat.z * quat.z);
+
+	const float SINGULARITY_THRESHOLD = 0.4999995f;
+	const float RAD_TO_DEG = (180.0f) / M_PI;
+
+	if (SingularityTest < -SINGULARITY_THRESHOLD)
+	{
+		angles[PITCH] = -90.0f;
+		angles[YAW]   = atan2(YawY, YawX) * RAD_TO_DEG;
+		angles[ROLL]  = NormalizeAxis(-angles[YAW] - (2.0f * atan2(quat.x, quat.w) * RAD_TO_DEG));
+	}
+	else if (SingularityTest > SINGULARITY_THRESHOLD)
+	{
+		angles[PITCH] = 90.0f;
+		angles[YAW]   = atan2(YawY, YawX) * RAD_TO_DEG;
+		angles[ROLL]  = NormalizeAxis(angles[YAW] - (2.0f * atan2(quat.x, quat.w) * RAD_TO_DEG));
+	}
+	else
+	{
+		angles[PITCH] = asin(2.0f * SingularityTest) * RAD_TO_DEG;
+		angles[YAW]   = atan2(YawY, YawX) * RAD_TO_DEG;
+		angles[ROLL]  = atan2(-2.0f * (quat.w * quat.x + quat.y * quat.z), (1.0f - 2.0f * (quat.x * quat.x + quat.y * quat.y))) * RAD_TO_DEG;
+	}
+}
