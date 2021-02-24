@@ -121,6 +121,84 @@ public:
 	}
 };
 
+class UAkComponent : public UObject
+{
+	DECLARE_CLASS(UAkComponent, UObject);
+public:
+
+	FVector RelativeLocation;
+	FRotator RelativeRotation;
+	FVector RelativeScale3D;
+
+	BEGIN_PROP_TABLE
+		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR(RelativeRotation)
+		PROP_VECTOR(RelativeScale3D)
+		END_PROP_TABLE
+
+		virtual void Serialize(FArchive& Ar)
+	{
+		guard(UAkComponent::Serialize);
+		Super::Serialize(Ar);
+		DROP_REMAINING_DATA(Ar);
+		unguard;
+	}
+};
+
+class UAkAmbientSound : public UObject
+{
+	DECLARE_CLASS(UAkAmbientSound, UObject);
+public:
+
+	UAkComponent* AkComponent;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(AkComponent)
+		END_PROP_TABLE
+
+		virtual void Serialize(FArchive& Ar)
+	{
+		guard(UAkAmbientSound::Serialize);
+		Super::Serialize(Ar);
+		DROP_REMAINING_DATA(Ar);
+		unguard;
+	}
+};
+
+class UAkAudioBank : public UObject
+{
+	DECLARE_CLASS(UAkAudioBank, UObject);
+public:
+
+		virtual void Serialize(FArchive& Ar)
+	{
+		guard(UAkAudioBank::Serialize);
+		Super::Serialize(Ar);
+		DROP_REMAINING_DATA(Ar);
+		unguard;
+	}
+};
+
+class UAkAudioEvent : public UObject
+{
+	DECLARE_CLASS(UAkAudioEvent, UObject);
+public:
+
+	UAkAudioBank* RequiredBank;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(RequiredBank)
+		END_PROP_TABLE
+
+		virtual void Serialize(FArchive& Ar)
+	{
+		guard(UAkAudioEvent::Serialize);
+		Super::Serialize(Ar);
+		DROP_REMAINING_DATA(Ar);
+		unguard;
+	}
+};
+
 class UAudioVolume : public UObject
 {
 	DECLARE_CLASS(UAudioVolume, UObject);
@@ -717,6 +795,10 @@ public:
 
 #define REGISTER_3RDP_CLASSES4 \
  REGISTER_CLASS(UBrushComponent) \
+ REGISTER_CLASS(UAkComponent) \
+ REGISTER_CLASS(UAkAmbientSound) \
+ REGISTER_CLASS(UAkAudioBank) \
+ REGISTER_CLASS(UAkAudioEvent) \
  REGISTER_CLASS(UAudioVolume) \
  REGISTER_CLASS(USoundCue) \
  REGISTER_CLASS(UAudioComponent) \

@@ -27,7 +27,7 @@ constexpr uint32 MakeBitmask()
 template<int Offset>
 constexpr int MakeBitmaskWithOffset()
 {
-    return 0;
+	return 0;
 }
 
 template<int Offset, int Arg2, int... Args>
@@ -167,8 +167,9 @@ END
 
 BEGIN("UTexture3")
 	DROP_VECTOR4(0)						// FGuid LightingGuid
-	// UTexture
-	DROP_INT8(2, 3, 5, 8, 9, 10, 11, 12, 13)
+	DROP_INT8(2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13)
+	DROP_INT64(6)						// FPerPlatformFloat Downscale
+	DROP_OBJ_ARRAY(14)					// AssetUserData
 END
 
 BEGIN("UMaterialInstance")
@@ -183,27 +184,27 @@ BEGIN("UMaterialInstance")
 END
 
 BEGIN("UMaterial3")
-	// known properties
-	MAP(BlendMode, 17)
-	MAP(TwoSided, 33)
-	MAP(bDisableDepthTest, 48)
-	// todo: native serializers
-	// todo: FScalarMaterialInput: (10, 11, 12, 25, 27)
-	// todo: FVectorMaterialInput: (13, 14, 24)
-	// todo: FColorMaterialInput: (15)
-	// todo: MAP(CachedExpressionData, 116)
-	//?? FShadingModelMaterialInput 28
-	//?? FLinearColor 46
-	// int8 properties
-	DROP_INT8(16, 17, 18, 19, 20, 21)
-	DROP_INT8(29, 30, 31, 32, 34, 35, 36, 37, 38)
-	DROP_INT8(48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59)
-	DROP_INT8(60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70)
-	DROP_INT8(75, 76, 77, 78, 79, 80, 82, 83, 84, 85)
-	DROP_INT8(86, 87, 88, 89, 90, 91, 92, 93, 94, 95)
-	DROP_INT8(96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111)
-	// other
-	DROP_VECTOR4(114)					// FGuid StateId
+// known properties
+MAP(BlendMode, 17)
+MAP(TwoSided, 33)
+MAP(bDisableDepthTest, 48)
+// todo: native serializers
+// todo: FScalarMaterialInput: (10, 11, 12, 25, 27)
+// todo: FVectorMaterialInput: (13, 14, 24)
+// todo: FColorMaterialInput: (15)
+// todo: MAP(CachedExpressionData, 116)
+//?? FShadingModelMaterialInput 28
+//?? FLinearColor 46
+// int8 properties
+DROP_INT8(16, 17, 18, 19, 20, 21)
+DROP_INT8(29, 30, 31, 32, 34, 35, 36, 37, 38)
+DROP_INT8(48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59)
+DROP_INT8(60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70)
+DROP_INT8(75, 76, 77, 78, 79, 80, 82, 83, 84, 85)
+DROP_INT8(86, 87, 88, 89, 90, 91, 92, 93, 94, 95)
+DROP_INT8(96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111)
+// other
+DROP_VECTOR4(114)					// FGuid StateId
 END
 
 BEGIN("UMaterialInterface")
@@ -321,10 +322,10 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 //		}
 //		else
 //		{
-			if (strcmp(CurrentClassName, Parent.ThisName) != 0)
-				continue;
-//		}
-		// Types are matching, redirect to parent
+		if (strcmp(CurrentClassName, Parent.ThisName) != 0)
+			continue;
+		//		}
+				// Types are matching, redirect to parent
 		CurrentClassName = Parent.ParentName;
 		CurrentType = FindStructType(CurrentClassName);
 		PropIndex -= Parent.NumProps;
@@ -348,7 +349,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		// if (CurrentType)
 		//	IsOurClass = CurrentType->IsA(p->Name + 1);
 		// else
-			IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
+		IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
 
 		while (++p < end && p->Name)
 		{
