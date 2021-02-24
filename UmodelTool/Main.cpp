@@ -1080,7 +1080,7 @@ int main(int argc, const char **argv)
 
 		//DHK
 		//if using wildcard for maps, enable these
-		FString sPattern = "/PD2/Content/PD2/MAPS/MS_2F";
+		FString sPattern = "/Game/Levels/Transmission";
 		const char* c = "*.umap";
 
 		//if NOT using wildcard for maps, enable these
