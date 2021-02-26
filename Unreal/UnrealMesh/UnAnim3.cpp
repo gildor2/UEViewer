@@ -762,7 +762,13 @@ void UAnimSet::ConvertAnims()
 		// bone tracks ...
 		Dst->Tracks.Empty(NumTracks);
 
-		FMemReader Reader(Seq->CompressedByteStream.GetData(), Seq->CompressedByteStream.Num());
+		// There could be an animation consisting of only trans with offsets == -1, what means
+		// use of RefPose. In this case there's no point adding the animation to AnimSet. We'll
+		// create FMemReader even for empty CompressedByteStream, otherwise it would be hard to
+		// create a valid CAnimSequence which won't crash animation export.
+		FMemReader Reader(
+			Seq->CompressedByteStream.Num() ? Seq->CompressedByteStream.GetData() : (const uint8*)"",
+			Seq->CompressedByteStream.Num());
 		Reader.SetupFrom(*Package);
 
 		bool HasTimeTracks = (Seq->KeyEncodingFormat == AKF_VariableKeyLerp);
