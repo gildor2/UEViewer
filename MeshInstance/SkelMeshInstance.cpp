@@ -1024,11 +1024,6 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 
 		if (ShowLabels)
 		{
-			if (LastHighlightBone == i)
-			{
-				volatile static int nnn = 0;
-				nnn++;
-			}
 			// Draw the bone's label
 			CVec3 TextPos = v1;
 			TextPos.Add(BC.origin);
@@ -1060,6 +1055,11 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 				// Do not highlight multiple bone names
 				DrawText3D(TextPos, TextColor, "(%d)%s", i, *B.Name);
 			}
+		}
+		else if (i == LastHighlightBone)
+		{
+			// No labels, but still highlight the bone
+			Color[0] = Color[1] = Color[2] = 10.0f;
 		}
 
 		glColor4fv(Color);
