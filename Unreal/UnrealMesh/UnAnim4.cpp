@@ -912,6 +912,21 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			}
 			unguard;
 
+#if SUPPORT_SCALE_KEYS
+			guard(ScaleKeys);
+			// read scale keys
+			if (ScaleOffset == -1)
+			{
+				DBG("    [%d] no scale data\n", TrackIndex);
+			}
+			else
+			{
+				Reader.Seek(ScaleOffset);
+				ReadPerTrackVectorData(Reader, TrackIndex, "scale", A->KeyScale, A->KeyScaleTime, Seq->NumFrames);
+			}
+			unguard;
+#endif // SUPPORT_SCALE_KEYS
+
 			unguard;
 
 			continue;
