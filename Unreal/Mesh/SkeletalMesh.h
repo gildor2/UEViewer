@@ -291,7 +291,7 @@ public:
 enum class EAnimRetargetingMode
 {
 	// Use settings defined in each AnimSet (default)
-	AnimSet,
+	AnimSet = 0,
 	// Force AnimRotationOnly enabled on all AnimSets, but for this SkeletalMesh only
 	AnimRotationOnly,
 	// Always pick data from the animation, no retargeting
