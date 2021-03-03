@@ -15,6 +15,7 @@
 //#define DEBUG_SKELMESH	1
 //#define DEBUG_ANIM		1
 //#define DEBUG_RETARGET	1
+#define DEBUG_RETARGET_BONE	"r_brow_outer"
 
 // References in UE4 code: Engine/Public/AnimationCompression.h
 // - FAnimationCompression_PerTrackUtils
@@ -245,6 +246,18 @@ void USkeleton::Serialize(FArchive &Ar)
 		for (int i = 0; i < AnimRetargetSources.Num(); i++)
 		{
 			appPrintf("  %d: %s\n", i, *AnimRetargetSources[i].Key);
+	#ifdef DEBUG_RETARGET_BONE
+			const FReferencePose& Pose = AnimRetargetSources[i].Value;
+			for (int j = 0; j < Pose.ReferencePose.Num(); j++)
+			{
+				if (ReferenceSkeleton.RefBoneInfo.IsValidIndex(j) &&
+					ReferenceSkeleton.RefBoneInfo[j].Name == DEBUG_RETARGET_BONE)
+				{
+					CVec3 BoneScale = GetBoneScale(ReferenceSkeleton, Pose.ReferencePose, j);
+					appPrintf("    %s: (%g %g %g) x (%g %g %g)\n", *ReferenceSkeleton.RefBoneInfo[j].Name, FVECTOR_ARG(Pose.ReferencePose[j].Translation), VECTOR_ARG(BoneScale));
+				}
+			}
+	#endif // DEBUG_RETARGET_BONE
 		}
 #endif
 		// Adjust scales of retarget pose bones
@@ -647,9 +660,11 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			BonePosition.Position = CVT(Transform.Translation);
 			BonePosition.Orientation = CVT(Transform.Rotation);
 #if DEBUG_RETARGET
-			if (Transform.Scale3D.X != 1.0f || Transform.Scale3D.Y != 1.0f || Transform.Scale3D.Z != 1.0f)
+			if ((fabs(Transform.Scale3D.X - 1.0f) > 0.001f) ||
+				(fabs(Transform.Scale3D.Y - 1.0f) > 0.001f) ||
+				(fabs(Transform.Scale3D.Z - 1.0f) > 0.001f))
 				appPrintf("RefPose: bone %d (%s) has scale %g %g %g\n", i, *ReferenceSkeleton.RefBoneInfo[i].Name, FVECTOR_ARG(Transform.Scale3D));
-#endif
+#endif // DEBUG_RETARGET
 			AnimSet->BonePositions.Add(BonePosition);
 			// Process bone retargeting mode
 			EBoneRetargetingMode BoneMode =EBoneRetargetingMode::Animation;
