@@ -654,7 +654,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 
 #if SHOW_ANIM
 	DrawTextLeft("Bone Information (%s): "
-		S_YELLOW "[refpose] " S_GREEN "[animated] " S_RED "[bad retarget]",
+		S_GREY "[refpose] " S_GREEN "[animated] " S_ORANGE "[retarget] " S_RED "[bad retarget]",
 		pMesh->OriginalMesh->Name);
 	for (int i = 0; i < NumBones; i++)
 	{
