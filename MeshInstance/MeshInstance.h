@@ -9,6 +9,7 @@ class CAnimSet;
 class CAnimSequence;
 class CStaticMesh;
 
+enum class EAnimRetargetingMode;
 
 /*-----------------------------------------------------------------------------
 	Basic CMeshInstance class
@@ -142,7 +143,7 @@ public:
 	int			LodIndex;
 	int			MorphIndex;
 	int			UVIndex;
-	int			RetargetingModeOverride;			// EAnimRetargetingMode
+	EAnimRetargetingMode RetargetingModeOverride;
 
 	CSkelMeshInstance();
 	virtual ~CSkelMeshInstance();

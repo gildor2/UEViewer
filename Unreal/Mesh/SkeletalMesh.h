@@ -28,6 +28,7 @@ TODO:
 
 #define MAX_MESHBONES				(1024*3)		// NGD had a mesh with ~2100 bones! (basepose_0000.uasset)
 #define NUM_INFLUENCES				4
+//#define SUPPORT_SCALE_KEYS			1
 //#define ANIM_DEBUG_INFO				1
 
 struct CSkelMeshVertex : public CMeshVertex
@@ -235,18 +236,28 @@ struct CAnimTrack
 {
 	TStaticArray<CQuat, 1>	KeyQuat;
 	TStaticArray<CVec3, 1>	KeyPos;
+#if SUPPORT_SCALE_KEYS
+	TStaticArray<CVec3, 1>	KeyScale;
+#endif
 	// 3 time arrays; should be used either KeyTime or KeyQuatTime + KeyPosTime
 	// When the corresponding array is empty, it will assume that Array[i] == i
 	TStaticArray<float, 1>	KeyTime;
 	TStaticArray<float, 1>	KeyQuatTime;
 	TStaticArray<float, 1>	KeyPosTime;
+#if SUPPORT_SCALE_KEYS
+	TStaticArray<float, 1>	KeyScaleTime;
+#endif
 
 	// DstPos and/or DstQuat will not be changed when KeyPos and/or KeyQuat are empty.
 	void GetBonePosition(float Frame, float NumFrames, bool Loop, CVec3 &DstPos, CQuat &DstQuat) const;
 
 	inline bool HasKeys() const
 	{
+#if !SUPPORT_SCALE_KEYS
 		return (KeyQuat.Num() + KeyPos.Num()) > 0;
+#else
+		return (KeyQuat.Num() + KeyPos.Num() + KeyScale.Num()) > 0;
+#endif
 	}
 
 	void CopyFrom(const CAnimTrack &Src);
@@ -291,7 +302,7 @@ public:
 enum class EAnimRetargetingMode
 {
 	// Use settings defined in each AnimSet (default)
-	AnimSet,
+	AnimSet = 0,
 	// Force AnimRotationOnly enabled on all AnimSets, but for this SkeletalMesh only
 	AnimRotationOnly,
 	// Always pick data from the animation, no retargeting

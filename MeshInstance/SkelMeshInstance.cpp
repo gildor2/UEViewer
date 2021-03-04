@@ -92,7 +92,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 :	LodIndex(0)
 ,	MorphIndex(-1)
 ,	UVIndex(0)
-,	RetargetingModeOverride((int)EAnimRetargetingMode::AnimSet)
+,	RetargetingModeOverride(EAnimRetargetingMode::AnimSet)
 ,	LastLodIndex(-2)				// initialize with value which differs from LodNum and from all other values
 ,	LastMorphIndex(-1)
 ,	MaxAnimChannel(-1)
@@ -654,19 +654,23 @@ void CSkelMeshInstance::UpdateSkeleton()
 
 #if SHOW_ANIM
 	DrawTextLeft("Bone Information (%s): "
-		S_YELLOW "[refpose] " S_GREEN "[animated] " S_RED "[bad retarget]",
+		S_GREY "[refpose] " S_GREEN "[animated] " S_ORANGE "[retarget] " S_RED "[bad retarget]",
 		pMesh->OriginalMesh->Name);
 	for (int i = 0; i < NumBones; i++)
 	{
 		const CBoneDebugInfo& BoneDebug = BoneDebugInfos[i];
 		if (!BoneDebug.BoneName) continue; // the bone is entirely skipped due to animation settings
-		const char* TextColor = S_YELLOW;
+		const char* TextColor = S_GREY;
 		if (BoneDebug.bIsAnimated)
 		{
-			TextColor = BoneDebug.bSkippedOnRetargetting ? S_RED : S_GREEN;
+			TextColor = S_GREEN;
+			if (BoneDebug.RetargetMode != EBoneRetargetingMode::Animation)
+			{
+				TextColor = BoneDebug.bSkippedOnRetargetting ? S_RED : S_ORANGE;
+			}
 		}
 		bool bClicked = DrawTextLeftH(NULL,
-			"%s%s" S_HYPERLINK("%d (%s)") " : P( %8.3f %8.3f %8.3f )  Q( %6.3f %6.3f %6.3f %6.3f )",
+			"%s%s" S_HYPERLINK("%d (%s)") " : T (%6.3f %6.3f %6.3f)  R (%5.2f %5.2f %5.2f %5.2f)",
 			HighlightBoneIndex == BoneDebug.MeshBoneIndex ? "> " : "  ", // indicator of the selected bone
 			TextColor, BoneDebug.MeshBoneIndex, BoneDebug.BoneName,
 			VECTOR_ARG(BoneDebug.AnimPosition), QUAT_ARG(BoneDebug.AnimRotation)

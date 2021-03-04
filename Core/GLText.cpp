@@ -252,7 +252,7 @@ static int textOffset = 0;
 
 #define I 255
 #define o 51
-static const unsigned colorTable[8] =
+static const unsigned colorTable[] =
 {
 	RGB255(0, 0, 0),
 	RGB255(I, o, o),
@@ -261,10 +261,12 @@ static const unsigned colorTable[8] =
 	RGB255(o, o, I),
 	RGB255(I, o, I),
 	RGB255(o, I, I),
-	RGB255(I, I, I)
+	RGB255(I, I, I),
+	RGB255(127, 127, 127),
+	RGB255(255, 127, 0),
 };
 
-#define WHITE_COLOR		RGB(255,255,255)
+#define DEFAULT_COLOR		RGB255(255,255,255)
 
 #undef I
 #undef o
@@ -346,7 +348,7 @@ static void DrawText(const CRText *rec)
 			if (c == COLOR_ESCAPE)
 			{
 				char c2 = text[i+1];
-				if (c2 >= '0' && c2 <= '7')
+				if (c2 >= '0' && c2 < '0' + ARRAY_COUNT(colorTable))
 				{
 					color = color2 = colorTable[c2 - '0'];
 					i++;
@@ -576,27 +578,27 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 
 void DrawTextLeft(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopLeft, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::TopLeft, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawTextRight(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopRight, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::TopRight, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawTextBottomLeft(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomLeft, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::BottomLeft, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawTextBottomRight(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomRight, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::BottomRight, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawText(ETextAnchor anchor, const char* text, ...)
 {
-	DRAW_TEXT(anchor, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(anchor, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawText(ETextAnchor anchor, unsigned color, const char* text, ...)
@@ -607,31 +609,31 @@ void DrawText(ETextAnchor anchor, unsigned color, const char* text, ...)
 
 bool DrawTextLeftH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopLeft, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::TopLeft, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextRightH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopRight, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::TopRight, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextBottomLeftH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomLeft, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::BottomLeft, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextBottomRightH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomRight, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::BottomRight, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextH(ETextAnchor anchor, bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(anchor, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(anchor, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 

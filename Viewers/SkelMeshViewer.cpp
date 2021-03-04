@@ -412,7 +412,14 @@ void CSkelMeshViewer::Draw2D()
 			OnOffStatus = S_RED "disabled";
 			break;
 		}
-		DrawTextBottomLeft(S_GREEN "Retargeting:" S_WHITE " %s", OnOffStatus);
+		if (DrawTextBottomLeftH(NULL, S_GREEN S_HYPERLINK("Retargeting:" S_WHITE " %s"), OnOffStatus))
+		{
+			// Allow retargeting toggle with a mouse click
+			if (MeshInst->RetargetingModeOverride == EAnimRetargetingMode::AnimSet)
+				SetRetargetingMode(EAnimRetargetingMode::NoRetargeting);
+			else
+				SetRetargetingMode(EAnimRetargetingMode::AnimSet);
+		}
 
 		const CAnimSequence* Seq = MeshInst->GetAnim(0);
 		if (Seq)
@@ -832,11 +839,9 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 
 	case 'r'|KEY_CTRL:
 		{
-			int mode = MeshInst->RetargetingModeOverride + 1;
-			if (mode >= (int)EAnimRetargetingMode::Count) mode = 0;
-			MeshInst->RetargetingModeOverride = mode;
-			for (CSkelMeshInstance* mesh : TaggedMeshes)
-				mesh->RetargetingModeOverride = mode;
+			EAnimRetargetingMode mode = EAnimRetargetingMode((int)MeshInst->RetargetingModeOverride + 1);
+			if (mode >= EAnimRetargetingMode::Count) mode = EAnimRetargetingMode::AnimSet;
+			SetRetargetingMode(mode);
 		}
 		break;
 
@@ -855,6 +860,13 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 	unguard;
 }
 
+void CSkelMeshViewer::SetRetargetingMode(EAnimRetargetingMode NewMode)
+{
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+	MeshInst->RetargetingModeOverride = NewMode;
+	for (CSkelMeshInstance* mesh : TaggedMeshes)
+		mesh->RetargetingModeOverride = NewMode;
+}
 
 void CSkelMeshViewer::AttachAnimSet()
 {
