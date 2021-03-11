@@ -21,6 +21,7 @@
 
 #include "UnSound.h"
 #include "UnThirdParty.h"
+#include "UnMap.h"
 
 #include "Exporters/Exporters.h"
 
@@ -139,7 +140,7 @@ BEGIN_CLASS_TABLE
 	REGISTER_MESH_CLASSES_U4
 	REGISTER_MATERIAL_CLASSES_U4
 	REGISTER_EXPRESSION_CLASSES
-	REGISTER_3RDP_CLASSES4 //DHK Add
+	REGISTER_UNMAP_CLASSES4 //DHK Add
 END_CLASS_TABLE
 	REGISTER_LIGHT_ENUMS_U4 //DHK Add
 	REGISTER_MATERIAL_ENUMS_U4
@@ -1080,12 +1081,12 @@ int main(int argc, const char **argv)
 
 		//DHK
 		//if using wildcard for maps, enable these
-		/*FString sPattern = "/Game/Maps";
-		const char* c = "*.umap";*/
+		FString sPattern = "/Game/Tactical/Levels/City";
+		const char* c = "*.umap";
 
 		//if NOT using wildcard for maps, enable these
-		FString sPattern = "";
-		const char* c = "";
+		/*FString sPattern = "";
+		const char* c = "";*/
 
 		bool bWildcard = c != "" ? appMatchWildcard(argPkgName, c, true) : false;
 
