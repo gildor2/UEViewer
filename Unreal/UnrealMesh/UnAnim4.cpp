@@ -15,7 +15,7 @@
 //#define DEBUG_SKELMESH	1
 //#define DEBUG_ANIM		1
 //#define DEBUG_RETARGET	1
-#define DEBUG_RETARGET_BONE	"r_brow_outer"
+//#define DEBUG_RETARGET_BONE	"r_brow_outer"
 
 // References in UE4 code: Engine/Public/AnimationCompression.h
 // - FAnimationCompression_PerTrackUtils
@@ -106,18 +106,21 @@ FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 
 	for (int i = 0; i < NumBones; i++)
 	{
-		appPrintf("bone[%d] \"%s\" parent=%d",
+		appPrintf("bone[%d] \"%s\" parent=%d\n",
 			i, *S.RefBoneInfo[i].Name, S.RefBoneInfo[i].ParentIndex);
-		FVector Scale = S.RefBonePose[i].Scale3D;
-		CVec3 ScaleDelta;
-		ScaleDelta.Set(Scale.X - 1, Scale.Y - 1, Scale.Z - 1);
-		if (ScaleDelta.GetLengthSq() > 0.001f)
-		{
-			appPrintf(" scale={%g %g %g}", FVECTOR_ARG(Scale));
-		}
-		appPrintf("\n");
 	}
 #endif // DEBUG_SKELMESH
+
+#ifdef DEBUG_RETARGET_BONE
+	for (int i = 0; i < NumBones; i++)
+	{
+		if (S.RefBoneInfo[i].Name == DEBUG_RETARGET_BONE)
+		{
+			CVec3 BoneScale = GetBoneScale(S, S.RefBonePose, i);
+			appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", i, *S.RefBoneInfo[i].Name, FVECTOR_ARG(S.RefBonePose[i].Translation), VECTOR_ARG(BoneScale));
+		}
+	}
+#endif // DEBUG_RETARGET_BONE
 
 	// Adjust skeleton's scale, if any. Use scale of the root bone.
 	AdjustBoneScales(S, S.RefBonePose);
@@ -245,7 +248,9 @@ void USkeleton::Serialize(FArchive &Ar)
 		appPrintf("Retarget sources: %d\n", AnimRetargetSources.Num());
 		for (int i = 0; i < AnimRetargetSources.Num(); i++)
 		{
-			appPrintf("  %d: %s\n", i, *AnimRetargetSources[i].Key);
+			appPrintf("  %d: %s%s\n", i, *AnimRetargetSources[i].Key,
+				ReferenceSkeleton.RefBoneInfo.Num() == AnimRetargetSources[i].Value.ReferencePose.Num() ?
+					"" : " // mismatched bone count");
 	#ifdef DEBUG_RETARGET_BONE
 			const FReferencePose& Pose = AnimRetargetSources[i].Value;
 			for (int j = 0; j < Pose.ReferencePose.Num(); j++)
@@ -254,7 +259,7 @@ void USkeleton::Serialize(FArchive &Ar)
 					ReferenceSkeleton.RefBoneInfo[j].Name == DEBUG_RETARGET_BONE)
 				{
 					CVec3 BoneScale = GetBoneScale(ReferenceSkeleton, Pose.ReferencePose, j);
-					appPrintf("    %s: (%g %g %g) x (%g %g %g)\n", *ReferenceSkeleton.RefBoneInfo[j].Name, FVECTOR_ARG(Pose.ReferencePose[j].Translation), VECTOR_ARG(BoneScale));
+					appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", j, *ReferenceSkeleton.RefBoneInfo[j].Name, FVECTOR_ARG(Pose.ReferencePose[j].Translation), VECTOR_ARG(BoneScale));
 				}
 			}
 	#endif // DEBUG_RETARGET_BONE
@@ -610,10 +615,13 @@ static void AdjustSequenceBySkeleton(USkeleton* Skeleton, const TArray<FTransfor
 	{
 		CAnimTrack* Track = Anim->Tracks[TrackIndex];
 		CVec3 BoneScale = GetBoneScale(Skeleton->ReferenceSkeleton, Transforms, TrackIndex);
-		if (BoneScale.x != 1.0f || BoneScale.y != 1.0f || BoneScale.z != 1.0f)
+		if ((fabs(BoneScale.x - 1.0f) > 0.001f) ||
+			(fabs(BoneScale.y - 1.0f) > 0.001f) ||
+			(fabs(BoneScale.z - 1.0f) > 0.001f))
 		{
 #if DEBUG_RETARGET
-			appPrintf("Adjust %d by scale %g %g %g\n", TrackIndex, VECTOR_ARG(BoneScale));
+			appPrintf("Adjust [%d] %s by scale %g %g %g\n", TrackIndex,
+				*Skeleton->ReferenceSkeleton.RefBoneInfo[TrackIndex].Name, VECTOR_ARG(BoneScale));
 #endif
 			for (int KeyIndex = 0; KeyIndex < Track->KeyPos.Num(); KeyIndex++)
 			{

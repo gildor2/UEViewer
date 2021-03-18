@@ -575,11 +575,6 @@ void CSkelMeshInstance::UpdateSkeleton()
 							: Animation->BonePositions[AnimBoneIndex].Position;
 						CVec3 TargetTransDir = Bone.Position;
 
-//#define TEMP_SHOW_BONES	1	// temporary code, added for debugging of retargeting problems
-#if TEMP_SHOW_BONES
-						CVec3 SourcePosition = SourceTransDir;
-						CVec3 AnimPos = NewBonePosition;
-#endif
 						//todo: optimization: can compare SourceTransDir and TargetTransDir, just copy animated position if same
 						float SourceTransDirLength = SourceTransDir.Normalize();
 						float TargetTransDirLength = TargetTransDir.Normalize();
@@ -605,16 +600,6 @@ void CSkelMeshInstance::UpdateSkeleton()
 #endif
 							break;
 						}
-#if TEMP_SHOW_BONES
-						if (Bone.Name == "L_brow_outer")
-						{
-							DrawTextLeft("%s: NewPosition (%g %g %g)", *Bone.Name, VECTOR_ARG(NewBonePosition));
-							DrawTextLeft("  Source (%g %g %g) Target (%g %g %g)",
-								VECTOR_ARG(SourcePosition),
-								VECTOR_ARG(Bone.Position));
-							DrawTextLeft("  AnimPos: (%g %g %g) Scale: %g", VECTOR_ARG(AnimPos), TargetTransDirLength / SourceTransDirLength);
-						}
-#endif // TEMP_SHOW_BONES
 					}
 					break;
 				}
@@ -670,10 +655,10 @@ void CSkelMeshInstance::UpdateSkeleton()
 			}
 		}
 		bool bClicked = DrawTextLeftH(NULL,
-			"%s%s" S_HYPERLINK("%d (%s)") " : T (%6.3f %6.3f %6.3f)  R (%5.2f %5.2f %5.2f %5.2f)",
+			"%s%s" S_HYPERLINK("%d (%s)") " : T (%6.3f %6.3f %6.3f) TL(%.3f) R (%5.2f %5.2f %5.2f %5.2f)",
 			HighlightBoneIndex == BoneDebug.MeshBoneIndex ? "> " : "  ", // indicator of the selected bone
 			TextColor, BoneDebug.MeshBoneIndex, BoneDebug.BoneName,
-			VECTOR_ARG(BoneDebug.AnimPosition), QUAT_ARG(BoneDebug.AnimRotation)
+			VECTOR_ARG(BoneDebug.AnimPosition), BoneDebug.AnimPosition.GetLength(), QUAT_ARG(BoneDebug.AnimRotation)
 		);
 		if (bClicked)
 		{
