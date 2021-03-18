@@ -1135,4 +1135,83 @@ void UTexture2D::GetMetadata(FArchive& Ar) const
 	unguard;
 }
 
+void UMaterial3::Serialize(FArchive &Ar)
+{
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4_BASE)
+	{
+		Serialize4(Ar);
+		return;
+	}
+#endif
+
+	Super::Serialize(Ar);
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4_BASE)
+	{
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+#endif // UNREAL4
+#if BIOSHOCK3
+	if (Ar.Game == GAME_Bioshock3)
+	{
+		// Bioshock Infinite has different internal material format
+		FGuid unk44;
+		TArray<UTexture2D*> Textures[5];
+		Ar << unk44;
+		for (int i = 0; i < 5; i++)
+		{
+			Ar << Textures[i];
+			if (!ReferencedTextures.Num() && Textures[i].Num())
+				CopyArray(ReferencedTextures, Textures[i]);
+#if 0
+			appPrintf("Arr[%d]\n", i);
+			for (int j = 0; j < Textures[i].Num(); j++)
+			{
+				UObject *obj = Textures[i][j];
+				appPrintf("... %d: %s %s\n", j, obj ? obj->GetClassName() : "??", obj ? obj->Name : "??");
+			}
+#endif
+		}
+		return;
+	}
+#endif // BIOSHOCK3
+#if MKVSDC
+	if (Ar.Game == GAME_MK)
+	{
+		// MK X has version 677, but different format of UMaterial
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+#endif // MKVSDC
+#if METRO_CONF
+	if (Ar.Game == GAME_MetroConflict && Ar.ArLicenseeVer >= 21) goto mask;
+#endif
+	if (Ar.ArVer >= 858)
+	{
+	mask:
+		int unkMask;		// default 1
+		Ar << unkMask;
+	}
+	if (Ar.ArVer >= 656)
+	{
+		guard(SerializeFMaterialResource);
+		// Starting with version 656 UE3 has deprecated ReferencedTextures array.
+		// This array is serialized inside FMaterialResource which is not needed
+		// for us in other case.
+		// FMaterialResource serialization is below
+		TArray<FString>			f10;
+		TMap<UObject*, int>		f1C;
+		int						f58;
+		FGuid					f60;
+		int						f80;
+		Ar << f10 << f1C << f58 << f60 << f80;
+		if (Ar.ArVer >= 656) Ar << ReferencedTextures;	// that is ...
+		// other fields are not interesting ...
+		unguard;
+	}
+	DROP_REMAINING_DATA(Ar);			//?? drop native data
+}
+
 #endif // UNREAL3

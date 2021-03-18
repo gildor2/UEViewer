@@ -1081,12 +1081,12 @@ int main(int argc, const char **argv)
 
 		//DHK
 		//if using wildcard for maps, enable these
-		FString sPattern = "/Game/Tactical/Levels/City";
-		const char* c = "*.umap";
+		/*FString sPattern = "/Game/Tactical/Levels/Forrest";
+		const char* c = "*.umap";*/
 
 		//if NOT using wildcard for maps, enable these
-		/*FString sPattern = "";
-		const char* c = "";*/
+		FString sPattern = "";
+		const char* c = "";
 
 		bool bWildcard = c != "" ? appMatchWildcard(argPkgName, c, true) : false;
 

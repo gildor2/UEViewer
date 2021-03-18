@@ -33,7 +33,9 @@ void CObjectViewer::Dump()
 
 		FString sClassName = Object->GetClassName();
 
-		if (sClassName.StartsWith("AudioComponent") || !sClassName.EndsWith("Component"))//TODO ugly!!!
+		if (sClassName.StartsWith("SkeletalMeshComponent") || 
+			sClassName.StartsWith("AudioComponent") || 
+			!sClassName.EndsWith("Component"))//TODO ugly!!!
 		{
 			appPrintf("\nObject info:\n============\n");
 			appPrintf("ClassName: %s, ObjectName: %s\n", Object->GetClassName(), Object->Name);

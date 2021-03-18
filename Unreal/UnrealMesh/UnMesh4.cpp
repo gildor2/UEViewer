@@ -849,8 +849,11 @@ struct FSkelMeshSection4
 		if (Ar.Game == GAME_Paragon) return;
 #endif
 
-		FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
-		Ar << DuplicatedVerticesBuffer;
+		if (Ar.Game < GAME_UE4(27) || !StripFlags.IsClassDataStripped(1)) // DuplicatedVertices
+		{
+			FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
+			Ar << DuplicatedVerticesBuffer;
+		}
 		Ar << S.bDisabled;
 
 		unguard;

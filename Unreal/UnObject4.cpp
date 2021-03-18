@@ -27,7 +27,7 @@ constexpr uint32 MakeBitmask()
 template<int Offset>
 constexpr int MakeBitmaskWithOffset()
 {
-	return 0;
+    return 0;
 }
 
 template<int Offset, int Arg2, int... Args>
@@ -66,8 +66,6 @@ struct PropInfo
 #endif
 
 #define DROP_OBJ_ARRAY(index)		{ "#arr_int32", index, 0 }, // TArray<UObject*>
-
-#define FORTNITE 1 //todo: disallow some UE4.26 features
 
 /*
  * Class table. If class is missing here, it's assumed that its property list
@@ -127,29 +125,12 @@ BEGIN("UAnimSequence4")
 	MAP(RefPoseSeq, 6)
 	MAP(RefFrameIndex, 7)
 	MAP(RetargetSource, 8)
-#if !FORTNITE
-	// release 4.26 version
 	MAP(RetargetSourceAssetReferencePose, 9)
 	MAP(Interpolation, 10)
 	MAP(bEnableRootMotion, 11)
 	DROP_INT8(12, 13, 14, 15)
 	MAP(AuthoredSyncMarkers, 16)
 	MAP(BakedPerBoneCustomAttributeData, 17)
-#elif 1
-	MAP(RetargetSourceAssetReferencePose, 9)
-	MAP(Interpolation, 10)
-	MAP(bEnableRootMotion, 11)
-	DROP_INT8(12, 13, 14, 15)
-	MAP(AuthoredSyncMarkers, 16)
-	//MAP(BakedPerBoneCustomAttributeData, 17)
-#else
-	//MAP(RetargetSourceAssetReferencePose, 9)
-	MAP(Interpolation, 9)
-	MAP(bEnableRootMotion, 10)
-	DROP_INT8(11, 12, 13, 14)
-	MAP(AuthoredSyncMarkers, 15)
-	MAP(BakedPerBoneCustomAttributeData, 16)
-#endif
 END
 
 BEGIN("UAnimationAsset")
@@ -184,27 +165,27 @@ BEGIN("UMaterialInstance")
 END
 
 BEGIN("UMaterial3")
-// known properties
-MAP(BlendMode, 17)
-MAP(TwoSided, 33)
-MAP(bDisableDepthTest, 48)
-// todo: native serializers
-// todo: FScalarMaterialInput: (10, 11, 12, 25, 27)
-// todo: FVectorMaterialInput: (13, 14, 24)
-// todo: FColorMaterialInput: (15)
-// todo: MAP(CachedExpressionData, 116)
-//?? FShadingModelMaterialInput 28
-//?? FLinearColor 46
-// int8 properties
-DROP_INT8(16, 17, 18, 19, 20, 21)
-DROP_INT8(29, 30, 31, 32, 34, 35, 36, 37, 38)
-DROP_INT8(48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59)
-DROP_INT8(60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70)
-DROP_INT8(75, 76, 77, 78, 79, 80, 82, 83, 84, 85)
-DROP_INT8(86, 87, 88, 89, 90, 91, 92, 93, 94, 95)
-DROP_INT8(96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111)
-// other
-DROP_VECTOR4(114)					// FGuid StateId
+	// known properties
+	MAP(BlendMode, 17)
+	MAP(TwoSided, 33)
+	MAP(bDisableDepthTest, 48)
+	// todo: native serializers
+	// todo: FScalarMaterialInput: (10, 11, 12, 25, 27)
+	// todo: FVectorMaterialInput: (13, 14, 24)
+	// todo: FColorMaterialInput: (15)
+	// todo: MAP(CachedExpressionData, 116)
+	//?? FShadingModelMaterialInput 28
+	//?? FLinearColor 46
+	// int8 properties
+	DROP_INT8(16, 17, 18, 19, 20, 21)
+	DROP_INT8(29, 30, 31, 32, 34, 35, 36, 37, 38)
+	DROP_INT8(48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59)
+	DROP_INT8(60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70)
+	DROP_INT8(75, 76, 77, 78, 79, 80, 82, 83, 84, 85)
+	DROP_INT8(86, 87, 88, 89, 90, 91, 92, 93, 94, 95)
+	DROP_INT8(96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111)
+	// other
+	DROP_VECTOR4(114)					// FGuid StateId
 END
 
 BEGIN("UMaterialInterface")
@@ -286,11 +267,7 @@ static const ParentInfo ParentData[] =
 	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // just 1 UObject* property
 	{ "UMaterialInstance", "UMaterialInterface", 21 },
 	{ "UMaterial3", "UMaterialInterface", 117 },
-#if !FORTNITE
-	{ "UAnimSequence4", "UAnimSequenceBase", 18, },
-#else
-	{ "UAnimSequence4", "UAnimSequenceBase", 17, },
-#endif
+	{ "UAnimSequence4", "UAnimSequenceBase", 18 },
 	{ "UAnimSequenceBase", "UAnimationAsset", 4 },
 	{ "FStaticSwitchParameter", "FStaticParameterBase", 1 },
 	{ "FStaticComponentMaskParameter", "FStaticParameterBase", 4 },
@@ -322,10 +299,10 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 //		}
 //		else
 //		{
-		if (strcmp(CurrentClassName, Parent.ThisName) != 0)
-			continue;
-		//		}
-				// Types are matching, redirect to parent
+			if (strcmp(CurrentClassName, Parent.ThisName) != 0)
+				continue;
+//		}
+		// Types are matching, redirect to parent
 		CurrentClassName = Parent.ParentName;
 		CurrentType = FindStructType(CurrentClassName);
 		PropIndex -= Parent.NumProps;
@@ -349,7 +326,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		// if (CurrentType)
 		//	IsOurClass = CurrentType->IsA(p->Name + 1);
 		// else
-		IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
+			IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
 
 		while (++p < end && p->Name)
 		{

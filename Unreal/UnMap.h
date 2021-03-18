@@ -459,7 +459,7 @@ public:
 	}
 };
 
-/*class USkeletalMeshActor : public UObject
+class USkeletalMeshActor : public UObject
 {
 	DECLARE_CLASS(USkeletalMeshActor, UObject);
 public:
@@ -471,7 +471,7 @@ public:
 		DROP_REMAINING_DATA(Ar);
 		unguard;
 	}
-};*/
+};
 
 class UStaticMeshComponent : public UObject
 {
@@ -720,7 +720,6 @@ public:
 //deleted
 /*
 	SceneComponent
-	SkeletalMeshActor
 */
 
 #define REGISTER_UNMAP_CLASSES4 \
@@ -746,6 +745,7 @@ public:
  REGISTER_CLASS(UPhysicalMaterial) \
  REGISTER_CLASS(FFloatInterval) \
  REGISTER_CLASS(USkeletalMeshComponent) \
+ REGISTER_CLASS(USkeletalMeshActor) \
  REGISTER_CLASS(UStaticMeshComponent) \
  REGISTER_CLASS(UStaticMeshActor) \
  REGISTER_CLASS(UWorldSettings) \
