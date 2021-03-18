@@ -67,8 +67,6 @@ struct PropInfo
 
 #define DROP_OBJ_ARRAY(index)		{ "#arr_int32", index, 0 }, // TArray<UObject*>
 
-#define FORTNITE 1 //todo: disallow some UE4.26 features
-
 /*
  * Class table. If class is missing here, it's assumed that its property list
  * matches property table (declared with BEGIN_PROP_TABLE).
@@ -127,29 +125,12 @@ BEGIN("UAnimSequence4")
 	MAP(RefPoseSeq, 6)
 	MAP(RefFrameIndex, 7)
 	MAP(RetargetSource, 8)
-#if !FORTNITE
-	// release 4.26 version
 	MAP(RetargetSourceAssetReferencePose, 9)
 	MAP(Interpolation, 10)
 	MAP(bEnableRootMotion, 11)
 	DROP_INT8(12, 13, 14, 15)
 	MAP(AuthoredSyncMarkers, 16)
 	MAP(BakedPerBoneCustomAttributeData, 17)
-#elif 1
-	MAP(RetargetSourceAssetReferencePose, 9)
-	MAP(Interpolation, 10)
-	MAP(bEnableRootMotion, 11)
-	DROP_INT8(12, 13, 14, 15)
-	MAP(AuthoredSyncMarkers, 16)
-	//MAP(BakedPerBoneCustomAttributeData, 17)
-#else
-	//MAP(RetargetSourceAssetReferencePose, 9)
-	MAP(Interpolation, 9)
-	MAP(bEnableRootMotion, 10)
-	DROP_INT8(11, 12, 13, 14)
-	MAP(AuthoredSyncMarkers, 15)
-	MAP(BakedPerBoneCustomAttributeData, 16)
-#endif
 END
 
 BEGIN("UAnimationAsset")
@@ -286,11 +267,7 @@ static const ParentInfo ParentData[] =
 	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // just 1 UObject* property
 	{ "UMaterialInstance", "UMaterialInterface", 21 },
 	{ "UMaterial3", "UMaterialInterface", 117 },
-#if !FORTNITE
-	{ "UAnimSequence4", "UAnimSequenceBase", 18, },
-#else
-	{ "UAnimSequence4", "UAnimSequenceBase", 17, },
-#endif
+	{ "UAnimSequence4", "UAnimSequenceBase", 18 },
 	{ "UAnimSequenceBase", "UAnimationAsset", 4 },
 	{ "FStaticSwitchParameter", "FStaticParameterBase", 1 },
 	{ "FStaticComponentMaskParameter", "FStaticParameterBase", 4 },
