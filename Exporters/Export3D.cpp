@@ -18,7 +18,7 @@ static void ExportScript(const UVertMesh *Mesh, FArchive &Ar)
 		"#exec MESH ORIGIN MESH=%s X=%g Y=%g Z=%g YAW=%d PITCH=%d ROLL=%d\n\n",
 		Mesh->Name,
 		Mesh->Name, Mesh->Name, Mesh->Name,
-		Mesh->Name, FVECTOR_ARG(Mesh->MeshOrigin),
+		Mesh->Name, VECTOR_ARG(Mesh->MeshOrigin),
 			Mesh->RotOrigin.Yaw >> 8, Mesh->RotOrigin.Pitch >> 8, Mesh->RotOrigin.Roll >> 8
 	);
 	// animation sequences
@@ -38,7 +38,7 @@ static void ExportScript(const UVertMesh *Mesh, FArchive &Ar)
 	// mesh scale
 	Ar.Printf(
 		"\n#exec MESHMAP SCALE MESHMAP=%s X=%g Y=%g Z=%g\n\n",
-		Mesh->Name, FVECTOR_ARG(Mesh->MeshScale)
+		Mesh->Name, VECTOR_ARG(Mesh->MeshScale)
 	);
 	// notifys
 	for (i = 0; i < Mesh->AnimSeqs.Num(); i++)

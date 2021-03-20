@@ -441,10 +441,10 @@ void CQuat::FromTwoVectors(const CVec3 &v1, const CVec3 &v2)
 		// around an arbitrary orthogonal axis. Axis normalisation
 		// can happen later, when we normalise the quaternion.
 		w = 0.0f;
-		if (fabs(v1.x) > fabs(v1.y))
-			result.Set(-v1.z, 0.0f, v1.x, w);
+		if (fabs(v1.X) > fabs(v1.Y))
+			result.Set(-v1.Z, 0.0f, v1.X, w);
 		else
-			result.Set(0.0f, -v1.z, v1.y, w);
+			result.Set(0.0f, -v1.Z, v1.Y, w);
 	}
 	else
 	{

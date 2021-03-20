@@ -35,7 +35,7 @@ struct CVec3
 	union
 	{
 		float v[3];
-		struct { float x, y, z; };
+		struct { float X, Y, Z; };
 	};
 	// access to data
 	inline float& operator[](int index)

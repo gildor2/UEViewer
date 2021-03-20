@@ -1058,7 +1058,7 @@ void UAnimSet::ConvertAnims()
 					if (Scale.X != -1)
 					{
 						Reader << Scale.Y << Scale.Z << Offset;
-//						appPrintf("  trans: %g %g %g -- %g %g %g\n", FVECTOR_ARG(Offset), FVECTOR_ARG(Scale));
+//						appPrintf("  trans: %g %g %g -- %g %g %g\n", VECTOR_ARG(Offset), VECTOR_ARG(Scale));
 						for (k = 0; k < TransKeys; k++)
 						{
 							FPackedVector_Trans pos;

@@ -989,7 +989,7 @@ struct FSkeletalMeshVertexBuffer4
 		}
 
 		Ar << B.MeshExtension << B.MeshOrigin;
-		DBG_SKEL("  Ext=(%g %g %g) Org=(%g %g %g)\n", FVECTOR_ARG(B.MeshExtension), FVECTOR_ARG(B.MeshOrigin));
+		DBG_SKEL("  Ext=(%g %g %g) Org=(%g %g %g)\n", VECTOR_ARG(B.MeshExtension), VECTOR_ARG(B.MeshOrigin));
 
 		// Serialize vertex data. Use global variables to avoid passing variables to serializers.
 		GNumSkelUVSets = B.NumTexCoords;

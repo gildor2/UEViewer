@@ -36,7 +36,7 @@
 #	include <SDL2/SDL.h>			//?? move outside (here for SDL_GetTicks() only?)
 #endif
 
-#define VECTOR_ARG(name)		name[0],name[1],name[2]
+#define VECTOR_ARG(v)			(v).X, (v).Y, (v).Z
 #define QUAT_ARG(v)				(v).X, (v).Y, (v).Z, (v).W
 #define ARRAY_ARG(array)		array, sizeof(array)/sizeof(array[0])
 #define ARRAY_COUNT(array)		(sizeof(array)/sizeof(array[0]))
