@@ -510,7 +510,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 				{
 					CQuat q = A->KeyQuat[i];
 					q.Mul(CVT(TransQuatBase));
-					q.w *= -1;
+					q.W *= -1;
 					A->KeyQuat[i] = q;
 				}
 			}

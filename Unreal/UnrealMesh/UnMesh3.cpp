@@ -2385,7 +2385,7 @@ void USkeletalMesh3::ConvertMesh()
 		Dst->Orientation = CVT(B.BonePos.Orientation);
 		// fix skeleton; all bones but 0
 		if (i >= 1)
-			Dst->Orientation.w *= -1;
+			Dst->Orientation.W *= -1;
 	}
 	unguard; // ProcessSkeleton
 

@@ -734,7 +734,7 @@ void UAnimationPackageWrapper::Process()
 	{
 		appPrintf("[%d] %s (parent=%d)\n", i, Skel->m_bones[i]->m_name, Skel->m_parentIndices[i]);
 		hkQsTransform &t = Skel->m_referencePose[i];
-		appPrintf("   {%g %g %g} - {%g %g %g %g} / {%g %g %g}\n", FVECTOR_ARG(t.m_translation), FQUAT_ARG(t.m_rotation), FVECTOR_ARG(t.m_scale));
+		appPrintf("   {%g %g %g} - {%g %g %g %g} / {%g %g %g}\n", FVECTOR_ARG(t.m_translation), QUAT_ARG(t.m_rotation), FVECTOR_ARG(t.m_scale));
 	}
 #endif
 	unguard;

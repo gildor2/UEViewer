@@ -37,7 +37,7 @@
 #endif
 
 #define VECTOR_ARG(name)		name[0],name[1],name[2]
-#define QUAT_ARG(name)			name.x,name.y,name.z,name.w
+#define QUAT_ARG(v)				(v).X, (v).Y, (v).Z, (v).W
 #define ARRAY_ARG(array)		array, sizeof(array)/sizeof(array[0])
 #define ARRAY_COUNT(array)		(sizeof(array)/sizeof(array[0]))
 

@@ -385,18 +385,18 @@ static CQuat FinishQuatRelative(int Shift, unsigned X, unsigned Y, unsigned Z, c
 {
 	CQuat Base, Delta;
 
-	Base.x = Interval[0] / 127.0f;
-	Base.y = Interval[1] / 127.0f;
-	Base.z = Interval[2] / 127.0f;
-	Base.w = Interval[3] / 127.0f;
+	Base.X = Interval[0] / 127.0f;
+	Base.Y = Interval[1] / 127.0f;
+	Base.Z = Interval[2] / 127.0f;
+	Base.W = Interval[3] / 127.0f;
 	Base.Normalize();
 
 	float Scale = 1.0f / ((1 << Shift) - 1);
-	Delta.x = X * Scale * ((byte)Interval[7]) / 127.5f + Interval[4] / 127.0f;
-	Delta.y = Y * Scale * ((byte)Interval[8]) / 127.5f + Interval[5] / 127.0f;
-	Delta.z = Z * Scale * ((byte)Interval[9]) / 127.5f + Interval[6] / 127.0f;
-	float wSq = 1.0f - (Delta.x*Delta.x + Delta.y*Delta.y + Delta.z*Delta.z);
-	Delta.w = (wSq > 0) ? sqrt(wSq) : 0;
+	Delta.X = X * Scale * ((byte)Interval[7]) / 127.5f + Interval[4] / 127.0f;
+	Delta.Y = Y * Scale * ((byte)Interval[8]) / 127.5f + Interval[5] / 127.0f;
+	Delta.Z = Z * Scale * ((byte)Interval[9]) / 127.5f + Interval[6] / 127.0f;
+	float wSq = 1.0f - (Delta.X*Delta.X + Delta.Y*Delta.Y + Delta.Z*Delta.Z);
+	Delta.W = (wSq > 0) ? sqrt(wSq) : 0;
 
 	Base.Mul(Delta);
 	return Base;
@@ -410,24 +410,24 @@ static CQuat FinishQuatFixedAxis(int Shift, unsigned Value, byte *Interval)
 	switch (Interval[0])
 	{
 	case 0:
-		r.x = 1;
+		r.X = 1;
 		break;
 	case 1:
-		r.y = 1;
+		r.Y = 1;
 		break;
 	default:
 //	case 2:
-		r.z = 1;
+		r.Z = 1;
 		break;
 	}
 	static const float Scale = M_PI * 2 / 255;
 	float Angle = (Interval[1] * Scale + Value * Interval[2] * Scale / ((1 << Shift) - 1)) * 0.5f;
 	float AngleSin = sin(Angle);
 
-	r.x *= AngleSin;
-	r.y *= AngleSin;
-	r.z *= AngleSin;
-	r.w = cos(Angle);
+	r.X *= AngleSin;
+	r.Y *= AngleSin;
+	r.Z *= AngleSin;
+	r.W = cos(Angle);
 	return r;
 }
 
