@@ -117,7 +117,7 @@ FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 		if (S.RefBoneInfo[i].Name == DEBUG_RETARGET_BONE)
 		{
 			CVec3 BoneScale = GetBoneScale(S, S.RefBonePose, i);
-			appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", i, *S.RefBoneInfo[i].Name, FVECTOR_ARG(S.RefBonePose[i].Translation), VECTOR_ARG(BoneScale));
+			appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", i, *S.RefBoneInfo[i].Name, VECTOR_ARG(S.RefBonePose[i].Translation), VECTOR_ARG(BoneScale));
 		}
 	}
 #endif // DEBUG_RETARGET_BONE
@@ -259,7 +259,7 @@ void USkeleton::Serialize(FArchive &Ar)
 					ReferenceSkeleton.RefBoneInfo[j].Name == DEBUG_RETARGET_BONE)
 				{
 					CVec3 BoneScale = GetBoneScale(ReferenceSkeleton, Pose.ReferencePose, j);
-					appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", j, *ReferenceSkeleton.RefBoneInfo[j].Name, FVECTOR_ARG(Pose.ReferencePose[j].Translation), VECTOR_ARG(BoneScale));
+					appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", j, *ReferenceSkeleton.RefBoneInfo[j].Name, VECTOR_ARG(Pose.ReferencePose[j].Translation), VECTOR_ARG(BoneScale));
 				}
 			}
 	#endif // DEBUG_RETARGET_BONE
@@ -615,9 +615,9 @@ static void AdjustSequenceBySkeleton(USkeleton* Skeleton, const TArray<FTransfor
 	{
 		CAnimTrack* Track = Anim->Tracks[TrackIndex];
 		CVec3 BoneScale = GetBoneScale(Skeleton->ReferenceSkeleton, Transforms, TrackIndex);
-		if ((fabs(BoneScale.x - 1.0f) > 0.001f) ||
-			(fabs(BoneScale.y - 1.0f) > 0.001f) ||
-			(fabs(BoneScale.z - 1.0f) > 0.001f))
+		if ((fabs(BoneScale.X - 1.0f) > 0.001f) ||
+			(fabs(BoneScale.Y - 1.0f) > 0.001f) ||
+			(fabs(BoneScale.Z - 1.0f) > 0.001f))
 		{
 #if DEBUG_RETARGET
 			appPrintf("Adjust [%d] %s by scale %g %g %g\n", TrackIndex,
@@ -671,7 +671,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			if ((fabs(Transform.Scale3D.X - 1.0f) > 0.001f) ||
 				(fabs(Transform.Scale3D.Y - 1.0f) > 0.001f) ||
 				(fabs(Transform.Scale3D.Z - 1.0f) > 0.001f))
-				appPrintf("RefPose: bone %d (%s) has scale %g %g %g\n", i, *ReferenceSkeleton.RefBoneInfo[i].Name, FVECTOR_ARG(Transform.Scale3D));
+				appPrintf("RefPose: bone %d (%s) has scale %g %g %g\n", i, *ReferenceSkeleton.RefBoneInfo[i].Name, VECTOR_ARG(Transform.Scale3D));
 #endif // DEBUG_RETARGET
 			AnimSet->BonePositions.Add(BonePosition);
 			// Process bone retargeting mode
@@ -694,7 +694,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			AnimSet->BoneModes[i] = BoneMode;
 #if DEBUG_ANIM
 			appPrintf("  %d: %s: (%g %g %g) mode=%d\n", i, *ReferenceSkeleton.RefBoneInfo[i].Name,
-				FVECTOR_ARG(ReferenceSkeleton.RefBonePose[i].Translation), BoneTree[i].TranslationRetargetingMode);
+				VECTOR_ARG(ReferenceSkeleton.RefBonePose[i].Translation), BoneTree[i].TranslationRetargetingMode);
 #endif
 		}
 
@@ -836,7 +836,7 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			Dst->RetargetBasePose.Add(BonePosition);
 #if DEBUG_RETARGET
 			if (BoneTransform.Scale3D.X != 1.0f || BoneTransform.Scale3D.Y != 1.0f || BoneTransform.Scale3D.Z != 1.0f)
-				appPrintf("Retarget: bone %d (%s) has scale %g %g %g\n", &BoneTransform - RetargetTransforms->GetData(), "?", FVECTOR_ARG(BoneTransform.Scale3D));
+				appPrintf("Retarget: bone %d (%s) has scale %g %g %g\n", &BoneTransform - RetargetTransforms->GetData(), "?", VECTOR_ARG(BoneTransform.Scale3D));
 #endif
 		}
 	}

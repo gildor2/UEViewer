@@ -48,8 +48,6 @@ class UnPackage;
 #define INDEX_NONE			-1
 
 
-#define FVECTOR_ARG(v)		(v).X, (v).Y, (v).Z
-#define FQUAT_ARG(v)		(v).X, (v).Y, (v).Z, (v).W
 #define FROTATOR_ARG(r)		(r).Yaw, (r).Pitch, (r).Roll
 #define FCOLOR_ARG(v)		(v).R, (v).G, (v).B, (v).A
 

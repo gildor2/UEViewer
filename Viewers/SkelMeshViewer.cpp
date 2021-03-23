@@ -140,10 +140,10 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 	TimeSinceCreate = -2;		// ignore first 2 frames: 1st frame will be called after mesh changing, 2nd frame could load textures etc
 
 #if SHOW_BOUNDS
-	appPrintf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
-	appPrintf("Bounds.max = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Max));
+	appPrintf("Bounds.min = %g %g %g\n", VECTOR_ARG(Mesh->BoundingBox.Min));
+	appPrintf("Bounds.max = %g %g %g\n", VECTOR_ARG(Mesh->BoundingBox.Max));
 	appPrintf("Origin     = %g %g %g\n", VECTOR_ARG(Mesh->MeshOrigin));
-	appPrintf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
+	appPrintf("Sphere     = %g %g %g R=%g\n", VECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
 #endif // SHOW_BOUNDS
 
 	unguard;
