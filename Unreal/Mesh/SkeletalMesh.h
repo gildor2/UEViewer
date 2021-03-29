@@ -324,6 +324,8 @@ enum class EBoneRetargetingMode : uint8
 	Animation,
 	// Use translation from mesh
 	Mesh,
+	AnimationScaled,
+	AnimationRelative,
 	// Recompute translation from difference between mesh and animation skeletons
 	OrientAndScale,
 

@@ -709,6 +709,12 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			case EBoneTranslationRetargetingMode::Animation:
 				BoneMode = EBoneRetargetingMode::Animation;
 				break;
+			case EBoneTranslationRetargetingMode::AnimationScaled:
+				BoneMode = EBoneRetargetingMode::AnimationScaled;
+				break;
+			case EBoneTranslationRetargetingMode::AnimationRelative:
+				BoneMode = EBoneRetargetingMode::AnimationRelative;
+				break;
 			case EBoneTranslationRetargetingMode::OrientAndScale:
 				BoneMode = EBoneRetargetingMode::OrientAndScale;
 				break;

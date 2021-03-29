@@ -557,16 +557,46 @@ void CSkelMeshInstance::UpdateSkeleton()
 				switch (RetargetingMode)
 				{
 				case EBoneRetargetingMode::Animation:
-					// Already set, do nothing
+					// Use translation from the animation. Already set, do nothing.
 					break;
 				case EBoneRetargetingMode::Mesh:
-					// Restore bone position from reference pose
+					// Use translation from the mesh.
 					NewBonePosition = Bone.Position;
 					// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
 					BoneUpdateCounts[i] += 3;
 					break;
-				//todo: EBoneTranslationRetargetingMode::Skeleton - simply copy translation from target skeleton - == ::Mesh mode (UE4 uses RetargetSources for that)
-				//todo:: EBoneTranslationRetargetingMode::AnimationScaled - like ::OrientAndScale, but no rotation
+				case EBoneRetargetingMode::AnimationScaled:
+					{
+						// Like ::OrientAndScale, but without rotation
+						CVec3 SourceTrans = AnimSeq1->RetargetBasePose.Num()
+							? AnimSeq1->RetargetBasePose[AnimBoneIndex].Position
+							: Animation->BonePositions[AnimBoneIndex].Position;
+						CVec3 TargetTrans = Bone.Position;
+						float SourceTransLength = SourceTrans.GetLength();
+						if (SourceTransLength > 0.001f)
+						{
+							NewBonePosition.Scale(TargetTrans.GetLength() / SourceTransLength);
+						}
+						else
+						{
+							// Skip this bone, it has missing bone in a source skeleton.
+							// This happens if source skeleton bone has identity transform (zero translation),
+							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
+							// Note: bone translation and rotation should be skipped.
+							NewBonePosition = Bone.Position;
+							NewBoneRotation = Bone.Orientation;
+#if SHOW_ANIM
+							BoneDebug.bSkippedOnRetargetting = true;
+#endif
+							break;
+						}
+					}
+					break;
+				case EBoneRetargetingMode::AnimationRelative:
+					{
+						//todo
+					}
+					break;
 				case EBoneRetargetingMode::OrientAndScale:
 					{
 						// Reference skeleton bone data is required here
@@ -578,11 +608,11 @@ void CSkelMeshInstance::UpdateSkeleton()
 						CVec3 TargetTransDir = Bone.Position;
 
 						//todo: optimization: can compare SourceTransDir and TargetTransDir, just copy animated position if same
-						float SourceTransDirLength = SourceTransDir.Normalize();
-						float TargetTransDirLength = TargetTransDir.Normalize();
-						if (fabs(SourceTransDirLength * TargetTransDirLength) > 0.001f)
+						float SourceTransLength = SourceTransDir.Normalize();
+						float TargetTransLength = TargetTransDir.Normalize();
+						if (SourceTransLength * TargetTransLength > 0.001f)
 						{
-							float Scale = TargetTransDirLength / SourceTransDirLength;
+							float Scale = TargetTransLength / SourceTransLength;
 							CQuat TransRotation;
 							TransRotation.FromTwoVectors(SourceTransDir, TargetTransDir);
 							// Reference: FAnimationRuntime::RetargetBoneTransform()
