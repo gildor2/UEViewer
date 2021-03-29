@@ -2383,6 +2383,9 @@ void USkeletalMesh3::ConvertMesh()
 		Dst->ParentIndex = B.ParentIndex;
 		Dst->Position    = CVT(B.BonePos.Position);
 		Dst->Orientation = CVT(B.BonePos.Orientation);
+#if !BAKE_BONE_SCALES
+		Dst->Scale.Set(1, 1, 1);
+#endif
 		// fix skeleton; all bones but 0
 		if (i >= 1)
 			Dst->Orientation.W *= -1;

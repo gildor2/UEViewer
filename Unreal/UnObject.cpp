@@ -1024,7 +1024,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 	if (!Prop || Prop->Count == 0)	// Prop->Count==0 when declared with PROP_DROP() macro
 	{
 		if (!Prop)
-			appPrintf("WARNING: %s \"%s::%s\" was not found\n", DbgTypeName, Name, *Tag.Name);
+			appPrintf("%s: unknown %s %s\n", DbgTypeName, Name, *Tag.Name); // notify about the unknown property
 #if DEBUG_PROPS
 		appPrintf("  (skipping %s)\n", *Tag.Name);
 #endif
@@ -1504,7 +1504,7 @@ void CTypeInfo::SerializeBatmanProps(FArchive& Ar, void* ObjectData) const
 
 		case NAME_VectorProperty:
 			Ar << PROP(FVector);
-			PROP_DBG("%g %g %g", FVECTOR_ARG(PROP(FVector)));
+			PROP_DBG("%g %g %g", VECTOR_ARG(PROP(FVector)));
 			break;
 
 		case NAME_RotatorProperty:
@@ -1913,7 +1913,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 		else if (COMPARE_TYPE(Prop->TypeName, PropType::FVector))
 		{
 			Ar << PROP(FVector);
-			PROP_DBG("%g %g %g", FVECTOR_ARG(PROP(FVector)));
+			PROP_DBG("%g %g %g", VECTOR_ARG(PROP(FVector)));
 		}
 		else if (COMPARE_TYPE(Prop->TypeName, "FLinearColor"))
 		{
