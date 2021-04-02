@@ -3084,6 +3084,8 @@ void UStaticMesh4::ConvertSourceModels()
 				CMeshSection* Sec = new (Lod->Sections) CMeshSection;
 				if (Materials.IsValidIndex(MaterialIndex))
 					Sec->Material = (UUnrealMaterial*)Materials[MaterialIndex];
+				else
+					Sec->Material = NULL;
 				Sec->FirstIndex = i * 3;
 			}
 		}
