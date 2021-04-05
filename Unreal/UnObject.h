@@ -8,6 +8,16 @@
 	UObject class
 -----------------------------------------------------------------------------*/
 
+// Bitfield flags
+enum ETypeFlags
+{
+	TYPE_None = 0,
+	TYPE_SilentLoad = 1,
+};
+
+#define TYPE_FLAGS(x)	virtual uint32 GetTypeFlags() const override \
+	{ return x; }
+
 class UObject
 {
 #if 0
@@ -63,6 +73,11 @@ public:
 	// the same name.
 	virtual void GetMetadata(FArchive& Ar) const
 	{
+	}
+
+	virtual uint32 GetTypeFlags() const
+	{
+		return 0;
 	}
 
 	// Empty property table

@@ -173,7 +173,10 @@ void UObject::EndLoad()
 			PROFILE_LABEL(Obj->GetClassName());
 
 			Package->SetupReader(Obj->PackageIndex);
-			appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, *Package->GetFilename());
+			if (!(Obj->GetTypeFlags() & TYPE_SilentLoad))
+			{
+				appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, *Package->GetFilename());
+			}
 			// setup NotifyInfo to describe object
 			appSetNotifyHeader("Loading object %s'%s.%s'", Obj->GetClassName(), Package->Name, Obj->Name);
 #if PROFILE_LOADING
