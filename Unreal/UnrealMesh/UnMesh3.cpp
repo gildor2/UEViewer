@@ -2419,10 +2419,10 @@ void USkeletalMesh3::PostLoad()
 		{
 			USkeletalMeshSocket *S = Sockets[i];
 			if (!S) continue;
-			CSkelMeshSocket *DS = new (ConvertedMesh->Sockets) CSkelMeshSocket;
-			DS->Name = S->SocketName;
-			DS->Bone = S->BoneName;
-			CCoords &C = DS->Transform;
+			CSkelMeshSocket& DS = ConvertedMesh->Sockets.AddZeroed_GetRef();
+			DS.Name = S->SocketName;
+			DS.Bone = S->BoneName;
+			CCoords& C = DS.Transform;
 			C.origin = CVT(S->RelativeLocation);
 			RotatorToAxis(S->RelativeRotation, C.axis);
 		}

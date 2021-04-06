@@ -7,8 +7,9 @@
 
 #include "UnObject.h"
 #include "UnMesh4.h"
-#include "UnMesh3.h"		// for FSkeletalMeshLODInfo
+#include "UnMesh3.h"				// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
+#include "UnMathTools.h"			// for FRotator to FCoords
 
 #include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial3.h"
@@ -1859,6 +1860,50 @@ void USkeletalMesh4::PostLoad()
 		if (MorphTargets[i])
 			ConvertedMesh->Morphs.Add(MorphTargets[i]->ConvertMorph());
 		unguardf("%d/%d", i, MorphTargets.Num());
+	}
+
+	// Collect sockets from USkeletalMesh and USkeleton
+	TArray<USkeletalMeshSocket*> SrcSockets;
+	int NumSockets = Sockets.Num(); // potential number of sockets
+	if (Skeleton) NumSockets += Skeleton->Sockets.Num();
+	SrcSockets.Empty(NumSockets);
+	for (USkeletalMeshSocket* SrcSocket : Sockets)
+	{
+		if (!SrcSocket) continue;
+		SrcSockets.Add(SrcSocket);
+	}
+	if (Skeleton)
+	{
+		for (USkeletalMeshSocket* SrcSocket : Skeleton->Sockets)
+		{
+			if (!SrcSocket) continue;
+			// Check if mesh already has a socket with the same name
+			bool bAlreadyExists = false;
+			for (USkeletalMeshSocket* CheckSocket : SrcSockets)
+			{
+				if (CheckSocket->SocketName == SrcSocket->SocketName)
+				{
+					bAlreadyExists = true;
+					break;
+				}
+			}
+			if (!bAlreadyExists)
+			{
+				SrcSockets.Add(SrcSocket);
+			}
+		}
+	}
+
+	// Convert all found sockets
+	for (USkeletalMeshSocket* SrcSocket : SrcSockets)
+	{
+		if (!SrcSocket) continue;
+		CSkelMeshSocket& Socket = ConvertedMesh->Sockets.AddZeroed_GetRef();
+		Socket.Name = SrcSocket->SocketName;
+		Socket.Bone = SrcSocket->BoneName;
+		CCoords& C = Socket.Transform;
+		C.origin = CVT(SrcSocket->RelativeLocation);
+		RotatorToAxis(SrcSocket->RelativeRotation, C.axis);
 	}
 
 	unguard;
