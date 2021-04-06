@@ -32,6 +32,8 @@ USkeleton::~USkeleton()
 	if (ConvertedAnim) delete ConvertedAnim;
 }
 
+#if BAKE_BONE_SCALES
+
 // Get the effective scale of the particular bone, with taking into account scales of the bone's parents
 static CVec3 GetBoneScale(const FReferenceSkeleton& Skel, const TArray<FTransform>& BoneTransforms, int BoneIndex)
 {
@@ -77,6 +79,8 @@ static bool AdjustBoneScales(const FReferenceSkeleton& SkeletonHierarchy, TArray
 	unguard;
 }
 
+#endif // BAKE_BONE_SCALES
+
 FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 {
 	guard(FReferenceSkeleton<<);
@@ -116,14 +120,22 @@ FArchive& operator<<(FArchive& Ar, FReferenceSkeleton& S)
 	{
 		if (S.RefBoneInfo[i].Name == DEBUG_RETARGET_BONE)
 		{
+	#if BAKE_BONE_SCALES
 			CVec3 BoneScale = GetBoneScale(S, S.RefBonePose, i);
-			appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", i, *S.RefBoneInfo[i].Name, VECTOR_ARG(S.RefBonePose[i].Translation), VECTOR_ARG(BoneScale));
+	#else
+			FVector BoneScale = S.RefBonePose[i].Scale3D;
+	#endif
+			CVec3 Translation = CVT(S.RefBonePose[i].Translation);
+			appPrintf("    [%d] %s: (%g %g %g), len %g , scale (%g %g %g)\n", i, *S.RefBoneInfo[i].Name,
+				VECTOR_ARG(Translation), Translation.GetLength(), VECTOR_ARG(BoneScale));
 		}
 	}
 #endif // DEBUG_RETARGET_BONE
 
+#if BAKE_BONE_SCALES
 	// Adjust skeleton's scale, if any. Use scale of the root bone.
 	AdjustBoneScales(S, S.RefBonePose);
+#endif
 
 	return Ar;
 
@@ -258,13 +270,21 @@ void USkeleton::Serialize(FArchive &Ar)
 				if (ReferenceSkeleton.RefBoneInfo.IsValidIndex(j) &&
 					ReferenceSkeleton.RefBoneInfo[j].Name == DEBUG_RETARGET_BONE)
 				{
+		#if BAKE_BONE_SCALES
 					CVec3 BoneScale = GetBoneScale(ReferenceSkeleton, Pose.ReferencePose, j);
-					appPrintf("    [%d] %s: (%g %g %g) x (%g %g %g)\n", j, *ReferenceSkeleton.RefBoneInfo[j].Name, VECTOR_ARG(Pose.ReferencePose[j].Translation), VECTOR_ARG(BoneScale));
+		#else
+					FVector BoneScale = Pose.ReferencePose[j].Scale3D;
+		#endif
+					CVec3 Translation = CVT(Pose.ReferencePose[j].Translation);
+					appPrintf("    [%d] %s: (%g %g %g), len %g, scale (%g %g %g)\n", j, *ReferenceSkeleton.RefBoneInfo[j].Name,
+						VECTOR_ARG(Translation), Translation.GetLength(), VECTOR_ARG(BoneScale));
 				}
 			}
 	#endif // DEBUG_RETARGET_BONE
 		}
 #endif
+
+#if BAKE_BONE_SCALES
 		// Adjust scales of retarget pose bones
 		for (auto& It : AnimRetargetSources)
 		{
@@ -277,6 +297,7 @@ void USkeleton::Serialize(FArchive &Ar)
 			}
 			unguardf("%s", *It.Key);
 		}
+#endif // BAKE_BONE_SCALES
 	}
 	else
 	{
@@ -596,6 +617,8 @@ static void FixRotationKeys(CAnimSequence* Anim)
 	}
 }
 
+#if BAKE_BONE_SCALES
+
 // Use skeleton's bone settings to adjust animation sequences
 static void AdjustSequenceBySkeleton(USkeleton* Skeleton, const TArray<FTransform>& Transforms, CAnimSequence* Anim)
 {
@@ -633,6 +656,8 @@ static void AdjustSequenceBySkeleton(USkeleton* Skeleton, const TArray<FTransfor
 
 	unguard;
 }
+
+#endif // BAKE_BONE_SCALES
 
 void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 {
@@ -683,6 +708,12 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 				break;
 			case EBoneTranslationRetargetingMode::Animation:
 				BoneMode = EBoneRetargetingMode::Animation;
+				break;
+			case EBoneTranslationRetargetingMode::AnimationScaled:
+				BoneMode = EBoneRetargetingMode::AnimationScaled;
+				break;
+			case EBoneTranslationRetargetingMode::AnimationRelative:
+				BoneMode = EBoneRetargetingMode::AnimationRelative;
 				break;
 			case EBoneTranslationRetargetingMode::OrientAndScale:
 				BoneMode = EBoneRetargetingMode::OrientAndScale;
@@ -1064,8 +1095,11 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 
 	// Now should invert all imported rotations
 	FixRotationKeys(Dst);
+
+#if BAKE_BONE_SCALES
 	// And apply scales to positions, when skeleton has any
 	AdjustSequenceBySkeleton(this, RetargetTransforms ? *RetargetTransforms : ReferenceSkeleton.RefBonePose, Dst);
+#endif
 
 	unguardf("Skel=%s Anim=%s", Name, Seq->Name);
 }
@@ -1604,11 +1638,13 @@ void UAnimSequence4::PostLoad()
 		return;
 	}
 
+#if BAKE_BONE_SCALES
 	// Scale RetargetSourceAssetReferencePose
 	if (RetargetSourceAssetReferencePose.Num())
 	{
 		AdjustBoneScales(Skeleton->ReferenceSkeleton, RetargetSourceAssetReferencePose);
 	}
+#endif // BAKE_BONE_SCALES
 
 	Skeleton->ConvertAnims(this);
 

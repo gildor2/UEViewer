@@ -9,6 +9,7 @@
 class UAnimNotify : public UObject
 {
 	DECLARE_CLASS(UAnimNotify, UObject);
+	TYPE_FLAGS(TYPE_SilentLoad);
 public:
 	int				Revision;
 };

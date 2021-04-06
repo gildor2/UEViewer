@@ -3,6 +3,9 @@
 
 #include "MeshCommon.h"
 
+//todo: should go away
+#define BAKE_BONE_SCALES 1
+
 /*-----------------------------------------------------------------------------
 	Local SkeletalMesh class, encapsulated all UE versions
 -----------------------------------------------------------------------------*/
@@ -103,6 +106,9 @@ struct CSkelMeshBone
 	int						ParentIndex;
 	CVec3					Position;
 	CQuat					Orientation;
+#if !BAKE_BONE_SCALES
+	CVec3					Scale;
+#endif
 };
 
 struct CMorphVertex
@@ -318,6 +324,8 @@ enum class EBoneRetargetingMode : uint8
 	Animation,
 	// Use translation from mesh
 	Mesh,
+	AnimationScaled,
+	AnimationRelative,
 	// Recompute translation from difference between mesh and animation skeletons
 	OrientAndScale,
 

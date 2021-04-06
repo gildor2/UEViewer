@@ -798,6 +798,9 @@ skeleton:
 		Dst->ParentIndex = B.ParentIndex;
 		Dst->Position    = CVT(B.BonePos.Position);
 		Dst->Orientation = CVT(B.BonePos.Orientation);
+#if !BAKE_BONE_SCALES
+		Dst->Scale.Set(1, 1, 1);
+#endif
 	}
 	unguard; // ProcessSkeleton
 
