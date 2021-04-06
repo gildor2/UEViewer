@@ -8,16 +8,6 @@
 	UObject class
 -----------------------------------------------------------------------------*/
 
-// Bitfield flags
-enum ETypeFlags
-{
-	TYPE_None = 0,
-	TYPE_SilentLoad = 1,
-};
-
-#define TYPE_FLAGS(x)	virtual uint32 GetTypeFlags() const override \
-	{ return x; }
-
 class UObject
 {
 #if 0
@@ -28,7 +18,7 @@ public:
 	// DECLARE_BASE constructs CTypeInfo with reference to CNullType, what makes compiler impossible to optimize it.
 	static const CTypeInfo* StaticGetTypeinfo()
 	{
-		static const CTypeInfo type("UObject", NULL, sizeof(UObject), NULL, 0, NULL, NULL);
+		static const CTypeInfo type("UObject", NULL, sizeof(UObject), NULL, 0, TYPE_None, NULL, NULL);
 		return &type;
 	}
 #endif
@@ -75,10 +65,7 @@ public:
 	{
 	}
 
-	virtual uint32 GetTypeFlags() const
-	{
-		return 0;
-	}
+	static const uint32 LocalTypeFlags = TYPE_None;
 
 	// Empty property table
 	enum { PropLevel = -1 };

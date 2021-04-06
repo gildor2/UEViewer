@@ -1,6 +1,13 @@
 #ifndef __TYPEINFO_H__
 #define __TYPEINFO_H__
 
+// Bitfield flags
+enum ETypeFlags
+{
+	TYPE_None = 0,
+	TYPE_SilentLoad = 1,
+};
+
 namespace TypeinfoDetail
 {
 	// Default value for StaticSerialize(), could be changed with USE_NATIVE_SERIALIZER macro
@@ -27,6 +34,7 @@ namespace TypeinfoDetail
 				Super::StaticGetTypeinfo(),		\
 				sizeof(ThisClass),				\
 				props, numProps,				\
+				LocalTypeFlags,					\
 				InternalConstructor,			\
 				StaticSerialize					\
 			);									\
@@ -35,6 +43,7 @@ namespace TypeinfoDetail
 
 #define DECLARE_STRUCT(Class)					\
 		DECLARE_BASE(Class, CNullType)			\
+		static const uint32 LocalTypeFlags = TYPE_None; \
 		const CTypeInfo* GetTypeinfo() const	\
 		{										\
 			return StaticGetTypeinfo();			\
@@ -43,6 +52,7 @@ namespace TypeinfoDetail
 // structure derived from another structure with typeinfo
 #define DECLARE_STRUCT2(Class,Base)				\
 		DECLARE_BASE(Class, Base)				\
+		static const uint32 LocalTypeFlags = TYPE_None; \
 		const CTypeInfo* GetTypeinfo() const	\
 		{										\
 			return StaticGetTypeinfo();			\
@@ -60,6 +70,11 @@ namespace TypeinfoDetail
 		{										\
 			return Ar << *(UObject**)&Res;		\
 		}
+
+#define TYPE_FLAGS(x)							\
+	public:										\
+		static const uint32 LocalTypeFlags = x;	\
+	private:
 
 // UE3 and UE4 has a possibility to use native serializer for a struct.
 // In UE4 it is declared with ...
@@ -112,16 +127,19 @@ struct CTypeInfo
 	int				SizeOf;
 	const CPropInfo* Props;
 	int				NumProps;
+	uint32			TypeFlags;
 	void (*Constructor)(void*);
 	void (*NativeSerializer)(FArchive&, void*);
 	// methods
 	constexpr FORCEINLINE CTypeInfo(const char *AName, const CTypeInfo *AParent, int DataSize,
-					 const CPropInfo *AProps, int PropCount, void (*AConstructor)(void*), void (*ASerializer)(FArchive&, void*))
+					 const CPropInfo *AProps, int PropCount, uint32 Flags,
+					 void (*AConstructor)(void*), void (*ASerializer)(FArchive&, void*))
 	:	Name(AName)
 	,	Parent(AParent)
 	,	SizeOf(DataSize)
 	,	Props(AProps)
 	,	NumProps(PropCount)
+	,	TypeFlags(Flags)
 	,	Constructor(AConstructor)
 	,	NativeSerializer(ASerializer)
 	{}
@@ -278,6 +296,7 @@ static FORCEINLINE const CTypeInfo* Class##_StaticGetTypeinfo() \
 		NULL,									\
 		sizeof(ThisClass),						\
 		props, ARRAY_COUNT(props),				\
+		TYPE_None,								\
 		NULL,									\
 		StaticSerialize							\
 	);											\

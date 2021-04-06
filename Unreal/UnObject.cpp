@@ -173,7 +173,7 @@ void UObject::EndLoad()
 			PROFILE_LABEL(Obj->GetClassName());
 
 			Package->SetupReader(Obj->PackageIndex);
-			if (!(Obj->GetTypeFlags() & TYPE_SilentLoad))
+			if (!(Obj->GetTypeinfo()->TypeFlags & TYPE_SilentLoad))
 			{
 				appPrintf("Loading %s %s from package %s\n", Obj->GetClassName(), Obj->Name, *Package->GetFilename());
 			}
