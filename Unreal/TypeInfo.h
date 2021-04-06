@@ -6,6 +6,7 @@ enum ETypeFlags
 {
 	TYPE_None = 0,
 	TYPE_SilentLoad = 1,
+	TYPE_InlinePropDump = 2,
 };
 
 namespace TypeinfoDetail

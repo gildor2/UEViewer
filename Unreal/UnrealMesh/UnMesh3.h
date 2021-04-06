@@ -174,7 +174,7 @@ struct FSkeletalMeshLODInfo
 class USkeletalMeshSocket : public UObject
 {
 	DECLARE_CLASS(USkeletalMeshSocket, UObject);
-	TYPE_FLAGS(TYPE_SilentLoad);
+	TYPE_FLAGS(TYPE_SilentLoad | TYPE_InlinePropDump);
 public:
 	FName					SocketName;
 	FName					BoneName;

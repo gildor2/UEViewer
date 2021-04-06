@@ -406,15 +406,22 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 				PROCESS(int,      "%d", PROP(int));
 				PROCESS(bool,     "%s", PROP(bool) ? "true" : "false");
 				PROCESS(float,    "%g", PROP(float));
-#if 1
 				if (IS(UObject*))
 				{
 					UObject *obj = PROP(UObject*);
 					if (obj)
 					{
-						char ObjName[256];
-						obj->GetFullName(ARRAY_ARG(ObjName));
-						PD2->PrintValue("%s'%s'", obj->GetClassName(), ObjName);
+						if (!(obj->GetTypeinfo()->TypeFlags & TYPE_InlinePropDump))
+						{
+							char ObjName[256];
+							obj->GetFullName(ARRAY_ARG(ObjName));
+							PD2->PrintValue("%s'%s'", obj->GetClassName(), ObjName);
+						}
+						else
+						{
+							// Process this like a structure
+							CollectProps(obj->GetTypeinfo(), obj, *PD2);
+						}
 					}
 					else
 					{
@@ -425,9 +432,6 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 						PD2->PrintValue("None");
 					}
 				}
-#else
-				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
-#endif
 				PROCESS(FName,    "%s", *PROP(FName));
 				PROCESS(FString,  "\"%s\"", *PROP(FString));
 				if (Prop->TypeName[0] == '#')
