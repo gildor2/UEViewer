@@ -167,6 +167,7 @@
 #define KH3				1		// Kingdom Hearts 3
 #define JEDI			1		// Star Wars Jedi: Fallen Order
 #define SEAOFTHIEVES	1		// Sea of Thieves
+#define VALORANT    	1		// VALORANT
 
 #define SPECIAL_TAGS	1		// games with different PACKAGE_FILE_TAG
 

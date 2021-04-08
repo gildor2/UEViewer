@@ -493,6 +493,8 @@ enum EGame
 		GAME_Borderlands3 = GAME_UE4(20)+1,
 		// 4.21
 		GAME_Jedi = GAME_UE4(21)+1,
+		// 4.24
+		GAME_Valorant = GAME_UE4(24)+1,
 		// 4.25
 		GAME_Dauntless = GAME_UE4(25)+1,
 
