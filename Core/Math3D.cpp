@@ -1,13 +1,11 @@
 #include "Core.h"
 
-
 /*-----------------------------------------------------------------------------
 	Constant geometry objects
 -----------------------------------------------------------------------------*/
 
 //const CBox	nullBox   = {{0,0,0}, {0,0,0}};
-const CCoords identCoords = { {0,0,0}, {1,0,0, 0,1,0, 0,0,1} };
-
+const CCoords identCoords = {{0, 0, 0}, {1, 0, 0, 0, 1, 0, 0, 0, 1}};
 
 /*-----------------------------------------------------------------------------
 	CVec3
@@ -21,7 +19,8 @@ float CVec3::GetLength() const
 float CVec3::Normalize()
 {
 	float length = sqrt(dot(*this, *this));
-	if (length) Scale(1.0f/length);
+	if (length)
+		Scale(1.0f / length);
 	return length;
 }
 
@@ -68,11 +67,10 @@ void cross(const CVec3 &v1, const CVec3 &v2, CVec3 &result)
 
 float VectorDistance(const CVec3 &vec1, const CVec3 &vec2)
 {
-	CVec3	vec;
+	CVec3 vec;
 	VectorSubtract(vec1, vec2, vec);
 	return vec.GetLength();
 }
-
 
 /*-----------------------------------------------------------------------------
 	CAxis
@@ -80,7 +78,7 @@ float VectorDistance(const CVec3 &vec1, const CVec3 &vec2)
 
 void CAxis::FromEuler(const CVec3 &angles)
 {
-	CVec3	right;
+	CVec3 right;
 	// Euler2Vecs() returns "right" instead of "y axis"
 	Euler2Vecs(angles, &v[0], &right, &v[2]);
 	VectorNegate(right, v[1]);
@@ -148,7 +146,6 @@ void CAxis::PrescaleSource(const CVec3 &scale)
 	v[2].Scale(scale);
 }
 
-
 /*-----------------------------------------------------------------------------
 	CCoords
 -----------------------------------------------------------------------------*/
@@ -175,8 +172,8 @@ void CCoords::UnTransformPoint(const CVec3 &src, CVec3 &dst) const
 {
 	CVec3 tmp;
 	VectorMA(origin, src[0], axis[0], tmp);
-	VectorMA(tmp,	 src[1], axis[1], tmp);
-	VectorMA(tmp,	 src[2], axis[2], dst);
+	VectorMA(tmp, src[1], axis[1], tmp);
+	VectorMA(tmp, src[2], axis[2], dst);
 }
 
 void CCoords::TransformCoords(const CCoords &src, CCoords &dst) const
@@ -210,15 +207,14 @@ void UnTransformPoint(const CVec3 &origin, const CAxis &axis, const CVec3 &src, 
 {
 	CVec3 tmp;
 	VectorMA(origin, src[0], axis[0], tmp);
-	VectorMA(tmp,	 src[1], axis[1], tmp);
-	VectorMA(tmp,	 src[2], axis[2], dst);
+	VectorMA(tmp, src[1], axis[1], tmp);
+	VectorMA(tmp, src[2], axis[2], dst);
 }
-
 
 // orthonormal coords can be inverted fast
 void InvertCoords(const CCoords &S, CCoords &D)
 {
-	CCoords T;		// to allow inplace inversion (when &D==&S)
+	CCoords T; // to allow inplace inversion (when &D==&S)
 	// negate inverse rotated origin
 	S.axis.TransformVector(S.origin, T.origin);
 	T.origin.Negate();
@@ -235,21 +231,18 @@ void InvertCoords(const CCoords &S, CCoords &D)
 	D = T;
 }
 
-
 void InvertCoordsSlow(const CCoords &S, CCoords &D)
 {
 	S.TransformCoordsSlow(identCoords, D);
 }
-
 
 void CoordsMA(CCoords &a, float scale, const CCoords &b)
 {
 	VectorMA(a.axis[0], scale, b.axis[0]);
 	VectorMA(a.axis[1], scale, b.axis[1]);
 	VectorMA(a.axis[2], scale, b.axis[2]);
-	VectorMA(a.origin,  scale, b.origin );
+	VectorMA(a.origin, scale, b.origin);
 }
-
 
 /*-----------------------------------------------------------------------------
 	Angle math
@@ -258,8 +251,8 @@ void CoordsMA(CCoords &a, float scale, const CCoords &b)
 // algles (0,0,0) => f(1,0,0) r(0,-1,0) u(0,0,1)
 void Euler2Vecs(const CVec3 &angles, CVec3 *forward, CVec3 *right, CVec3 *up)
 {
-	float	angle;
-	float	sr, sp, sy, cr, cp, cy;	// roll/pitch/yaw sin/cos
+	float angle;
+	float sr, sp, sy, cr, cp, cy; // roll/pitch/yaw sin/cos
 
 	if (angles[YAW])
 	{
@@ -286,9 +279,10 @@ void Euler2Vecs(const CVec3 &angles, CVec3 *forward, CVec3 *right, CVec3 *up)
 	}
 
 	if (forward)
-		forward->Set(cp*cy, cp*sy, -sp);
+		forward->Set(cp * cy, cp * sy, -sp);
 
-	if (!right && !up) return;
+	if (!right && !up)
+		return;
 
 	if (angles[ROLL])
 	{
@@ -303,19 +297,18 @@ void Euler2Vecs(const CVec3 &angles, CVec3 *forward, CVec3 *right, CVec3 *up)
 	}
 
 	if (right)
-		right->Set(-sr*sp*cy + cr*sy, -sr*sp*sy - cr*cy, -sr*cp);
+		right->Set(-sr * sp * cy + cr * sy, -sr * sp * sy - cr * cy, -sr * cp);
 
 	if (up)
-		up->Set(cr*sp*cy + sr*sy, cr*sp*sy - sr*cy, cr*cp);
+		up->Set(cr * sp * cy + sr * sy, cr * sp * sy - sr * cy, cr * cp);
 }
-
 
 void Vec2Euler(const CVec3 &vec, CVec3 &angles)
 {
 	angles[ROLL] = 0;
 	if (vec[0] == 0 && vec[1] == 0)
 	{
-		angles[YAW]   = 0;
+		angles[YAW] = 0;
 		angles[PITCH] = (IsNegative(vec[2])) ? 90 : 270;
 	}
 	else
@@ -324,20 +317,21 @@ void Vec2Euler(const CVec3 &vec, CVec3 &angles)
 		if (vec[0])
 		{
 			yaw = atan2(vec[1], vec[0]) * 180 / M_PI;
-			if (IsNegative(yaw)) yaw += 360;
+			if (IsNegative(yaw))
+				yaw += 360;
 		}
 		else
 			yaw = (!IsNegative(vec[1])) ? 90 : 270;
 
-		float forward = sqrt(vec[0]*vec[0] + vec[1]*vec[1]);
-		float pitch   = -atan2(vec[2], forward) * 180 / M_PI;
-		if (IsNegative(pitch)) pitch += 360;
+		float forward = sqrt(vec[0] * vec[0] + vec[1] * vec[1]);
+		float pitch = -atan2(vec[2], forward) * 180 / M_PI;
+		if (IsNegative(pitch))
+			pitch += 360;
 
 		angles[PITCH] = pitch;
-		angles[YAW]   = yaw;
+		angles[YAW] = yaw;
 	}
 }
-
 
 // short version of Vec2Euler()
 float Vec2Yaw(const CVec3 &vec)
@@ -348,13 +342,13 @@ float Vec2Yaw(const CVec3 &vec)
 	if (vec[0])
 	{
 		float yaw = atan2(vec[1], vec[0]) * 180 / M_PI;
-		if (IsNegative(yaw)) yaw += 360;
+		if (IsNegative(yaw))
+			yaw += 360;
 		return yaw;
 	}
 	else
 		return !IsNegative(vec[1]) ? 90 : 270;
 }
-
 
 /*-----------------------------------------------------------------------------
 	Quaternion
@@ -369,10 +363,10 @@ void CQuat::FromAxis(const CAxis &src)
 		float t = trace + 1.0f;
 		float s = appRsqrt(t) * 0.5f;
 
-		w = s * t;
-		x = (src[2][1] - src[1][2]) * s;
-		y = (src[0][2] - src[2][0]) * s;
-		z = (src[1][0] - src[0][1]) * s;
+		W = s * t;
+		X = (src[2][1] - src[1][2]) * s;
+		Y = (src[0][2] - src[2][0]) * s;
+		Z = (src[1][0] - src[0][1]) * s;
 	}
 	else
 	{
@@ -388,7 +382,7 @@ void CQuat::FromAxis(const CAxis &src)
 		float t = (src[i][i] - (src[j][j] + src[k][k])) + 1.0f;
 		float s = appRsqrt(t) * 0.5f;
 
-		float *q = (float*)this;
+		float *q = (float *)this;
 		q[i] = s * t;
 		q[3] = (src[k][j] - src[j][k]) * s;
 		q[j] = (src[j][i] + src[i][j]) * s;
@@ -398,21 +392,21 @@ void CQuat::FromAxis(const CAxis &src)
 
 void CQuat::ToAxis(CAxis &dst) const
 {
-	float x2 = x * 2;
-	float y2 = y * 2;
-	float z2 = z * 2;
+	float x2 = X * 2;
+	float y2 = Y * 2;
+	float z2 = Z * 2;
 
-	float xx = x * x2;
-	float xy = x * y2;
-	float xz = x * z2;
+	float xx = X * x2;
+	float xy = X * y2;
+	float xz = X * z2;
 
-	float yy = y * y2;
-	float yz = y * z2;
-	float zz = z * z2;
+	float yy = Y * y2;
+	float yz = Y * z2;
+	float zz = Z * z2;
 
-	float wx = w * x2;
-	float wy = w * y2;
-	float wz = w * z2;
+	float wx = W * x2;
+	float wy = W * y2;
+	float wz = W * z2;
 
 	dst[0][0] = 1.0f - (yy + zz);
 	dst[0][1] = xy - wz;
@@ -427,51 +421,47 @@ void CQuat::ToAxis(CAxis &dst) const
 	dst[2][2] = 1.0f - (xx + yy);
 }
 
-
 float CQuat::GetLength() const
 {
-	return sqrt(x * x + y * y + z * z + w * w);
+	return sqrt(X * X + Y * Y + Z * Z + W * W);
 }
-
 
 // References:
 // - UE4: UnrealMath.cpp, FindBetween_Helper()
 // - http://lolengine.net/blog/2014/02/24/quaternion-from-two-vectors-final
-void CQuat::FromTwoVectors(const CVec3& v1, const CVec3& v2)
+void CQuat::FromTwoVectors(const CVec3 &v1, const CVec3 &v2)
 {
 	float norm_u_norm_v = sqrt(dot(v1, v1) * dot(v2, v2));
 	float w = norm_u_norm_v + dot(v1, v1);
 
-	CQuat& result = *this;
+	CQuat &result = *this;
 	if (w < 1e-6f * norm_u_norm_v)
 	{
 		// If u and v are exactly opposite, rotate 180 degrees
 		// around an arbitrary orthogonal axis. Axis normalisation
 		// can happen later, when we normalise the quaternion.
 		w = 0.0f;
-		if (fabs(v1.x) > fabs(v1.y))
-			result.Set(-v1.z, 0.0f, v1.x, w);
+		if (fabs(v1.X) > fabs(v1.Y))
+			result.Set(-v1.Z, 0.0f, v1.X, w);
 		else
-			result.Set(0.0f, -v1.z, v1.y, w);
-    }
-    else
-    {
+			result.Set(0.0f, -v1.Z, v1.Y, w);
+	}
+	else
+	{
 		// Otherwise, build quaternion the standard way.
-		cross(v1, v2, (CVec3&)result.x);
-		result.w = w;
-    }
+		cross(v1, v2, (CVec3 &)result.X);
+		result.W = w;
+	}
 
 	result.Normalize();
 }
 
-
-void CQuat::RotateVector(const CVec3& src, CVec3& dst) const
+void CQuat::RotateVector(const CVec3 &src, CVec3 &dst) const
 {
 	CAxis axis;
 	ToAxis(axis);
 	axis.TransformVector(src, dst);
 }
-
 
 void CQuat::Normalize()
 {
@@ -479,24 +469,22 @@ void CQuat::Normalize()
 	if (len)
 	{
 		len = 1.0f / len;
-		x *= len;
-		y *= len;
-		z *= len;
-		w *= len;
+		X *= len;
+		Y *= len;
+		Z *= len;
+		W *= len;
 	}
 }
-
 
 void CQuat::Mul(const CQuat &Q)
 {
 	CQuat tmp;
-	tmp.x = w * Q.x + x * Q.w + y * Q.z - z * Q.y;
-	tmp.y = w * Q.y - x * Q.z + y * Q.w + z * Q.x;
-	tmp.z = w * Q.z + x * Q.y - y * Q.x + z * Q.w;
-	tmp.w = w * Q.w - x * Q.x - y * Q.y - z * Q.z;
+	tmp.X = W * Q.X + X * Q.W + Y * Q.Z - Z * Q.Y;
+	tmp.Y = W * Q.Y - X * Q.Z + Y * Q.W + Z * Q.X;
+	tmp.Z = W * Q.Z + X * Q.Y - Y * Q.X + Z * Q.W;
+	tmp.W = W * Q.W - X * Q.X - Y * Q.Y - Z * Q.Z;
 	*this = tmp;
 }
-
 
 void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
 {
@@ -516,27 +504,27 @@ void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
 	// can also compare A and B and return A when equals ...
 
 	// get cosine of angle between quaternions
-	float cosom = A.x * B.x + A.y * B.y + A.z * B.z + A.w * B.w;
+	float cosom = A.X * B.X + A.Y * B.Y + A.Z * B.Z + A.W * B.W;
 	float sign = 1;
 	if (cosom < 0)
 	{
 		// rotation for more than 180 degree, inverse it for better result
 		cosom = -cosom;
-		sign  = -1;
+		sign = -1;
 	}
 	float scaleA, scaleB;
 	if (1.0f - cosom > 1e-6f)
 	{
 #if 1
-		float f        = 1.0f - cosom * cosom;
+		float f = 1.0f - cosom * cosom;
 		float sinomInv = appRsqrt(f);
-		float omega    = atan2(f * sinomInv, fabs(cosom));	//!! slow
+		float omega = atan2(f * sinomInv, fabs(cosom)); //!! slow
 #else
-		float omega    = acos(cosom);						//!! slow
-		float sinomInv = 1.0f / sin(omega);					//!! slow
+		float omega = acos(cosom);			//!! slow
+		float sinomInv = 1.0f / sin(omega); //!! slow
 #endif
-		scaleA = sin((1.0f - Alpha) * omega) * sinomInv;	//!! slow
-		scaleB = sin(Alpha * omega) * sinomInv;				//!! slow
+		scaleA = sin((1.0f - Alpha) * omega) * sinomInv; //!! slow
+		scaleB = sin(Alpha * omega) * sinomInv;			 //!! slow
 	}
 	else
 	{
@@ -545,10 +533,10 @@ void Slerp(const CQuat &A, const CQuat &B, float Alpha, CQuat &dst)
 	}
 	scaleB *= sign;
 	// lerp result
-	dst.x = scaleA * A.x + scaleB * B.x;
-	dst.y = scaleA * A.y + scaleB * B.y;
-	dst.z = scaleA * A.z + scaleB * B.z;
-	dst.w = scaleA * A.w + scaleB * B.w;
+	dst.X = scaleA * A.X + scaleB * B.X;
+	dst.Y = scaleA * A.Y + scaleB * B.Y;
+	dst.Z = scaleA * A.Z + scaleB * B.Z;
+	dst.W = scaleA * A.W + scaleB * B.W;
 }
 
 // Convert angle to -180...+180 range
@@ -560,12 +548,12 @@ static float NormalizeAxis(float angle)
 	return angle;
 }
 
-void Quat2Euler(const CQuat& quat, CVec3& angles)
+void Quat2Euler(const CQuat &quat, CVec3 &angles)
 {
 	// Reference: FQuat::Rotator() in UE4
-	const float SingularityTest = quat.z * quat.x- quat.w * quat.y;
-	const float YawY = 2.0f * (quat.w * quat.z + quat.x * quat.y);
-	const float YawX = 1.0f - 2.0f * (quat.y * quat.y + quat.z * quat.z);
+	const float SingularityTest = quat.Z * quat.X - quat.W * quat.Y;
+	const float YawY = 2.0f * (quat.W * quat.Z + quat.X * quat.Y);
+	const float YawX = 1.0f - 2.0f * (quat.Y * quat.Y + quat.Z * quat.Z);
 
 	const float SINGULARITY_THRESHOLD = 0.4999995f;
 	const float RAD_TO_DEG = (180.0f) / M_PI;
@@ -573,19 +561,19 @@ void Quat2Euler(const CQuat& quat, CVec3& angles)
 	if (SingularityTest < -SINGULARITY_THRESHOLD)
 	{
 		angles[PITCH] = -90.0f;
-		angles[YAW]   = atan2(YawY, YawX) * RAD_TO_DEG;
-		angles[ROLL]  = NormalizeAxis(-angles[YAW] - (2.0f * atan2(quat.x, quat.w) * RAD_TO_DEG));
+		angles[YAW] = atan2(YawY, YawX) * RAD_TO_DEG;
+		angles[ROLL] = NormalizeAxis(-angles[YAW] - (2.0f * atan2(quat.X, quat.W) * RAD_TO_DEG));
 	}
 	else if (SingularityTest > SINGULARITY_THRESHOLD)
 	{
 		angles[PITCH] = 90.0f;
-		angles[YAW]   = atan2(YawY, YawX) * RAD_TO_DEG;
-		angles[ROLL]  = NormalizeAxis(angles[YAW] - (2.0f * atan2(quat.x, quat.w) * RAD_TO_DEG));
+		angles[YAW] = atan2(YawY, YawX) * RAD_TO_DEG;
+		angles[ROLL] = NormalizeAxis(angles[YAW] - (2.0f * atan2(quat.X, quat.W) * RAD_TO_DEG));
 	}
 	else
 	{
 		angles[PITCH] = asin(2.0f * SingularityTest) * RAD_TO_DEG;
-		angles[YAW]   = atan2(YawY, YawX) * RAD_TO_DEG;
-		angles[ROLL]  = atan2(-2.0f * (quat.w * quat.x + quat.y * quat.z), (1.0f - 2.0f * (quat.x * quat.x + quat.y * quat.y))) * RAD_TO_DEG;
+		angles[YAW] = atan2(YawY, YawX) * RAD_TO_DEG;
+		angles[ROLL] = atan2(-2.0f * (quat.W * quat.X + quat.Y * quat.Z), (1.0f - 2.0f * (quat.X * quat.X + quat.Y * quat.Y))) * RAD_TO_DEG;
 	}
 }

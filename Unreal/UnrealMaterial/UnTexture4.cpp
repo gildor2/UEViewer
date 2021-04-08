@@ -287,6 +287,23 @@ void UTexture2D::Serialize4(FArchive& Ar)
 	unguard;
 }
 
+void UMaterial3::Serialize4(FArchive& Ar)
+{
+	guard(UMaterial3::Serialize4);
+
+	if ((Ar.Game >= GAME_UE4(26)) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
+	{
+		// TODO: implement unversioned properties for UMaterial
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+
+	Super::Serialize(Ar);
+	DROP_REMAINING_DATA(Ar);
+
+	unguard;
+}
+
 void UMaterial3::PostLoad()
 {
 	guard(UMaterial3::PostLoad);

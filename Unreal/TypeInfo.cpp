@@ -61,13 +61,13 @@ void UnregisterClass(const char* Name, bool WholeTree)
 			appPrintf("Unregister %s\n", GClasses[i].Name);
 #endif
 			// class was found
-			if (i == GClassCount-1)
+			if (i == GClassCount - 1)
 			{
 				// last table entry
 				GClassCount--;
 				return;
 			}
-			memcpy(GClasses+i, GClasses+i+1, (GClassCount-i-1) * sizeof(GClasses[0]));
+			memcpy(GClasses + i, GClasses + i + 1, (GClassCount - i - 1) * sizeof(GClasses[0]));
 			GClassCount--;
 			i--;
 		}
@@ -104,7 +104,7 @@ const CTypeInfo* FindClassType(const char* Name, bool ClassType)
 		}
 
 		if (!GClasses[i].TypeInfo) appError("No typeinfo for class");
-		const CTypeInfo *Type = GClasses[i].TypeInfo();
+		const CTypeInfo* Type = GClasses[i].TypeInfo();
 		// FindUnversionedProp() calls FindStructType for classes and structs, so disable the comparison for now
 		// if (Type->IsClass() != ClassType) continue;
 #if DEBUG_TYPES
@@ -131,9 +131,9 @@ bool IsSuppressedClass(const char* Name)
 }
 
 
-bool CTypeInfo::IsA(const char *TypeName) const
+bool CTypeInfo::IsA(const char* TypeName) const
 {
-	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
+	for (const CTypeInfo* Type = this; Type; Type = Type->Parent)
 		if (!strcmp(TypeName, Type->Name + 1))
 			return true;
 	return false;
@@ -146,28 +146,28 @@ bool CTypeInfo::IsA(const char *TypeName) const
 
 struct enumInfo
 {
-	const char       *Name;
-	const enumToStr  *Values;
+	const char* Name;
+	const enumToStr* Values;
 	int              NumValues;
 };
 
 static enumInfo RegisteredEnums[MAX_ENUMS];
 static int NumEnums = 0;
 
-void RegisterEnum(const char *EnumName, const enumToStr *Values, int Count)
+void RegisterEnum(const char* EnumName, const enumToStr* Values, int Count)
 {
 	guard(RegisterEnum);
 
 	assert(NumEnums < MAX_ENUMS);
-	enumInfo &Info = RegisteredEnums[NumEnums++];
-	Info.Name      = EnumName;
-	Info.Values    = Values;
+	enumInfo& Info = RegisteredEnums[NumEnums++];
+	Info.Name = EnumName;
+	Info.Values = Values;
 	Info.NumValues = Count;
 
 	unguard;
 }
 
-const enumInfo *FindEnum(const char *EnumName)
+const enumInfo* FindEnum(const char* EnumName)
 {
 	for (int i = 0; i < NumEnums; i++)
 		if (!strcmp(RegisteredEnums[i].Name, EnumName))
@@ -175,28 +175,28 @@ const enumInfo *FindEnum(const char *EnumName)
 	return NULL;
 }
 
-const char *EnumToName(const char *EnumName, int Value)
+const char* EnumToName(const char* EnumName, int Value)
 {
-	const enumInfo *Info = FindEnum(EnumName);
+	const enumInfo* Info = FindEnum(EnumName);
 	if (!Info) return NULL;				// enum was not found
 	for (int i = 0; i < Info->NumValues; i++)
 	{
-		const enumToStr &V = Info->Values[i];
+		const enumToStr& V = Info->Values[i];
 		if (V.value == Value)
 			return V.name;
 	}
 	return NULL;						// no such value
 }
 
-int NameToEnum(const char *EnumName, const char *Value)
+int NameToEnum(const char* EnumName, const char* Value)
 {
-	const enumInfo *Info = FindEnum(EnumName);
+	const enumInfo* Info = FindEnum(EnumName);
 	if (!Info) return ENUM_UNKNOWN;		// enum was not found
 	const char* s = strstr(Value, "::"); // UE4 may have "EnumName::Value" text
-	if (s) Value = s+2;
+	if (s) Value = s + 2;
 	for (int i = 0; i < Info->NumValues; i++)
 	{
-		const enumToStr &V = Info->Values[i];
+		const enumToStr& V = Info->Values[i];
 		if (!stricmp(V.name, Value))
 			return V.value;
 	}
@@ -210,26 +210,26 @@ int NameToEnum(const char *EnumName, const char *Value)
 
 struct PropPatch
 {
-	const char *ClassName;
-	const char *OldName;
-	const char *NewName;
+	const char* ClassName;
+	const char* OldName;
+	const char* NewName;
 };
 
 static TArray<PropPatch> Patches;
 
-/*static*/ void CTypeInfo::RemapProp(const char *ClassName, const char *OldName, const char *NewName)
+/*static*/ void CTypeInfo::RemapProp(const char* ClassName, const char* OldName, const char* NewName)
 {
-	PropPatch *p = new (Patches) PropPatch;
+	PropPatch* p = new (Patches) PropPatch;
 	p->ClassName = ClassName;
-	p->OldName   = OldName;
-	p->NewName   = NewName;
+	p->OldName = OldName;
+	p->NewName = NewName;
 }
 
-const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
+const CPropInfo* CTypeInfo::FindProperty(const char* Name) const
 {
 	guard(CTypeInfo::FindProperty);
 	// check for remap
-	for (const PropPatch &p : Patches)
+	for (const PropPatch& p : Patches)
 	{
 		;
 		if (!stricmp(p.ClassName, this->Name) && !stricmp(p.OldName, Name))
@@ -239,7 +239,7 @@ const CPropInfo *CTypeInfo::FindProperty(const char *Name) const
 		}
 	}
 	// find property
-	for (const CTypeInfo *Type = this; Type; Type = Type->Parent)
+	for (const CTypeInfo* Type = this; Type; Type = Type->Parent)
 	{
 		const char* AliasName = NULL;
 		const CPropInfo* CurrentProp = Type->Props;
@@ -288,11 +288,11 @@ struct CPropDump
 	bool				bDiscard;
 
 	CPropDump()
-	: bIsArrayItem(false)
-	, bDiscard(false)
+		: bIsArrayItem(false)
+		, bDiscard(false)
 	{}
 
-	void PrintName(const char *fmt, ...)
+	void PrintName(const char* fmt, ...)
 	{
 		va_list	argptr;
 		va_start(argptr, fmt);
@@ -300,7 +300,7 @@ struct CPropDump
 		va_end(argptr);
 	}
 
-	void PrintValue(const char *fmt, ...)
+	void PrintValue(const char* fmt, ...)
 	{
 		va_list	argptr;
 		va_start(argptr, fmt);
@@ -314,7 +314,7 @@ struct CPropDump
 	}
 
 private:
-	void PrintTo(FString& Dst, const char *fmt, va_list argptr)
+	void PrintTo(FString& Dst, const char* fmt, va_list argptr)
 	{
 		char buffer[1024];
 		vsnprintf(ARRAY_ARG(buffer), fmt, argptr);
@@ -323,7 +323,7 @@ private:
 };
 
 
-static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dump)
+static void CollectProps(const CTypeInfo* Type, const void* Data, CPropDump& Dump)
 {
 	for (/* empty */; Type; Type = Type->Parent)
 	{
@@ -331,13 +331,13 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 
 		for (int PropIndex = 0; PropIndex < Type->NumProps; PropIndex++)
 		{
-			const CPropInfo *Prop = Type->Props + PropIndex;
+			const CPropInfo* Prop = Type->Props + PropIndex;
 			if (!Prop->Count)
 			{
-//				appPrintf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
+				//				appPrintf("  %3d: (dummy) %s\n", PropIndex, Prop->Name);
 				continue;
 			}
-			CPropDump *PD = new (Dump.Nested) CPropDump;
+			CPropDump* PD = new (Dump.Nested) CPropDump;
 
 			// name
 
@@ -345,26 +345,26 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 			PD->PrintName("(%d)", PropIndex);
 #endif
 #if DUMP_SHOW_PROP_TYPE
-			PD->PrintName("%s ", (Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName+1);	// skip enum marker
+			PD->PrintName("%s ", (Prop->TypeName[0] != '#') ? Prop->TypeName : Prop->TypeName + 1);	// skip enum marker
 #endif
 			PD->PrintName("%s", Prop->Name);
 
 			// value
 
-			byte *value = (byte*)Data + Prop->Offset;
+			byte* value = (byte*)Data + Prop->Offset;
 			int PropCount = Prop->Count;
 
 			bool IsArray = (PropCount > 1) || (PropCount == -1);
 			if (PropCount == -1)
 			{
 				// TArray<> value
-				FArray *Arr = (FArray*)value;
-				value     = (byte*)Arr->GetData();
+				FArray* Arr = (FArray*)value;
+				value = (byte*)Arr->GetData();
 				PropCount = Arr->Num();
 			}
 
 			// find structure type
-			const CTypeInfo *StrucType = FindStructType(Prop->TypeName);
+			const CTypeInfo* StrucType = FindStructType(Prop->TypeName);
 			bool IsStruc = (StrucType != NULL);
 
 			// formatting of property start
@@ -381,7 +381,7 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 			// dump item(s)
 			for (int ArrayIndex = 0; ArrayIndex < PropCount; ArrayIndex++)
 			{
-				CPropDump *PD2 = PD;
+				CPropDump* PD2 = PD;
 				if (IsArray)
 				{
 					// create nested CPropDump
@@ -402,29 +402,36 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 						PD2->PrintValue(format, value); \
 					}
 
-				PROCESS(byte,     "%d", PROP(byte));
-				PROCESS(int,      "%d", PROP(int));
-				PROCESS(bool,     "%s", PROP(bool) ? "true" : "false");
-				PROCESS(float,    "%g", PROP(float));
-#if 1
+				PROCESS(byte, "%d", PROP(byte));
+				PROCESS(int, "%d", PROP(int));
+				PROCESS(bool, "%s", PROP(bool) ? "true" : "false");
+				PROCESS(float, "%g", PROP(float));
 				if (IS(UObject*))
 				{
-					UObject *obj = PROP(UObject*);
+					UObject* obj = PROP(UObject*);
 					if (obj)
 					{
-						char ObjName[256];
-						obj->GetFullName(ARRAY_ARG(ObjName));
-						PD2->PrintValue("%s'%s'", obj->GetClassName(), ObjName);
-
-						//DHK nested components, if child is UObject*
-						FString sObjClassName = obj->GetClassName();
-
-						if (!sObjClassName.StartsWith("StaticMesh4"))//TODO ugly!!!
+						if (!(obj->GetTypeinfo()->TypeFlags & TYPE_InlinePropDump))
 						{
-							appPrintf(" ComponentClassName: %s, ComponentObjectName: %s\n", obj->GetClassName(), obj->Name);
-							obj->GetTypeinfo()->DumpProps(obj);
+							char ObjName[256];
+							obj->GetFullName(ARRAY_ARG(ObjName));
+							PD2->PrintValue("%s'%s'", obj->GetClassName(), ObjName);
+
+							//DHK nested components, if child is UObject*
+							FString sObjClassName = obj->GetClassName();
+
+							if (!sObjClassName.StartsWith("StaticMesh4"))//TODO ugly!!!
+							{
+								appPrintf(" ComponentClassName: %s, ComponentObjectName: %s\n", obj->GetClassName(), obj->Name);
+								obj->GetTypeinfo()->DumpProps(obj);
+							}
+							//end
 						}
-						//end
+						else
+						{
+							// Process this like a structure
+							CollectProps(obj->GetTypeinfo(), obj, *PD2);
+						}
 					}
 					else
 					{
@@ -435,15 +442,12 @@ static void CollectProps(const CTypeInfo *Type, const void *Data, CPropDump &Dum
 						PD2->PrintValue("None");
 					}
 				}
-#else
-				PROCESS(UObject*, "%s", PROP(UObject*) ? PROP(UObject*)->Name : "Null");
-#endif
-				PROCESS(FName,    "%s", *PROP(FName));
-				PROCESS(FString,  "\"%s\"", *PROP(FString));
+				PROCESS(FName, "%s", *PROP(FName));
+				PROCESS(FString, "\"%s\"", *PROP(FString));
 				if (Prop->TypeName[0] == '#')
 				{
 					// enum value
-					const char *v = EnumToName(Prop->TypeName+1, *value);		// skip enum marker
+					const char* v = EnumToName(Prop->TypeName + 1, *value);		// skip enum marker
 					PD2->PrintValue("%s (%d)", v ? v : "<unknown>", *value);
 				}
 				if (IsStruc)
@@ -464,7 +468,7 @@ static void PrintIndent(FArchive& Ar, int Value)
 		Ar.Printf("    ");
 }
 
-static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool TopLevel, int MaxLineWidth = 80)
+static void PrintProps(const CPropDump& Dump, FArchive& Ar, int Indent, bool TopLevel, int MaxLineWidth = 80)
 {
 	PrintIndent(Ar, Indent);
 
@@ -484,7 +488,7 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 		int i;
 
 		// check whether we can display all nested properties in a single line or not
-		for (const CPropDump &Prop : Dump.Nested)
+		for (const CPropDump& Prop : Dump.Nested)
 		{
 			if (Prop.bDiscard) continue;
 
@@ -508,7 +512,7 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 			// single-line value display
 			Ar.Printf(" { ");
 			bool bFirst = true;
-			for (const CPropDump &Prop : Dump.Nested)
+			for (const CPropDump& Prop : Dump.Nested)
 			{
 				if (Prop.bDiscard) continue;
 
@@ -535,10 +539,10 @@ static void PrintProps(const CPropDump &Dump, FArchive& Ar, int Indent, bool Top
 				Ar.Printf("{\n");
 			}
 
-			for (const CPropDump &Prop : Dump.Nested)
+			for (const CPropDump& Prop : Dump.Nested)
 			{
 				if (Prop.bDiscard) continue;
-				PrintProps(Prop, Ar, Indent+1, false, MaxLineWidth);
+				PrintProps(Prop, Ar, Indent + 1, false, MaxLineWidth);
 			}
 
 			if (!TopLevel)
@@ -563,7 +567,7 @@ public:
 	typedef void (*Callback_t)(const char*);
 
 	FLineOutputArchive(Callback_t InCallback)
-	: Callback(InCallback)
+		: Callback(InCallback)
 	{}
 	~FLineOutputArchive()
 	{
@@ -577,9 +581,9 @@ public:
 	{
 		appError("FLineOutputArchive::Seek");
 	}
-	virtual void Serialize(void *data, int size)
+	virtual void Serialize(void* data, int size)
 	{
-		const char* dataStart = (const char*) data;
+		const char* dataStart = (const char*)data;
 		int length = 0;
 		for (const char* s = (const char*)data; /* none */; s++)
 		{
@@ -616,7 +620,7 @@ public:
 };
 
 
-void CTypeInfo::DumpProps(const void *Data) const
+void CTypeInfo::DumpProps(const void* Data) const
 {
 	guard(CTypeInfo::DumpProps);
 	CPropDump Dump;
@@ -644,7 +648,7 @@ void CTypeInfo::DumpProps(const void* Data, void (*Callback)(const char*)) const
 	unguard;
 }
 
-void CTypeInfo::SaveProps(const void *Data, FArchive& Ar) const
+void CTypeInfo::SaveProps(const void* Data, FArchive& Ar) const
 {
 	guard(CTypeInfo::SaveProps);
 	CPropDump Dump;
@@ -724,7 +728,7 @@ static void GetToken(FArchive& Ar, FString& Out)
 	assert(s < buffer + ARRAY_COUNT(buffer));
 	*s = 0;
 	Out = buffer;
-//	printf("TOKEN: [%s]\n", *Out); //!!!!
+	//	printf("TOKEN: [%s]\n", *Out); //!!!!
 
 	unguard;
 }
@@ -748,7 +752,7 @@ static bool SkipProperty(FArchive& Ar)
 	return true;
 }
 
-bool CTypeInfo::LoadProps(void *Data, FArchive& Ar) const
+bool CTypeInfo::LoadProps(void* Data, FArchive& Ar) const
 {
 	guard(CTypeInfo::LoadProps);
 
@@ -783,8 +787,8 @@ bool CTypeInfo::LoadProps(void *Data, FArchive& Ar) const
 			}
 			continue;
 		}
-		byte *value = (byte*)Data + Prop->Offset;
-//		printf("Prop: %s %s\n", Prop->TypeName, Prop->Name); //!!!!
+		byte* value = (byte*)Data + Prop->Offset;
+		//		printf("Prop: %s %s\n", Prop->TypeName, Prop->Name); //!!!!
 
 		LastPosition = Ar.Tell();
 		FStaticString<32> Token2;
@@ -795,7 +799,7 @@ bool CTypeInfo::LoadProps(void *Data, FArchive& Ar) const
 			return false;
 		}
 
-		const CTypeInfo *StrucType = FindStructType(Prop->TypeName);
+		const CTypeInfo* StrucType = FindStructType(Prop->TypeName);
 		bool IsStruc = (StrucType != NULL);
 		if (IsStruc)
 		{

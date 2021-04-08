@@ -30,16 +30,20 @@
 struct CMeshBoneData
 {
 	// static data (computed after mesh loading)
-	int			BoneMap;			// index of bone in animation tracks
-	CCoords		RefCoords;			// coordinates of bone in reference pose (used only when computing RefCoordsInv)
+	int			AnimBoneIndex;		// index of this bone in animation tracks
+	CCoords		RefCoords;			// coordinates of reference pose bone in model space (used only when computing RefCoordsInv)
 	CCoords		RefCoordsInv;		// inverse of RefCoords
 	int			SubtreeSize;		// count of all children bones (0 for leaf bone)
 	// dynamic data
 	// skeleton configuration
-	float		Scale;				// bone scale; 1=unscaled
+	float		Scale;				// uniform bone scale, changes the geometry; 1 = unscaled
+#if !BAKE_BONE_SCALES
+	CVec3		Scale3D;			// scale of this bone, not affecting geometry
+	CVec3		AccumulatedChildScale; // scale for all children, including all parent bone scales
+#endif // BAKE_BONE_SCALES
 	int			FirstChannel;		// first animation channel, affecting this bone
 	// current pose
-	CCoords		Coords;				// current coordinates of bone, model-space
+	CCoords		Coords;				// current coordinates of bone, in model space
 	CCoords		Transform;			// used to transform vertex from reference pose to current pose
 #if USE_SSE
 	CCoords4	Transform4;			// SSE version
@@ -218,53 +222,51 @@ void CSkelMeshInstance::SetMesh(CSkeletalMesh *Mesh)
 	LastLodIndex = -2;
 	LastMorphIndex = -1;
 
-	CMeshBoneData *data;
+	CMeshBoneData* data;
 	for (i = 0, data = BoneData; i < NumBones; i++, data++)
 	{
 		const CSkelMeshBone &B = Mesh->RefSkeleton[i];
 		// NOTE: assumed, that parent bones goes first
 		assert(B.ParentIndex <= i);
 
+		const CMeshBoneData* ParentBone = (i != 0) ? &BoneData[B.ParentIndex] : NULL;
+
 		// reset animation bone map (will be set by SetAnim())
-		data->BoneMap = INDEX_NONE;
+		data->AnimBoneIndex = INDEX_NONE;
 
 		// compute reference bone coords
-		CVec3 BP;
-		CQuat BO;
 		// get default pose
-		BP = B.Position;
-		BO = B.Orientation;
-		if (!i) BO.Conjugate();
+		CVec3 BP = B.Position;
+		CQuat BO = B.Orientation;
+		if (!ParentBone) BO.Conjugate();
 
-		CCoords &BC = data->RefCoords;
-		BC.origin = BP;
-		BO.ToAxis(BC.axis);
-		// move bone position to global coordinate space
-		if (i)	// do not rotate root bone
-			BoneData[B.ParentIndex].RefCoords.UnTransformCoords(BC, BC);
-		// store inverted transformation too
-		InvertCoords(data->RefCoords, data->RefCoordsInv);
-#if 0
-	//!!
-if (i == 32 || i == 34)
-{
-	appNotify("Bone %d (%8.3f %8.3f %8.3f) - (%8.3f %8.3f %8.3f %8.3f)", i, VECTOR_ARG(BP), QUAT_ARG(BO));
-#define C data->RefCoords
-	appNotify("REF   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
-	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
-	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
-	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
-#undef C
-#define C data->RefCoordsInv
-	appNotify("REFIN : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
-	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
-	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
-	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
-#undef C
-}
-#endif
 		// initialize skeleton configuration
 		data->Scale = 1.0f;			// default bone scale
+#if !BAKE_BONE_SCALES
+		data->Scale3D = B.Scale;
+		data->AccumulatedChildScale = B.Scale;
+		if (ParentBone)
+		{
+			data->AccumulatedChildScale.Scale(ParentBone->AccumulatedChildScale);
+		}
+#endif // BAKE_BONE_SCALES
+
+		CCoords& RefCoords = data->RefCoords;
+		RefCoords.origin = BP;
+#if !BAKE_BONE_SCALES
+		if (ParentBone)
+		{
+			RefCoords.origin.Scale(ParentBone->AccumulatedChildScale);
+		}
+#endif
+		BO.ToAxis(RefCoords.axis);
+		// transform bone position to global coordinate space
+		if (ParentBone)
+		{
+			ParentBone->RefCoords.UnTransformCoords(RefCoords, RefCoords);
+		}
+		// store inverted transformation too
+		InvertCoords(data->RefCoords, data->RefCoordsInv);
 	}
 
 	// check bones tree
@@ -304,13 +306,13 @@ void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 		const CSkelMeshBone &B = pMesh->RefSkeleton[i];
 
 		// find reference bone in animation track
-		data->BoneMap = INDEX_NONE;		// in a case when bone has no corresponding animation track
+		data->AnimBoneIndex = INDEX_NONE;		// in a case when bone has no corresponding animation track
 		if (Animation)
 		{
 			for (int j = 0; j < Animation->TrackBoneNames.Num(); j++)
 				if (!stricmp(B.Name, Animation->TrackBoneNames[j]))
 				{
-					data->BoneMap = j;
+					data->AnimBoneIndex = j;
 					break;
 				}
 		}
@@ -494,7 +496,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 			CVec3 NewBonePosition = Bone.Position;				// default position - from mesh bind pose
 			CQuat NewBoneRotation = Bone.Orientation;			// ...
 
-			int AnimBoneIndex = data->BoneMap;
+			int AnimBoneIndex = data->AnimBoneIndex;
 
 #if SHOW_ANIM
 			CBoneDebugInfo& BoneDebug = BoneDebugInfos[i];
@@ -555,16 +557,46 @@ void CSkelMeshInstance::UpdateSkeleton()
 				switch (RetargetingMode)
 				{
 				case EBoneRetargetingMode::Animation:
-					// Already set, do nothing
+					// Use translation from the animation. Already set, do nothing.
 					break;
 				case EBoneRetargetingMode::Mesh:
-					// Restore bone position from reference pose
+					// Use translation from the mesh.
 					NewBonePosition = Bone.Position;
 					// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
 					BoneUpdateCounts[i] += 3;
 					break;
-				//todo: EBoneTranslationRetargetingMode::Skeleton - simply copy translation from target skeleton - == ::Mesh mode (UE4 uses RetargetSources for that)
-				//todo:: EBoneTranslationRetargetingMode::AnimationScaled - like ::OrientAndScale, but no rotation
+				case EBoneRetargetingMode::AnimationScaled:
+					{
+						// Like ::OrientAndScale, but without rotation
+						CVec3 SourceTrans = AnimSeq1->RetargetBasePose.Num()
+							? AnimSeq1->RetargetBasePose[AnimBoneIndex].Position
+							: Animation->BonePositions[AnimBoneIndex].Position;
+						CVec3 TargetTrans = Bone.Position;
+						float SourceTransLength = SourceTrans.GetLength();
+						if (SourceTransLength > 0.001f)
+						{
+							NewBonePosition.Scale(TargetTrans.GetLength() / SourceTransLength);
+						}
+						else
+						{
+							// Skip this bone, it has missing bone in a source skeleton.
+							// This happens if source skeleton bone has identity transform (zero translation),
+							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
+							// Note: bone translation and rotation should be skipped.
+							NewBonePosition = Bone.Position;
+							NewBoneRotation = Bone.Orientation;
+#if SHOW_ANIM
+							BoneDebug.bSkippedOnRetargetting = true;
+#endif
+							break;
+						}
+					}
+					break;
+				case EBoneRetargetingMode::AnimationRelative:
+					{
+						//todo
+					}
+					break;
 				case EBoneRetargetingMode::OrientAndScale:
 					{
 						// Reference skeleton bone data is required here
@@ -575,17 +607,12 @@ void CSkelMeshInstance::UpdateSkeleton()
 							: Animation->BonePositions[AnimBoneIndex].Position;
 						CVec3 TargetTransDir = Bone.Position;
 
-//#define TEMP_SHOW_BONES	1	// temporary code, added for debugging of retargeting problems
-#if TEMP_SHOW_BONES
-						CVec3 SourcePosition = SourceTransDir;
-						CVec3 AnimPos = NewBonePosition;
-#endif
 						//todo: optimization: can compare SourceTransDir and TargetTransDir, just copy animated position if same
-						float SourceTransDirLength = SourceTransDir.Normalize();
-						float TargetTransDirLength = TargetTransDir.Normalize();
-						if (fabs(SourceTransDirLength * TargetTransDirLength) > 0.001f)
+						float SourceTransLength = SourceTransDir.Normalize();
+						float TargetTransLength = TargetTransDir.Normalize();
+						if (SourceTransLength * TargetTransLength > 0.001f)
 						{
-							float Scale = TargetTransDirLength / SourceTransDirLength;
+							float Scale = TargetTransLength / SourceTransLength;
 							CQuat TransRotation;
 							TransRotation.FromTwoVectors(SourceTransDir, TargetTransDir);
 							// Reference: FAnimationRuntime::RetargetBoneTransform()
@@ -605,16 +632,6 @@ void CSkelMeshInstance::UpdateSkeleton()
 #endif
 							break;
 						}
-#if TEMP_SHOW_BONES
-						if (Bone.Name == "L_brow_outer")
-						{
-							DrawTextLeft("%s: NewPosition (%g %g %g)", *Bone.Name, VECTOR_ARG(NewBonePosition));
-							DrawTextLeft("  Source (%g %g %g) Target (%g %g %g)",
-								VECTOR_ARG(SourcePosition),
-								VECTOR_ARG(Bone.Position));
-							DrawTextLeft("  AnimPos: (%g %g %g) Scale: %g", VECTOR_ARG(AnimPos), TargetTransDirLength / SourceTransDirLength);
-						}
-#endif // TEMP_SHOW_BONES
 					}
 					break;
 				}
@@ -670,10 +687,10 @@ void CSkelMeshInstance::UpdateSkeleton()
 			}
 		}
 		bool bClicked = DrawTextLeftH(NULL,
-			"%s%s" S_HYPERLINK("%d (%s)") " : T (%6.3f %6.3f %6.3f)  R (%5.2f %5.2f %5.2f %5.2f)",
+			"%s%s" S_HYPERLINK("%d (%s)") " : T (%6.3f %6.3f %6.3f) TL(%.3f) R (%5.2f %5.2f %5.2f %5.2f)",
 			HighlightBoneIndex == BoneDebug.MeshBoneIndex ? "> " : "  ", // indicator of the selected bone
 			TextColor, BoneDebug.MeshBoneIndex, BoneDebug.BoneName,
-			VECTOR_ARG(BoneDebug.AnimPosition), QUAT_ARG(BoneDebug.AnimRotation)
+			VECTOR_ARG(BoneDebug.AnimPosition), BoneDebug.AnimPosition.GetLength(), QUAT_ARG(BoneDebug.AnimRotation)
 		);
 		if (bClicked)
 		{
@@ -686,25 +703,42 @@ void CSkelMeshInstance::UpdateSkeleton()
 	delete[] BoneDebugInfos;
 #endif // SHOW_ANIM
 
-	// Transform bones using skeleton hierarchy
+	// Convert bone's Coords from bone to model space and update skinning matrices
+	ComputeMeshSpaceCoords();
+
+	unguard;
+}
+
+void CSkelMeshInstance::ComputeMeshSpaceCoords()
+{
+	// Transform bone Coords using skeleton hierarchy
 	int i;
-	CMeshBoneData *data;
-	for (i = 0, data = BoneData; i < pMesh->RefSkeleton.Num(); i++, data++)
+	CMeshBoneData* data;
+	int NumBones = pMesh->RefSkeleton.Num();
+	for (i = 0, data = BoneData; i < NumBones; i++, data++)
 	{
-		CCoords &BC = data->Coords;
+		CCoords& BC = data->Coords;
+		const CMeshBoneData* ParentBone = (i != 0) ? &BoneData[pMesh->RefSkeleton[i].ParentIndex] : NULL;
+
 		BC.origin = data->Pos;
 		data->Quat.ToAxis(BC.axis);
-
-		// move bone position to global coordinate space
-		if (!i)
+#if !BAKE_BONE_SCALES
+		if (ParentBone)
 		{
-			// root bone - use BaseTransformScaled
+			BC.origin.Scale(ParentBone->AccumulatedChildScale);
+		}
+#endif
+
+		// Move bone position to global coordinate space
+		if (!ParentBone)
+		{
+			// this is the root bone - use BaseTransformScaled
 			BaseTransformScaled.UnTransformCoords(BC, BC);
 		}
 		else
 		{
-			// other bones - rotate around parent bone
-			BoneData[pMesh->RefSkeleton[i].ParentIndex].Coords.UnTransformCoords(BC, BC);
+			// other bones - position relative to the parent bone
+			ParentBone->Coords.UnTransformCoords(BC, BC);
 		}
 		// deform skeleton according to external settings
 		if (data->Scale != 1.0f)
@@ -713,8 +747,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 			BC.axis[1].Scale(data->Scale);
 			BC.axis[2].Scale(data->Scale);
 		}
-		// compute transformation of world-space model vertices from reference
-		// pose to desired pose
+		// compute transformation of model-space vertices from reference pose to desired pose
 		BC.UnTransformCoords(data->RefCoordsInv, data->Transform);
 
 #if USE_SSE
@@ -722,9 +755,7 @@ void CSkelMeshInstance::UpdateSkeleton()
 		data->Transform4.Set(data->Transform);
 #endif
 	}
-	unguard;
 }
-
 
 void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 {

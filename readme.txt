@@ -216,6 +216,9 @@ ooz
 
 Changes
 ~~~~~~~
+06.04.2021
+- added UE4 SkeletalMesh socket support
+
 18.02.2021
 - added support for playing back animations with negative rates (playing in opposite direction)
 

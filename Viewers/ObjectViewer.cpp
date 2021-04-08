@@ -10,11 +10,11 @@
 
 #include "Exporters/Exporters.h"
 
-CObjectViewer::CObjectViewer(const UObject* Obj, CApplication *Win, bool InNonVisualObject)
-: Object(Obj)
-, Window(Win)
-, JumpAfterFrame(NULL)
-, bHasVisualObject(!InNonVisualObject)
+CObjectViewer::CObjectViewer(const UObject* Obj, CApplication* Win, bool InNonVisualObject)
+	: Object(Obj)
+	, Window(Win)
+	, JumpAfterFrame(NULL)
+	, bHasVisualObject(!InNonVisualObject)
 {
 	SetDistScale(1);
 	ResetView();
@@ -33,13 +33,15 @@ void CObjectViewer::Dump()
 
 		FString sClassName = Object->GetClassName();
 
-		if (sClassName.StartsWith("AudioComponent") || !sClassName.EndsWith("Component"))//TODO ugly!!!
+		if (sClassName.StartsWith("SkeletalMeshComponent") ||
+			sClassName.StartsWith("AudioComponent") ||
+			!sClassName.EndsWith("Component"))//TODO ugly!!!
 		{
 			appPrintf("\nObject info:\n============\n");
 			appPrintf("ClassName: %s, ObjectName: %s\n", Object->GetClassName(), Object->Name);
 
 			Object->GetTypeinfo()->DumpProps(Object);
-		}	
+		}
 		//end
 	}
 }
@@ -144,16 +146,16 @@ void CObjectViewer::Draw2D()
 		return;
 	}
 
-	const char *CookedPkgName   = Object->Package->Name;
-	const char *UncookedPkgName = Object->GetUncookedPackageName();
+	const char* CookedPkgName = Object->Package->Name;
+	const char* UncookedPkgName = Object->GetUncookedPackageName();
 	if (stricmp(CookedPkgName, UncookedPkgName) == 0)
 		DrawTextLeft(S_GREEN "Package :" S_WHITE " %s", *Object->Package->GetFilename());
 	else
 		DrawTextLeft(S_GREEN "Package :" S_WHITE " %s (%s)", *Object->Package->GetFilename(), UncookedPkgName);
 
 	DrawTextLeft(S_GREEN "Class   :" S_WHITE " %s\n"
-				 S_GREEN "Object  :" S_WHITE " %s",
-				 Object->GetRealClassName(), Object->Name);
+		S_GREEN "Object  :" S_WHITE " %s",
+		Object->GetRealClassName(), Object->Name);
 
 	// get group name
 	if (Object->Package && Object->Package->Game < GAME_UE4_BASE)

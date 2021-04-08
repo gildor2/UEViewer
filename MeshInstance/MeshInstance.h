@@ -267,6 +267,7 @@ protected:
 	const CAnimSequence *FindAnim(const char *AnimName) const;
 	void PlayAnimInternal(const char *AnimName, float Rate, float TweenTime, int Channel, bool Looped);
 	void UpdateSkeleton();
+	void ComputeMeshSpaceCoords();
 	void BuildInfColors();
 	bool BuildMorphVerts();
 };

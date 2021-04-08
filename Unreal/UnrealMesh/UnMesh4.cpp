@@ -7,8 +7,9 @@
 
 #include "UnObject.h"
 #include "UnMesh4.h"
-#include "UnMesh3.h"		// for FSkeletalMeshLODInfo
+#include "UnMesh3.h"				// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
+#include "UnMathTools.h"			// for FRotator to FCoords
 
 #include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial3.h"
@@ -849,8 +850,11 @@ struct FSkelMeshSection4
 		if (Ar.Game == GAME_Paragon) return;
 #endif
 
-		FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
-		Ar << DuplicatedVerticesBuffer;
+		if (Ar.Game < GAME_UE4(27) || !StripFlags.IsClassDataStripped(1)) // DuplicatedVertices
+		{
+			FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
+			Ar << DuplicatedVerticesBuffer;
+		}
 		Ar << S.bDisabled;
 
 		unguard;
@@ -986,7 +990,7 @@ struct FSkeletalMeshVertexBuffer4
 		}
 
 		Ar << B.MeshExtension << B.MeshOrigin;
-		DBG_SKEL("  Ext=(%g %g %g) Org=(%g %g %g)\n", FVECTOR_ARG(B.MeshExtension), FVECTOR_ARG(B.MeshOrigin));
+		DBG_SKEL("  Ext=(%g %g %g) Org=(%g %g %g)\n", VECTOR_ARG(B.MeshExtension), VECTOR_ARG(B.MeshOrigin));
 
 		// Serialize vertex data. Use global variables to avoid passing variables to serializers.
 		GNumSkelUVSets = B.NumTexCoords;
@@ -1858,6 +1862,50 @@ void USkeletalMesh4::PostLoad()
 		unguardf("%d/%d", i, MorphTargets.Num());
 	}
 
+	// Collect sockets from USkeletalMesh and USkeleton
+	TArray<USkeletalMeshSocket*> SrcSockets;
+	int NumSockets = Sockets.Num(); // potential number of sockets
+	if (Skeleton) NumSockets += Skeleton->Sockets.Num();
+	SrcSockets.Empty(NumSockets);
+	for (USkeletalMeshSocket* SrcSocket : Sockets)
+	{
+		if (!SrcSocket) continue;
+		SrcSockets.Add(SrcSocket);
+	}
+	if (Skeleton)
+	{
+		for (USkeletalMeshSocket* SrcSocket : Skeleton->Sockets)
+		{
+			if (!SrcSocket) continue;
+			// Check if mesh already has a socket with the same name
+			bool bAlreadyExists = false;
+			for (USkeletalMeshSocket* CheckSocket : SrcSockets)
+			{
+				if (CheckSocket->SocketName == SrcSocket->SocketName)
+				{
+					bAlreadyExists = true;
+					break;
+				}
+			}
+			if (!bAlreadyExists)
+			{
+				SrcSockets.Add(SrcSocket);
+			}
+		}
+	}
+
+	// Convert all found sockets
+	for (USkeletalMeshSocket* SrcSocket : SrcSockets)
+	{
+		if (!SrcSocket) continue;
+		CSkelMeshSocket& Socket = ConvertedMesh->Sockets.AddZeroed_GetRef();
+		Socket.Name = SrcSocket->SocketName;
+		Socket.Bone = SrcSocket->BoneName;
+		CCoords& C = Socket.Transform;
+		C.origin = CVT(SrcSocket->RelativeLocation);
+		RotatorToAxis(SrcSocket->RelativeRotation, C.axis);
+	}
+
 	unguard;
 }
 
@@ -2065,6 +2113,9 @@ void USkeletalMesh4::ConvertMesh()
 		Dst->ParentIndex = B.ParentIndex;
 		Dst->Position    = CVT(T.Translation);
 		Dst->Orientation = CVT(T.Rotation);
+#if !BAKE_BONE_SCALES
+		Dst->Scale       = CVT(T.Scale3D);
+#endif
 		// fix skeleton; all bones but 0
 		if (i >= 1)
 			Dst->Orientation.Conjugate();
@@ -3078,6 +3129,8 @@ void UStaticMesh4::ConvertSourceModels()
 				CMeshSection* Sec = new (Lod->Sections) CMeshSection;
 				if (Materials.IsValidIndex(MaterialIndex))
 					Sec->Material = (UUnrealMaterial*)Materials[MaterialIndex];
+				else
+					Sec->Material = NULL;
 				Sec->FirstIndex = i * 3;
 			}
 		}

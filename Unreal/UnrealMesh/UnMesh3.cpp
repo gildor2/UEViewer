@@ -1048,7 +1048,7 @@ struct FSkeletalMeshVertexBuffer3
 		// MOH2010, which uses bUsePackedPosition. PS3 also has bUsePackedPosition support (at least TRON)
 		DBG_SKEL("... data: packUV:%d packPos:%d%s numUV:%d PackPos:(%g %g %g)+(%g %g %g)\n",
 			!S.bUseFullPrecisionUVs, S.bUsePackedPosition, AllowPackedPosition ? "" : " (disabled)", S.NumUVSets,
-			FVECTOR_ARG(S.MeshOrigin), FVECTOR_ARG(S.MeshExtension));
+			VECTOR_ARG(S.MeshOrigin), VECTOR_ARG(S.MeshExtension));
 		if (!AllowPackedPosition) S.bUsePackedPosition = false;		// not used in games (see comment above)
 
 	#if PLA
@@ -2383,9 +2383,12 @@ void USkeletalMesh3::ConvertMesh()
 		Dst->ParentIndex = B.ParentIndex;
 		Dst->Position    = CVT(B.BonePos.Position);
 		Dst->Orientation = CVT(B.BonePos.Orientation);
+#if !BAKE_BONE_SCALES
+		Dst->Scale.Set(1, 1, 1);
+#endif
 		// fix skeleton; all bones but 0
 		if (i >= 1)
-			Dst->Orientation.w *= -1;
+			Dst->Orientation.W *= -1;
 	}
 	unguard; // ProcessSkeleton
 
@@ -2416,10 +2419,10 @@ void USkeletalMesh3::PostLoad()
 		{
 			USkeletalMeshSocket *S = Sockets[i];
 			if (!S) continue;
-			CSkelMeshSocket *DS = new (ConvertedMesh->Sockets) CSkelMeshSocket;
-			DS->Name = S->SocketName;
-			DS->Bone = S->BoneName;
-			CCoords &C = DS->Transform;
+			CSkelMeshSocket& DS = ConvertedMesh->Sockets.AddZeroed_GetRef();
+			DS.Name = S->SocketName;
+			DS.Bone = S->BoneName;
+			CCoords& C = DS.Transform;
 			C.origin = CVT(S->RelativeLocation);
 			RotatorToAxis(S->RelativeRotation, C.axis);
 		}
@@ -2755,7 +2758,7 @@ struct FStaticMeshVertexStream3
 			FVector Mins, Extents;
 			Ar << IsPacked << VectorType << Mins << Extents;
 			DBG_STAT("... Bioshock3: IsPacked=%d VectorType=%d Mins=%g %g %g Extents=%g %g %g\n",
-				IsPacked, VectorType, FVECTOR_ARG(Mins), FVECTOR_ARG(Extents));
+				IsPacked, VectorType, VECTOR_ARG(Mins), VECTOR_ARG(Extents));
 			if (IsPacked)
 			{
 				if (VectorType)
@@ -2788,7 +2791,7 @@ struct FStaticMeshVertexStream3
 			Ar << VertexType << UsePackedPosition;
 			if (Ar.ArLicenseeVer >= 20)
 				Ar << v1 << v2;
-//			appPrintf("VT=%d, PP=%d, V1=%g %g %g, V2=%g %g %g\n", VertexType, UsePackedPosition, FVECTOR_ARG(v1), FVECTOR_ARG(v2));
+//			appPrintf("VT=%d, PP=%d, V1=%g %g %g, V2=%g %g %g\n", VertexType, UsePackedPosition, VECTOR_ARG(v1), VECTOR_ARG(v2));
 			if (UsePackedPosition && VertexType != 0)
 			{
 				appError("Unsupported vertex type!\n");

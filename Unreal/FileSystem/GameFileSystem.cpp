@@ -28,7 +28,7 @@ char GRootDirectory[MAX_PACKAGE_PATH];
 
 #define UE4_PACKAGE_EXTENSIONS	"uasset", "umap",
 
-static const char *PackageExtensions[] =
+static const char* PackageExtensions[] =
 {
 	"u", "ut2", "utx", "uax", "usx", "ukx",
 #if UNREAL3
@@ -90,7 +90,7 @@ static const char *PackageExtensions[] =
 #if UNREAL3 || UC2
 #define HAS_SUPPORT_FILES 1
 // secondary (non-package) files
-static const char *KnownExtensions[] =
+static const char* KnownExtensions[] =
 {
 #	if UNREAL3
 	"tfc",			// Texture File Cache
@@ -119,7 +119,7 @@ static const char *KnownExtensions[] =
 // By default umodel extracts data to the current directory. Working with a huge amount of files
 // could result to get "too many unknown files" error. We can ignore types of files which are
 // extracted by umodel to reduce chance to get such error.
-static const char *SkipExtensions[] =
+static const char* SkipExtensions[] =
 {
 	"tga", "png", "dds", "bmp", "mat", "txt",	// textures, materials
 	"psk", "pskx", "psa", "config", "gltf",		// meshes, animations
@@ -141,7 +141,7 @@ static const char* UE4PackageExtensions[] =
 
 #endif // UNREAL4
 
-static bool FindExtension(const char *Ext, const char **ExtensionsList, int NumExtensions)
+static bool FindExtension(const char* Ext, const char** ExtensionsList, int NumExtensions)
 {
 	for (int i = 0; i < NumExtensions; i++)
 		if (!stricmp(Ext, ExtensionsList[i])) return true;
@@ -170,8 +170,8 @@ struct CGameFolderInfo
 	uint16 NumFiles;		// number of files located in this folder
 
 	CGameFolderInfo()
-	: HashNext(0)
-	, NumFiles(0)
+		: HashNext(0)
+		, NumFiles(0)
 	{}
 };
 
@@ -180,7 +180,7 @@ static uint16 GameFoldersHash[GAME_FOLDER_HASH_SIZE];
 
 
 #if UNREAL3
-const char*           GStartupPackage = "startup_xxx";	// this is just a magic constant pointer, content is meaningless
+const char* GStartupPackage = "startup_xxx";	// this is just a magic constant pointer, content is meaningless
 static CGameFileInfo* GStartupPackageInfo = NULL;
 static int            GStartupPackageInfoWeight = 0;
 #endif
@@ -355,7 +355,7 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 {
 	guard(RegisterGameFile);
 
-//	printf("..file %s\n", FullName);
+	//	printf("..file %s\n", FullName);
 
 	const char* ext = strrchr(FullName, '.');
 	if (ext == NULL) return;
@@ -503,7 +503,7 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 		}
 
 		// Cut GRootDirectory from filename
-		const char *s = FullName + strlen(GRootDirectory) + 1;
+		const char* s = FullName + strlen(GRootDirectory) + 1;
 		assert(s[-1] == '/');
 		info.Filename = s;
 
@@ -533,7 +533,7 @@ FORCEINLINE CGameFileInfo* AllocFileInfo()
 	{
 		FileInfoChain = new CMemoryChain();
 	}
-	return (CGameFileInfo*) FileInfoChain->Alloc(sizeof(CGameFileInfo));
+	return (CGameFileInfo*)FileInfoChain->Alloc(sizeof(CGameFileInfo));
 }
 
 FORCEINLINE void DeallocFileInfo(CGameFileInfo* info)
@@ -547,7 +547,7 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 	guard(CGameFileInfo::Register);
 
 	// Verify file extension
-	const char *ext = strrchr(RegisterInfo.Filename, '.');
+	const char* ext = strrchr(RegisterInfo.Filename, '.');
 	if (!ext) return NULL; // unknown type
 	ext++;
 
@@ -643,9 +643,9 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 		int startupWeight = 0;
 		if (info->ShortFilename[7] == '.')
 			startupWeight = 30;							// "startup.upk"
-		else if (strnicmp(info->ShortFilename+7, "_int.", 5) == 0)
+		else if (strnicmp(info->ShortFilename + 7, "_int.", 5) == 0)
 			startupWeight = 20;							// "startup_int.upk"
-		else if (strnicmp(info->ShortFilename+7, "_loc_int.", 9) == 0)
+		else if (strnicmp(info->ShortFilename + 7, "_loc_int.", 9) == 0)
 			startupWeight = 20;							// "startup_int.upk"
 		else if (info->ShortFilename[7] == '_')
 			startupWeight = 1;							// non-int locale, lower priority - use if when other is not detected
@@ -698,13 +698,13 @@ CGameFileInfo* CGameFileInfo::Register(FVirtualFileSystem* parentVfs, const CReg
 	unguardf("%s", RegisterInfo.Filename);
 }
 
-static bool ScanGameDirectory(const char *dir, bool recurse)
+static bool ScanGameDirectory(const char* dir, bool recurse)
 {
 	guard(ScanGameDirectory);
 
 	char Path[MAX_PACKAGE_PATH];
 	bool res = true;
-//	printf("Scan %s\n", dir);
+	//	printf("Scan %s\n", dir);
 
 	struct FileInfo
 	{
@@ -737,14 +737,14 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		}
 		else
 		{
-			Files.Add( { found.name, found.size } );
+			Files.Add({ found.name, found.size });
 		}
 	} while (res && _findnexti64(hFind, &found) != -1);
 	_findclose(hFind);
 #else
-	DIR *find = opendir(dir);
+	DIR* find = opendir(dir);
 	if (!find) return true;
-	struct dirent *ent;
+	struct dirent* ent;
 	while (/*res &&*/ (ent = readdir(find)))
 	{
 		if (ent->d_name[0] == '.') continue;			// "." or ".."
@@ -760,7 +760,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 		}
 		else
 		{
-			Files.Add( { ent->d_name, buf.st_size } );
+			Files.Add({ ent->d_name, buf.st_size });
 		}
 	}
 	closedir(find);
@@ -788,7 +788,7 @@ static bool ScanGameDirectory(const char *dir, bool recurse)
 
 void LoadGears4Manifest(const CGameFileInfo* info);
 
-void appSetRootDirectory(const char *dir, bool recurse)
+void appSetRootDirectory(const char* dir, bool recurse)
 {
 	guard(appSetRootDirectory);
 
@@ -815,7 +815,7 @@ void appSetRootDirectory(const char *dir, bool recurse)
 	}
 #endif // GEARS4
 
-	appPrintf("Found %d game files (%d skipped) in %d folders at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, GameFolders.Num() ? GameFolders.Num()-1 : 0, dir);
+	appPrintf("Found %d game files (%d skipped) in %d folders at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, GameFolders.Num() ? GameFolders.Num() - 1 : 0, dir);
 
 #if UNREAL4
 	// Count sizes of additional files. Should process .uexp and .ubulk files, register their information for .uasset.
@@ -846,14 +846,14 @@ void appSetRootDirectory(const char *dir, bool recurse)
 }
 
 
-const char *appGetRootDirectory()
+const char* appGetRootDirectory()
 {
 	return GRootDirectory[0] ? GRootDirectory : NULL;
 }
 
 
 // UE2 has simple directory hierarchy with directory depth 1
-static const char *KnownDirs2[] =
+static const char* KnownDirs2[] =
 {
 	"Animations",
 	"Maps",
@@ -871,13 +871,13 @@ static const char *KnownDirs2[] =
 };
 
 
-void appSetRootDirectory2(const char *filename)
+void appSetRootDirectory2(const char* filename)
 {
 	guard(appSetRootDirectory2);
 
 	char buf[MAX_PACKAGE_PATH];
 	appStrncpyz(buf, filename, ARRAY_COUNT(buf));
-	char *s;
+	char* s;
 	// replace slashes
 	for (s = buf; *s; s++)
 		if (*s == '\\') *s = '/';
@@ -898,7 +898,7 @@ void appSetRootDirectory2(const char *filename)
 	root = buf;
 
 	// analyze path
-	const char *pCooked = NULL;
+	const char* pCooked = NULL;
 	for (int i = 0; i < 8; i++)
 	{
 		// find deepest directory name
@@ -949,7 +949,7 @@ void appSetRootDirectory2(const char *filename)
 			GForcePlatform = PLATFORM_IOS;
 		if (GForcePlatform != PLATFORM_UNKNOWN)
 		{
-			static const char *PlatformNames[] =
+			static const char* PlatformNames[] =
 			{
 				"",
 				"PC",
@@ -973,7 +973,7 @@ void appSetRootDirectory2(const char *filename)
 }
 
 
-const CGameFileInfo* CGameFileInfo::Find(const char *Filename, int GameFolder)
+const CGameFileInfo* CGameFileInfo::Find(const char* Filename, int GameFolder)
 {
 	guard(CGameFileInfo::Find);
 
@@ -1121,8 +1121,8 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename, int GameFolder)
 		}
 
 		int matchWeight = 0;
-		const char *s = *InfoPath + InfoPath.Len() - 1;
-		const char *d = *FindPath + FindPath.Len() - 1;
+		const char* s = *InfoPath + InfoPath.Len() - 1;
+		const char* d = *FindPath + FindPath.Len() - 1;
 		int maxCheck = min(InfoPath.Len(), FindPath.Len());
 		// Check if FindPath matches end of InfoPath, case-insensitively
 		while (tolower(*s) == tolower(*d) && maxCheck > 0)
@@ -1138,10 +1138,10 @@ const CGameFileInfo* CGameFileInfo::Find(const char *Filename, int GameFolder)
 			// Fully matched
 			return info;
 		}
-//		printf("--> matched: %s (weight=%d)\n", info->RelativeName, matchWeight);
+		//		printf("--> matched: %s (weight=%d)\n", info->RelativeName, matchWeight);
 		if (matchWeight > bestMatchWeight)
 		{
-//			printf("---> better match\n");
+			//			printf("---> better match\n");
 			bestMatch = info;
 			bestMatchWeight = matchWeight;
 		}
@@ -1192,7 +1192,7 @@ struct FindPackageWildcardData
 	FString			Wildcard;
 };
 
-static bool FindPackageWildcardCallback(const CGameFileInfo *file, FindPackageWildcardData &data)
+static bool FindPackageWildcardCallback(const CGameFileInfo* file, FindPackageWildcardData& data)
 {
 	FStaticString<MAX_PACKAGE_PATH> Name;
 
@@ -1225,7 +1225,7 @@ static bool FindPackageWildcardCallback(const CGameFileInfo *file, FindPackageWi
 }
 
 
-void appFindGameFiles(const char *Filename, TArray<const CGameFileInfo*>& Files)
+void appFindGameFiles(const char* Filename, TArray<const CGameFileInfo*>& Files)
 {
 	guard(appFindGameFiles);
 
@@ -1268,12 +1268,12 @@ void appFindGameFiles(const char *Filename, TArray<const CGameFileInfo*>& Files)
 }
 
 
-const char *appSkipRootDir(const char *Filename)
+const char* appSkipRootDir(const char* Filename)
 {
 	if (!GRootDirectory[0]) return Filename;
 
-	const char *str1 = GRootDirectory;
-	const char *str2 = Filename;
+	const char* str1 = GRootDirectory;
+	const char* str2 = Filename;
 	while (true)
 	{
 		char c1 = *str1++;
@@ -1360,10 +1360,10 @@ void CGameFileInfo::GetCleanName(FString& OutName) const
 	return stricmp(*PathA, *PathB);
 }
 
-void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char *Ext, void *Param)
+void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char* Ext, void* Param)
 {
 	guard(appEnumGameFilesWorker);
-	for (const CGameFileInfo *info : GameFiles)
+	for (const CGameFileInfo* info : GameFiles)
 	{
 		if (!Ext)
 		{
@@ -1380,7 +1380,7 @@ void appEnumGameFilesWorker(EnumGameFilesCallback_t Callback, const char *Ext, v
 	unguard;
 }
 
-void appEnumGameFoldersWorker(EnumGameFoldersCallback_t Callback, void *Param)
+void appEnumGameFoldersWorker(EnumGameFoldersCallback_t Callback, void* Param)
 {
 	guard(appEnumGameFoldersWorker);
 	for (const CGameFolderInfo& info : GameFolders)

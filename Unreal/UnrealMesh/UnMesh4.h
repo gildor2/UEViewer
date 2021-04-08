@@ -1040,6 +1040,7 @@ public:
 	REGISTER_CLASS(FSkinWeightProfileInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS(UMorphTarget) \
+	REGISTER_CLASS(USkeletalMeshSocket) \
 	REGISTER_CLASS(UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(FMeshBuildSettings) \

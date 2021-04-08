@@ -69,8 +69,8 @@ inline void TransformDirection(CVec3& vec)
 
 inline void TransformRotation(CQuat& q)
 {
-	Exchange(q.y, q.z);		// same logic as for vector
-//??	q.w *= -1;				// changing left-handed to right-handed, so inverse rotation - works correctly without this line
+	Exchange(q.Y, q.Z);		// same logic as for vector
+//??	q.W *= -1;				// changing left-handed to right-handed, so inverse rotation - works correctly without this line
 }
 
 struct BufferData
@@ -338,7 +338,7 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 			appError("%X -> %g\n", V.Normal.Data, Normal.w);
 		}
 	#endif
-		Tangent.w = (Normal.w < 0) ? -1 : 1;
+		Tangent.W = (Normal.W < 0) ? -1 : 1;
 
 		TransformPosition(Position);
 		TransformDirection(Normal);
@@ -349,7 +349,7 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 
 		// Fill buffers
 		PositionBuf.Put(Position);
-		NormalBuf.Put(Normal.xyz);
+		NormalBuf.Put(Normal.XYZ);
 		TangentBuf.Put(Tangent);
 		UVBuf[0]->Put(V.UV);
 	}
@@ -550,10 +550,10 @@ static void ExportSkinData(GLTFExportContext& Context, const CSkelMeshLod& Lod, 
 			"      \"translation\" : [ %g, %g, %g ],\n"
 			"      \"rotation\" : [ %g, %g, %g, %g ]\n",
 			bonePos[0], bonePos[1], bonePos[2],
-			boneRot.x, boneRot.y, boneRot.z, boneRot.w
+			boneRot.X, boneRot.Y, boneRot.Z, boneRot.W
 		);
 
-		boneRot.w *= -1;
+		boneRot.W *= -1;
 
 		CCoords& BC = BoneCoords[boneIndex];
 		BC.origin = bonePos;

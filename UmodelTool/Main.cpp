@@ -21,6 +21,7 @@
 
 #include "UnSound.h"
 #include "UnThirdParty.h"
+#include "UnMap.h"
 
 #include "Exporters/Exporters.h"
 
@@ -59,93 +60,94 @@ static void RegisterCommonUnrealClasses()
 {
 	// classes and structures
 	RegisterCoreClasses();
-BEGIN_CLASS_TABLE
+	BEGIN_CLASS_TABLE
 
-	REGISTER_MATERIAL_CLASSES
-	REGISTER_ANIM_NOTIFY_CLASSES
+		REGISTER_MATERIAL_CLASSES
+		REGISTER_ANIM_NOTIFY_CLASSES
 #if BIOSHOCK
-	REGISTER_MATERIAL_CLASSES_BIO
-	REGISTER_MESH_CLASSES_BIO
+		REGISTER_MATERIAL_CLASSES_BIO
+		REGISTER_MESH_CLASSES_BIO
 #endif
 #if SPLINTER_CELL
-	REGISTER_MATERIAL_CLASSES_SCELL
+		REGISTER_MATERIAL_CLASSES_SCELL
 #endif
 #if UNREAL3
-	REGISTER_MATERIAL_CLASSES_U3		//!! needed for Bioshock 2 too
+		REGISTER_MATERIAL_CLASSES_U3		//!! needed for Bioshock 2 too
 #endif
 
 #if DECLARE_VIEWER_PROPS
-	REGISTER_SKELMESH_VCLASSES
-	REGISTER_STATICMESH_VCLASSES
-	REGISTER_MATERIAL_VCLASSES
+		REGISTER_SKELMESH_VCLASSES
+		REGISTER_STATICMESH_VCLASSES
+		REGISTER_MATERIAL_VCLASSES
 #endif // DECLARE_VIEWER_PROPS
 
-END_CLASS_TABLE
-	// enumerations
-	REGISTER_MATERIAL_ENUMS
+		END_CLASS_TABLE
+		// enumerations
+		REGISTER_MATERIAL_ENUMS
 #if UNREAL3
-	REGISTER_MATERIAL_ENUMS_U3
-	REGISTER_MESH_ENUMS_U3
+		REGISTER_MATERIAL_ENUMS_U3
+		REGISTER_MESH_ENUMS_U3
 #endif
 }
 
 
 static void RegisterUnrealClasses2()
 {
-BEGIN_CLASS_TABLE
-	REGISTER_MESH_CLASSES_U2
+	BEGIN_CLASS_TABLE
+		REGISTER_MESH_CLASSES_U2
 #if UNREAL1
-	REGISTER_MESH_CLASSES_U1
+		REGISTER_MESH_CLASSES_U1
 #endif
 #if RUNE
-	REGISTER_MESH_CLASSES_RUNE
+		REGISTER_MESH_CLASSES_RUNE
 #endif
-END_CLASS_TABLE
+		END_CLASS_TABLE
 }
 
 
 static void RegisterUnrealClasses3()
 {
 #if UNREAL3
-BEGIN_CLASS_TABLE
-//	REGISTER_MATERIAL_CLASSES_U3 -- registered for Bioshock in RegisterCommonUnrealClasses()
-	REGISTER_MESH_CLASSES_U3
-	REGISTER_EXPRESSION_CLASSES
+	BEGIN_CLASS_TABLE
+		//	REGISTER_MATERIAL_CLASSES_U3 -- registered for Bioshock in RegisterCommonUnrealClasses()
+		REGISTER_MESH_CLASSES_U3
+		REGISTER_EXPRESSION_CLASSES
 #if TUROK
-	REGISTER_MESH_CLASSES_TUROK
+		REGISTER_MESH_CLASSES_TUROK
 #endif
 #if MASSEFF
-	REGISTER_MESH_CLASSES_MASSEFF
+		REGISTER_MESH_CLASSES_MASSEFF
 #endif
 #if DCU_ONLINE
-	REGISTER_MATERIAL_CLASSES_DCUO
+		REGISTER_MATERIAL_CLASSES_DCUO
 #endif
 #if TRANSFORMERS
-	REGISTER_MESH_CLASSES_TRANS
+		REGISTER_MESH_CLASSES_TRANS
 #endif
 #if MKVSDC
-	REGISTER_MESH_CLASSES_MK
+		REGISTER_MESH_CLASSES_MK
 #endif
-END_CLASS_TABLE
+		END_CLASS_TABLE
 #endif // UNREAL3
-	SuppressUnknownClass("UBodySetup");
+		SuppressUnknownClass("UBodySetup");
+	SuppressUnknownClass("UMaterialExpression*"); // wildcard
 }
 
 
 static void RegisterUnrealClasses4()
 {
 #if UNREAL4
-BEGIN_CLASS_TABLE
-	REGISTER_MESH_CLASSES_U4
-	REGISTER_MATERIAL_CLASSES_U4
-	REGISTER_EXPRESSION_CLASSES
-	REGISTER_3RDP_CLASSES4 //DHK Add
-END_CLASS_TABLE
-	REGISTER_LIGHT_ENUMS_U4 //DHK Add
-	REGISTER_MATERIAL_ENUMS_U4
-	REGISTER_MESH_ENUMS_U4
+	BEGIN_CLASS_TABLE
+		REGISTER_MESH_CLASSES_U4
+		REGISTER_MATERIAL_CLASSES_U4
+		REGISTER_EXPRESSION_CLASSES
+		REGISTER_UNMAP_CLASSES4 //DHK Add
+		END_CLASS_TABLE
+		REGISTER_LIGHT_ENUMS_U4 //DHK Add
+		REGISTER_MATERIAL_ENUMS_U4
+		REGISTER_MESH_ENUMS_U4
 #endif // UNREAL4
-	SuppressUnknownClass("UMaterialExpression*"); // wildcard
+		SuppressUnknownClass("UMaterialExpression*"); // wildcard
 	SuppressUnknownClass("UMaterialFunction");
 	SuppressUnknownClass("UPhysicalMaterial");
 	SuppressUnknownClass("UBodySetup");
@@ -157,27 +159,27 @@ END_CLASS_TABLE
 
 static void RegisterUnrealSoundClasses()
 {
-BEGIN_CLASS_TABLE
-	REGISTER_SOUND_CLASSES
+	BEGIN_CLASS_TABLE
+		REGISTER_SOUND_CLASSES
 #if UNREAL3
-	REGISTER_SOUND_CLASSES_UE3
+		REGISTER_SOUND_CLASSES_UE3
 #endif
 #if TRANSFORMERS
-	REGISTER_SOUND_CLASSES_TRANS
+		REGISTER_SOUND_CLASSES_TRANS
 #endif
 #if UNREAL4
-	REGISTER_SOUND_CLASSES_UE4
+		REGISTER_SOUND_CLASSES_UE4
 #endif
-END_CLASS_TABLE
+		END_CLASS_TABLE
 }
 
 
 static void RegisterUnreal3rdPartyClasses()
 {
 #if UNREAL3
-BEGIN_CLASS_TABLE
-	REGISTER_3RDP_CLASSES3 //DHK was REGISTER_3RDP_CLASSES
-END_CLASS_TABLE
+	BEGIN_CLASS_TABLE
+		REGISTER_3RDP_CLASSES3 //DHK was REGISTER_3RDP_CLASSES
+		END_CLASS_TABLE
 #endif
 }
 
@@ -346,125 +348,125 @@ void InitClassAndExportSystems(int Game)
 static void PrintUsage()
 {
 	appPrintf(
-			"UE Viewer - Unreal Engine viewer and exporter\n"
-			"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
+		"UE Viewer - Unreal Engine viewer and exporter\n"
+		"Usage: umodel [command] [options] <package> [<object> [<class>]]\n"
 #if HAS_UI
-			"       umodel [command] [options] <directory>\n"
+		"       umodel [command] [options] <directory>\n"
 #endif
-			"       umodel @<response_file>\n"
-			"\n"
-			"    <package>       name of package to load - this could be a file name\n"
-			"                    with or without extension, or wildcard\n"
-			"    <object>        name of object to load\n"
-			"    <class>         class of object to load (useful, when trying to load\n"
-			"                    object with ambiguous name)\n"
+		"       umodel @<response_file>\n"
+		"\n"
+		"    <package>       name of package to load - this could be a file name\n"
+		"                    with or without extension, or wildcard\n"
+		"    <object>        name of object to load\n"
+		"    <class>         class of object to load (useful, when trying to load\n"
+		"                    object with ambiguous name)\n"
 #if HAS_UI
-			"    <directory>     path to the game (see -path option)\n"
+		"    <directory>     path to the game (see -path option)\n"
 #endif
-			"\n"
-			"Commands:\n"
-			"    -view           (default) visualize object; when no <object> specified\n"
-			"                    will load whole package\n"
-			"    -list           list contents of package\n"
-			"    -export         export specified object or whole package\n"
-			"    -save           save specified packages\n"
-			"\n"
-			"Help information:\n"
-			"    -help           display this help page\n"
-			"    -version        display umodel version information\n"
-			"    -taglist        list of tags to override game autodetection (for -game=nnn option)\n"
-			"    -gamelist       list of supported games\n"
-			"\n"
-			"Developer commands:\n"
-			"    -log=file       write log to the specified file\n"
-			"    -dump           dump object information to console\n"
-			"    -pkginfo        load package and display its information\n"
-			"    -testexport     perform fake export\n"
+		"\n"
+		"Commands:\n"
+		"    -view           (default) visualize object; when no <object> specified\n"
+		"                    will load whole package\n"
+		"    -list           list contents of package\n"
+		"    -export         export specified object or whole package\n"
+		"    -save           save specified packages\n"
+		"\n"
+		"Help information:\n"
+		"    -help           display this help page\n"
+		"    -version        display umodel version information\n"
+		"    -taglist        list of tags to override game autodetection (for -game=nnn option)\n"
+		"    -gamelist       list of supported games\n"
+		"\n"
+		"Developer commands:\n"
+		"    -log=file       write log to the specified file\n"
+		"    -dump           dump object information to console\n"
+		"    -pkginfo        load package and display its information\n"
+		"    -testexport     perform fake export\n"
 #if SHOW_HIDDEN_SWITCHES
-			"    -check          check some assumptions, no other actions performed\n"
+		"    -check          check some assumptions, no other actions performed\n"
 #	if VSTUDIO_INTEGRATION
-			"    -debug          invoke system crash handler on errors\n"
+		"    -debug          invoke system crash handler on errors\n"
 #	endif
 #	if THREADING
-			"    -nomt           disable multithreading optimizations\n"
+		"    -nomt           disable multithreading optimizations\n"
 #	endif
 #endif // SHOW_HIDDEN_SWITCHES
-			"\n"
-			"Options:\n"
-			"    -path=PATH      path to game installation directory; if not specified,\n"
-			"                    program will search for packages in current directory\n"
-			"    -game=tag       override game autodetection (see -taglist for variants)\n"
-			"    -pkgver=nnn     override package version (advanced option!)\n"
-			"    -pkg=package    load extra package (in addition to <package>)\n"
-			"    -obj=object     specify object(s) to load\n"
+		"\n"
+		"Options:\n"
+		"    -path=PATH      path to game installation directory; if not specified,\n"
+		"                    program will search for packages in current directory\n"
+		"    -game=tag       override game autodetection (see -taglist for variants)\n"
+		"    -pkgver=nnn     override package version (advanced option!)\n"
+		"    -pkg=package    load extra package (in addition to <package>)\n"
+		"    -obj=object     specify object(s) to load\n"
 #if HAS_UI
-			"    -gui            force startup UI to appear\n" //?? debug-only option?
+		"    -gui            force startup UI to appear\n" //?? debug-only option?
 #endif
-			"    -aes=key        provide AES decryption key for encrypted pak files,\n"
-			"                    key is ASCII or hex string (hex format is 0xAABBCCDD),\n"
-			"                    multiple options could be provided for multi-key games\n"
-			"    -aes=@file.txt  read AES decryption key(s) from a text file\n"
-			"\n"
-			"Compatibility options:\n"
-			"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
-			"                    unsupported data format\n"
-			"    -noanim         disable loading of MeshAnimation classes\n"
-			"    -nostat         disable loading of StaticMesh class\n"
-			"    -novert         disable loading of VertMesh class\n"
-			"    -notex          disable loading of Material classes\n"
-			"    -nomorph        disable loading of MorphTarget class\n"
-			"    -nolightmap     disable loading of Lightmap textures\n"
-			"    -sounds         allow export of sounds\n"
-			"    -3rdparty       allow 3rd party asset export (ScaleForm, FaceFX)\n"
-			"    -lzo|lzx|zlib   force compression method for UE3 fully-compressed packages\n"
-			"\n"
-			"Platform selection:\n"
-			"    -ps3            Playstation 3\n"
-			"    -ps4            Playstation 4\n"
-			"    -nsw            Nintendo Switch\n"
-			"    -ios            iOS (iPhone/iPad)\n"
-			"    -android        Android\n"
-			"\n");
+		"    -aes=key        provide AES decryption key for encrypted pak files,\n"
+		"                    key is ASCII or hex string (hex format is 0xAABBCCDD),\n"
+		"                    multiple options could be provided for multi-key games\n"
+		"    -aes=@file.txt  read AES decryption key(s) from a text file\n"
+		"\n"
+		"Compatibility options:\n"
+		"    -nomesh         disable loading of SkeletalMesh classes in a case of\n"
+		"                    unsupported data format\n"
+		"    -noanim         disable loading of MeshAnimation classes\n"
+		"    -nostat         disable loading of StaticMesh class\n"
+		"    -novert         disable loading of VertMesh class\n"
+		"    -notex          disable loading of Material classes\n"
+		"    -nomorph        disable loading of MorphTarget class\n"
+		"    -nolightmap     disable loading of Lightmap textures\n"
+		"    -sounds         allow export of sounds\n"
+		"    -3rdparty       allow 3rd party asset export (ScaleForm, FaceFX)\n"
+		"    -lzo|lzx|zlib   force compression method for UE3 fully-compressed packages\n"
+		"\n"
+		"Platform selection:\n"
+		"    -ps3            Playstation 3\n"
+		"    -ps4            Playstation 4\n"
+		"    -nsw            Nintendo Switch\n"
+		"    -ios            iOS (iPhone/iPad)\n"
+		"    -android        Android\n"
+		"\n");
 
 	appPrintf(
-			"Viewer options:\n"
-			"    -meshes         view meshes only\n"
-			"    -materials      view materials only (excluding textures)\n"
-			"    -anim=<set>     specify AnimSet to automatically attach to mesh\n"
- 			"\n"
-			"Export options:\n"
-			"    -out=PATH       export everything into PATH instead of the current directory\n"
-			"    -all            used with -dump, will dump all objects instead of specified one\n"
-			"    -uncook         use original package name as a base export directory (UE3)\n"
-			"    -groups         use group names instead of class names for directories (UE1-3)\n"
-			"    -uc             create unreal script when possible\n"
-			"    -psk            use ActorX format for meshes (default)\n"
-			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
-			"    -gltf           use glTF 2.0 format for mesh\n"
-			"    -lods           export all available mesh LOD levels\n"
-			"    -dds            export textures in DDS format whenever possible\n"
-			"    -png            export textures in PNG format instead of TGA\n"
-			"    -notgacomp      disable TGA compression\n"
-			"    -nooverwrite    prevent existing files from being overwritten (better\n"
-			"                    performance)\n"
-			"\n"
-			"Supported resources for export:\n"
-			"    SkeletalMesh    exported as ActorX psk file, MD5Mesh or glTF\n"
-			"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
-			"    VertMesh        exported as Unreal 3d file\n"
-			"    StaticMesh      exported as psk file with no skeleton (pskx) or glTF\n"
-			"    Texture         exported in tga or dds format\n"
-			"    Sounds          file extension depends on object contents\n"
-			"    ScaleForm       gfx\n"
-			"    FaceFX          fxa\n"
-			"    Sound           exported \"as is\"\n"
-			"\n"
-			"For list of supported games please use -gamelist option.\n"
+		"Viewer options:\n"
+		"    -meshes         view meshes only\n"
+		"    -materials      view materials only (excluding textures)\n"
+		"    -anim=<set>     specify AnimSet to automatically attach to mesh\n"
+		"\n"
+		"Export options:\n"
+		"    -out=PATH       export everything into PATH instead of the current directory\n"
+		"    -all            used with -dump, will dump all objects instead of specified one\n"
+		"    -uncook         use original package name as a base export directory (UE3)\n"
+		"    -groups         use group names instead of class names for directories (UE1-3)\n"
+		"    -uc             create unreal script when possible\n"
+		"    -psk            use ActorX format for meshes (default)\n"
+		"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
+		"    -gltf           use glTF 2.0 format for mesh\n"
+		"    -lods           export all available mesh LOD levels\n"
+		"    -dds            export textures in DDS format whenever possible\n"
+		"    -png            export textures in PNG format instead of TGA\n"
+		"    -notgacomp      disable TGA compression\n"
+		"    -nooverwrite    prevent existing files from being overwritten (better\n"
+		"                    performance)\n"
+		"\n"
+		"Supported resources for export:\n"
+		"    SkeletalMesh    exported as ActorX psk file, MD5Mesh or glTF\n"
+		"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
+		"    VertMesh        exported as Unreal 3d file\n"
+		"    StaticMesh      exported as psk file with no skeleton (pskx) or glTF\n"
+		"    Texture         exported in tga or dds format\n"
+		"    Sounds          file extension depends on object contents\n"
+		"    ScaleForm       gfx\n"
+		"    FaceFX          fxa\n"
+		"    Sound           exported \"as is\"\n"
+		"\n"
+		"For list of supported games please use -gamelist option.\n"
 	);
 
 	appPrintf(
-			"\n"
-			"For details and updates please visit %s\n", GUmodelHomepage
+		"\n"
+		"For details and updates please visit %s\n", GUmodelHomepage
 	);
 }
 
@@ -472,8 +474,8 @@ static void PrintUsage()
 static void PrintVersionInfo()
 {
 	appPrintf(
-			"UE Viewer (UModel)\n" "%s\n" "%s\n" "%s\n",
-			GBuildString, GCopyrightString, GUmodelHomepage
+		"UE Viewer (UModel)\n" "%s\n" "%s\n" "%s\n",
+		GBuildString, GCopyrightString, GUmodelHomepage
 	);
 }
 
@@ -484,12 +486,12 @@ static void PrintVersionInfo()
 
 struct OptionInfo
 {
-	const char	*name;
-	byte		*variable;
+	const char* name;
+	byte* variable;
 	byte		value;
 };
 
-static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
+static bool ProcessOption(const OptionInfo* Info, int Count, const char* Option)
 {
 	for (int i = 0; i < Count; i++)
 	{
@@ -502,7 +504,7 @@ static bool ProcessOption(const OptionInfo *Info, int Count, const char *Option)
 }
 
 // Display error message about wrong command line and then exit.
-static void CommandLineError(const char *fmt, ...)
+static void CommandLineError(const char* fmt, ...)
 {
 	va_list	argptr;
 	va_start(argptr, fmt);
@@ -686,46 +688,46 @@ static void TestStrings()
 	appResetProfiler();
 
 	{
-		FString s1("  NonEmptyString  ") ;
+		FString s1("  NonEmptyString  ");
 		FString s2 = s1.TrimStartAndEnd();
 		printf(STR(func) "() -> \"%s\"\n", *s2); \
 	}
 
-/*	TEST("", TrimStart);
-	TEST("", TrimEnd);
-	TEST("", TrimStartAndEnd);
-	TEST(" ", TrimStart);
-	TEST(" ", TrimEnd);
-	TEST(" ", TrimStartAndEnd);
-	TEST("abcdef ", TrimStart);
-	TEST("abcdef ", TrimEnd);
-	TEST("abcdef ", TrimStartAndEnd);
-	TEST(" abcdef", TrimStart);
-	TEST(" abcdef", TrimEnd);
-	TEST(" abcdef", TrimStartAndEnd);
-	TEST(" abcdef ", TrimStart);
-	TEST(" abcdef ", TrimEnd);
-	TEST(" abcdef ", TrimStartAndEnd); */
+	/*	TEST("", TrimStart);
+		TEST("", TrimEnd);
+		TEST("", TrimStartAndEnd);
+		TEST(" ", TrimStart);
+		TEST(" ", TrimEnd);
+		TEST(" ", TrimStartAndEnd);
+		TEST("abcdef ", TrimStart);
+		TEST("abcdef ", TrimEnd);
+		TEST("abcdef ", TrimStartAndEnd);
+		TEST(" abcdef", TrimStart);
+		TEST(" abcdef", TrimEnd);
+		TEST(" abcdef", TrimStartAndEnd);
+		TEST(" abcdef ", TrimStart);
+		TEST(" abcdef ", TrimEnd);
+		TEST(" abcdef ", TrimStartAndEnd); */
 
 	{
-	FStaticString<256> ss1("test_static_string");
-	FString ss2 = ss1;
-	printf("[%s]\n", *ss2);
+		FStaticString<256> ss1("test_static_string");
+		FString ss2 = ss1;
+		printf("[%s]\n", *ss2);
 	}
 
 	{
-	FString ss1("test_static_string_2");
-	FStaticString<256> ss2 = ss1;
-	printf("[%s]\n", *ss2);
+		FString ss1("test_static_string_2");
+		FStaticString<256> ss2 = ss1;
+		printf("[%s]\n", *ss2);
 	}
 
 	{
-	FStaticString<256> ss1("test_static_string_2");
-	FStaticString<256> ss2;
-	FString& p1 = ss1;
-	FString& p2 = ss2;
-	p2 = p1;
-	printf("[%s]\n", *p2);
+		FStaticString<256> ss1("test_static_string_2");
+		FStaticString<256> ss2;
+		FString& p1 = ss1;
+		FString& p2 = ss2;
+		p2 = p1;
+		printf("[%s]\n", *p2);
 	}
 
 	appPrintProfiler();
@@ -737,7 +739,7 @@ static void TestStrings()
 #define OPT_NBOOL(name,var)				{ name, (byte*)&var, false },
 #define OPT_VALUE(name,var,value)		{ name, (byte*)&var, value },
 
-int main(int argc, const char **argv)
+int main(int argc, const char** argv)
 {
 	appInitPlatform();
 
@@ -750,7 +752,7 @@ int main(int argc, const char **argv)
 
 	// Set up exception handling
 #if DO_GUARD
-	TRY {
+	TRY{
 #endif
 
 #if _WIN32
@@ -767,7 +769,7 @@ int main(int argc, const char **argv)
 	{
 		// Should read command line from a file
 		const char* appName = argv[0];
-		appParseResponseFile(argv[1]+1, argc, argv);
+		appParseResponseFile(argv[1] + 1, argc, argv);
 		argv[0] = appName;
 	}
 
@@ -798,10 +800,10 @@ int main(int argc, const char **argv)
 	static bool bAll = false, hasRootDir = false, forceUI = false;
 	TArray<const char*> packagesToLoad, objectsToLoad;
 	TArray<const char*> params;
-	const char *attachAnimName = NULL;
+	const char* attachAnimName = NULL;
 	for (int arg = 1; arg < argc; arg++)
 	{
-		const char *opt = argv[arg];
+		const char* opt = argv[arg];
 		if (opt[0] != '-')
 		{
 			params.Add(opt);
@@ -820,16 +822,16 @@ int main(int argc, const char **argv)
 			OPT_VALUE("pkginfo", mainCmd, CMD_PkgInfo)
 			OPT_VALUE("list",    mainCmd, CMD_List)
 #if VSTUDIO_INTEGRATION
-			OPT_BOOL ("debug",   GUseDebugger)
+			OPT_BOOL("debug",   GUseDebugger)
 #endif
 #if RENDERING
-			OPT_BOOL ("meshes",    GApplication.ShowMeshes)
-			OPT_BOOL ("materials", GApplication.ShowMaterials)
+			OPT_BOOL("meshes",    GApplication.ShowMeshes)
+			OPT_BOOL("materials", GApplication.ShowMaterials)
 #endif
-			OPT_BOOL ("uncook",  GSettings.Export.SaveUncooked)
-			OPT_BOOL ("groups",  GSettings.Export.SaveGroups)
-			OPT_BOOL ("lods",    GExportLods)
-			OPT_BOOL ("uc",      GExportScripts)
+			OPT_BOOL("uncook",  GSettings.Export.SaveUncooked)
+			OPT_BOOL("groups",  GSettings.Export.SaveGroups)
+			OPT_BOOL("lods",    GExportLods)
+			OPT_BOOL("uc",      GExportScripts)
 			// disable classes
 			OPT_NBOOL("nomesh",  GSettings.Startup.UseSkeletalMesh)
 			OPT_NBOOL("nostat",  GSettings.Startup.UseStaticMesh)
@@ -838,12 +840,12 @@ int main(int argc, const char **argv)
 			OPT_NBOOL("notex",   GSettings.Startup.UseTexture)
 			OPT_NBOOL("nomorph", GSettings.Startup.UseMorphTarget)
 			OPT_NBOOL("nolightmap", GSettings.Startup.UseLightmapTexture)
-			OPT_BOOL ("sounds",  GSettings.Startup.UseSound)
-			OPT_BOOL ("dds",     GSettings.Export.ExportDdsTexture)
-			OPT_BOOL ("notgacomp", GNoTgaCompress)
-			OPT_BOOL ("nooverwrite", GDontOverwriteFiles)
+			OPT_BOOL("sounds",  GSettings.Startup.UseSound)
+			OPT_BOOL("dds",     GSettings.Export.ExportDdsTexture)
+			OPT_BOOL("notgacomp", GNoTgaCompress)
+			OPT_BOOL("nooverwrite", GDontOverwriteFiles)
 #if HAS_UI
-			OPT_BOOL ("gui",     forceUI)
+			OPT_BOOL("gui",     forceUI)
 #endif
 			// platform
 			OPT_VALUE("ps3",     GSettings.Startup.Platform, PLATFORM_PS3)
@@ -852,9 +854,9 @@ int main(int argc, const char **argv)
 			OPT_VALUE("ios",     GSettings.Startup.Platform, PLATFORM_IOS)
 			OPT_VALUE("android", GSettings.Startup.Platform, PLATFORM_ANDROID)
 			// UE3 compression method
-			OPT_VALUE("lzo",     GSettings.Startup.PackageCompression, COMPRESS_LZO )
+			OPT_VALUE("lzo",     GSettings.Startup.PackageCompression, COMPRESS_LZO)
 			OPT_VALUE("zlib",    GSettings.Startup.PackageCompression, COMPRESS_ZLIB)
-			OPT_VALUE("lzx",     GSettings.Startup.PackageCompression, COMPRESS_LZX )
+			OPT_VALUE("lzx",     GSettings.Startup.PackageCompression, COMPRESS_LZX)
 		};
 		if (ProcessOption(ARRAY_ARG(options), opt))
 			continue;
@@ -883,50 +885,50 @@ int main(int argc, const char **argv)
 		// more complex options
 		else if (!strnicmp(opt, "log=", 4))
 		{
-			appOpenLogFile(opt+4);
+			appOpenLogFile(opt + 4);
 		}
 		else if (!strnicmp(opt, "path=", 5))
 		{
-			GSettings.Startup.SetPath(opt+5);
+			GSettings.Startup.SetPath(opt + 5);
 			hasRootDir = true;
 		}
 		else if (!strnicmp(opt, "out=", 4))
 		{
-			GSettings.Export.SetPath(opt+4);
+			GSettings.Export.SetPath(opt + 4);
 		}
 		else if (!strnicmp(opt, "game=", 5))
 		{
-			int tag = FindGameTag(opt+5);
+			int tag = FindGameTag(opt + 5);
 			if (tag == -1)
 			{
-				appPrintf("ERROR: unknown game tag \"%s\". Use -taglist option to display available tags.\n", opt+5);
+				appPrintf("ERROR: unknown game tag \"%s\". Use -taglist option to display available tags.\n", opt + 5);
 				exit(0);
 			}
 			GSettings.Startup.GameOverride = tag;
 		}
 		else if (!strnicmp(opt, "pkgver=", 7))
 		{
-			int ver = atoi(opt+7);
+			int ver = atoi(opt + 7);
 			if (ver < 1)
 			{
-				appPrintf("ERROR: pkgver number is not valid: %s\n", opt+7);
+				appPrintf("ERROR: pkgver number is not valid: %s\n", opt + 7);
 				exit(0);
 			}
 			GForcePackageVersion = ver;
 		}
 		else if (!strnicmp(opt, "pkg=", 4))
 		{
-			const char *pkg = opt+4;
+			const char* pkg = opt + 4;
 			packagesToLoad.Add(pkg);
 		}
 		else if (!strnicmp(opt, "obj=", 4))
 		{
-			const char *obj = opt+4;
+			const char* obj = opt + 4;
 			objectsToLoad.Add(obj);
 		}
 		else if (!strnicmp(opt, "anim=", 5))
 		{
-			const char *obj = opt+5;
+			const char* obj = opt + 5;
 			objectsToLoad.Add(obj);
 			attachAnimName = obj;
 		}
@@ -936,7 +938,7 @@ int main(int argc, const char **argv)
 		}
 		else if (!strnicmp(opt, "aes=", 4))
 		{
-			HandleAesKeyOption(opt+4);
+			HandleAesKeyOption(opt + 4);
 		}
 		// information commands
 		else if (!stricmp(opt, "taglist"))
@@ -982,9 +984,9 @@ int main(int argc, const char **argv)
 	}
 
 	// Parse UMODEL [package_name [obj_name [class_name]]]
-	const char *argPkgName   = (params.Num() >= 1) ? params[0] : NULL;
-	const char *argObjName   = (params.Num() >= 2) ? params[1] : NULL;
-	const char *argClassName = (params.Num() >= 3) ? params[2] : NULL;
+	const char* argPkgName = (params.Num() >= 1) ? params[0] : NULL;
+	const char* argObjName = (params.Num() >= 2) ? params[1] : NULL;
+	const char* argClassName = (params.Num() >= 3) ? params[2] : NULL;
 	if (params.Num() > 3)
 	{
 		CommandLineError("too many arguments, please check your command line.\nYou specified: package=%s, object=%s, class=%s",
@@ -1080,12 +1082,12 @@ int main(int argc, const char **argv)
 
 		//DHK
 		//if using wildcard for maps, enable these
-		/*FString sPattern = "/Game/Maps";
-		const char* c = "*.umap";*/
+		FString sPattern = "/Game/BlackLegend/Maps/Chapter1";
+		const char* c = "*.umap";
 
 		//if NOT using wildcard for maps, enable these
-		FString sPattern = "";
-		const char* c = "";
+		/*FString sPattern = "";
+		const char* c = "";*/
 
 		bool bWildcard = c != "" ? appMatchWildcard(argPkgName, c, true) : false;
 
@@ -1183,7 +1185,7 @@ int main(int argc, const char **argv)
 			// dump package exports table
 			for (int i = 0; i < Package->Summary.ExportCount; i++)
 			{
-				const FObjectExport &Exp = Package->ExportTable[i];
+				const FObjectExport& Exp = Package->ExportTable[i];
 				appPrintf("%4d %8X %8X %s %s\n", i, Exp.SerialOffset, Exp.SerialSize, Package->GetClassNameFor(Exp), *Exp.ObjectName);
 			}
 		}
@@ -1217,12 +1219,12 @@ int main(int argc, const char **argv)
 		int totalFound = 0;
 		for (int objIdx = 0; objIdx < objectsToLoad.Num(); objIdx++)
 		{
-			const char *objName   = objectsToLoad[objIdx];
-			const char *className = (objIdx == 0) ? argClassName : NULL;
+			const char* objName = objectsToLoad[objIdx];
+			const char* className = (objIdx == 0) ? argClassName : NULL;
 			int found = 0;
 			for (int pkg = 0; pkg < Packages.Num(); pkg++)
 			{
-				UnPackage *Package2 = Packages[pkg];
+				UnPackage* Package2 = Packages[pkg];
 				// load specific object(s)
 				int idx = -1;
 				while (true)
@@ -1235,7 +1237,7 @@ int main(int argc, const char **argv)
 					appPrintf("Export \"%s\" was found in package \"%s\"\n", objName, *Package2->GetFilename());
 
 					// create object from package
-					UObject *Obj = Package2->CreateExport(idx);
+					UObject* Obj = Package2->CreateExport(idx);
 					if (Obj)
 					{
 						Objects.Add(Obj);
@@ -1291,7 +1293,7 @@ int main(int argc, const char **argv)
 		if (Objects.Num())
 		{
 			BeginExport(true);
-	        ExportObjects(&Objects); // will export everything if "Objects" array is empty, however we're calling ExportPackages() in this case
+			ExportObjects(&Objects); // will export everything if "Objects" array is empty, however we're calling ExportPackages() in this case
 			EndExport();
 		}
 		else
@@ -1362,17 +1364,17 @@ int main(int argc, const char **argv)
 	}
 #endif // RENDERING
 
-//	ReleaseAllObjects();
-#if DUMP_MEM_ON_EXIT
-	//!! note: CUmodelApp is not destroyed here
-	appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
-	appDumpMemoryAllocations();
-#endif
+	//	ReleaseAllObjects();
+	#if DUMP_MEM_ON_EXIT 
+		//!! note: CUmodelApp is not destroyed here
+		appPrintf("Memory: allocated " FORMAT_SIZE("d") " bytes in %d blocks\n", GTotalAllocationSize, GTotalAllocationCount);
+		appDumpMemoryAllocations();
+	#endif
 
-	unguardf("umodel_build=%s", STR(GIT_REVISION));	// using string constant to allow non-git builds (with GIT_REVISION 'unknown')
+		unguardf("umodel_build=%s", STR(GIT_REVISION));	// using string constant to allow non-git builds (with GIT_REVISION 'unknown')
 
-#if DO_GUARD
-	} CATCH_CRASH {
+	#if DO_GUARD
+	} CATCH_CRASH{
 		GError.HandleError();
 	}
 #endif
