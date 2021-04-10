@@ -580,9 +580,21 @@ bool FFileArchive::OpenFile()
 	*s++ = 0;
 
 	f = fopen64(FullName, Mode);
-	if (f) return true;			// success
-	if (!(Options & EFileArchiveOptions::NoOpenError))
+	if (f)
 	{
+		// Successfully opened
+		return true;
+	}
+
+	// Failed to open the file
+	if (EnumHasAnyFlags(Options, EFileArchiveOptions::OpenWarning))
+	{
+		// Display an error message
+		appPrintf("WARNING: can't open file (%s) %s\n", strerror(errno), FullName);
+	}
+	else if (!EnumHasAnyFlags(Options, EFileArchiveOptions::NoOpenError))
+	{
+		// Throw fatal error
 		appError("Can't open file (%s) %s", strerror(errno), FullName);
 	}
 

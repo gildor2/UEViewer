@@ -141,8 +141,9 @@ public:
 	// this file. Files are filled into 'otherFiles' array, 'this' file is not included.
 	void FindOtherFiles(TArray<const CGameFileInfo*>& files) const;
 
-	// Open the file
-	FArchive* CreateReader() const;
+	// Open the file. If bDontCrash is true and file can't be opened, the warning will be logged, and the function
+	// will return NULL.
+	FArchive* CreateReader(bool bDontCrash = false) const;
 
 	// Filename stuff
 
@@ -809,9 +810,14 @@ public:
 
 enum class EFileArchiveOptions
 {
+	// Default option: binary file, throw an error if open failed
 	Default = 0,
+	// Silently return if file open is failed
 	NoOpenError = 1,
-	TextFile = 2,
+	// Print a warning message if file open is failed, do not throw an error
+	OpenWarning = 2,
+	// Open as a text file
+	TextFile = 4,
 };
 
 BITFIELD_ENUM(EFileArchiveOptions);

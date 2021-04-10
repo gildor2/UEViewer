@@ -1284,7 +1284,7 @@ const char *appSkipRootDir(const char *Filename)
 }
 
 
-FArchive* CGameFileInfo::CreateReader() const
+FArchive* CGameFileInfo::CreateReader(bool bDontCrash) const
 {
 	if (!FileSystem)
 	{
@@ -1293,7 +1293,21 @@ FArchive* CGameFileInfo::CreateReader() const
 		GetRelativeName(RelativeName);
 		char buf[MAX_PACKAGE_PATH];
 		appSprintf(ARRAY_ARG(buf), "%s/%s", GRootDirectory, *RelativeName);
-		return new FFileReader(buf);
+		if (!bDontCrash)
+		{
+			return new FFileReader(buf);
+		}
+		else
+		{
+			// "Safe" mode
+			FArchive* Reader = new FFileReader(buf, EFileArchiveOptions::OpenWarning);
+			if (!Reader->IsOpen())
+			{
+				delete Reader;
+				Reader = NULL;
+			}
+			return Reader;
+		}
 	}
 	else
 	{

@@ -337,7 +337,11 @@ public:
 	guard(UnPackage::CreateLoader);
 
 	// setup FArchive
-	FArchive* Loader = (baseLoader) ? baseLoader : new FFileReader(filename);
+	FArchive* Loader = (baseLoader) ? baseLoader : new FFileReader(filename, EFileArchiveOptions::OpenWarning);
+	if (!Loader)
+	{
+		return NULL;
+	}
 
 	// Verify the file size first, taking into account that it might be too large to open (requires 64-bit size support).
 	int64 FileSize = Loader->GetFileSize64();
