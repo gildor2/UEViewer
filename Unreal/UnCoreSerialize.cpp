@@ -539,7 +539,7 @@ FFileArchive::~FFileArchive()
 int FFileArchive::GetFileSize() const
 {
 	int64 size = GetFileSize64();
-	if (size >= (1LL << 31)) appError("GetFileSize returns 0x%llX", size); // 2Gb size restriction
+	if (size >= MAX_FILE_SIZE_32) appError("GetFileSize returns 0x%llX", size); // 2Gb size restriction
 	return (int)size;
 }
 

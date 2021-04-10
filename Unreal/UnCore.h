@@ -520,6 +520,8 @@ enum EPlatform
 	FArchive class
 -----------------------------------------------------------------------------*/
 
+#define MAX_FILE_SIZE_32		(1LL << 31)		// 2Gb for int32
+
 class FArchive
 {
 public:
