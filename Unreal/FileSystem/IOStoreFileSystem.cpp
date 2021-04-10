@@ -537,7 +537,7 @@ bool FIOStoreFileSystem::AttachReader(FArchive* reader, FString& error)
 	appStrncpyz(ContainerFileName, *Filename, ARRAY_COUNT(ContainerFileName));
 	char* ext = strrchr(ContainerFileName, '.') + 1;
 	strcpy(ext, "ucas");
-	FArchive* ContainerFile = new FFileReader(ContainerFileName, FAO_NoOpenError);
+	FArchive* ContainerFile = new FFileReader(ContainerFileName, EFileArchiveOptions::NoOpenError);
 	if (!ContainerFile->IsOpen())
 	{
 		delete ContainerFile;
@@ -744,7 +744,7 @@ FArchive* FIOStoreFileSystem::CreateReaderForChunk(EIoChunkType ChunkType)
 {
 	guard(FIOStoreFileSystem::LoadGlobalContainer);
 
-	FArchive* tocReader = new FFileReader(Filename, FAO_NoOpenError);
+	FArchive* tocReader = new FFileReader(Filename, EFileArchiveOptions::NoOpenError);
 	if (!tocReader->IsOpen())
 	{
 		delete tocReader;

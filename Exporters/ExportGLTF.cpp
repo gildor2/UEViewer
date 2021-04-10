@@ -1011,14 +1011,14 @@ void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh)
 		char meshName[256];
 		appSprintf(ARRAY_ARG(meshName), "%s%s", OriginalMesh->Name, suffix);
 
-		FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", meshName);
+		FArchive* Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.gltf", meshName);
 		if (Ar)
 		{
 			GLTFExportContext Context;
 			Context.MeshName = meshName;
 			Context.SkelMesh = Mesh;
 
-			FArchive* Ar2 = CreateExportArchive(OriginalMesh, 0, "%s.bin", meshName);
+			FArchive* Ar2 = CreateExportArchive(OriginalMesh, EFileArchiveOptions::Default, "%s.bin", meshName);
 			assert(Ar2);
 			ExportMeshLod(Context, Mesh->Lods[Lod], Mesh->Lods[Lod].Verts, *Ar, *Ar2);
 			delete Ar;
@@ -1053,14 +1053,14 @@ void ExportStaticMeshGLTF(const CStaticMesh* Mesh)
 		char meshName[256];
 		appSprintf(ARRAY_ARG(meshName), "%s%s", OriginalMesh->Name, suffix);
 
-		FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", meshName);
+		FArchive* Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.gltf", meshName);
 		if (Ar)
 		{
 			GLTFExportContext Context;
 			Context.MeshName = meshName;
 			Context.StatMesh = Mesh;
 
-			FArchive* Ar2 = CreateExportArchive(OriginalMesh, 0, "%s.bin", meshName);
+			FArchive* Ar2 = CreateExportArchive(OriginalMesh, EFileArchiveOptions::Default, "%s.bin", meshName);
 			assert(Ar2);
 			ExportMeshLod(Context, Mesh->Lods[Lod], Mesh->Lods[Lod].Verts, *Ar, *Ar2);
 			delete Ar;

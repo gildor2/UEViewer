@@ -92,7 +92,7 @@ void ExportMd5Mesh(const CSkeletalMesh *Mesh)
 		return;
 	}
 
-	FArchive *Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.md5mesh", OriginalMesh->Name);
+	FArchive *Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.md5mesh", OriginalMesh->Name);
 	if (!Ar) return;
 
 	const CSkelMeshLod &Lod = Mesh->Lods[0];
@@ -309,7 +309,7 @@ void ExportMd5Anim(const CAnimSet *Anim)
 		int i;
 		const CAnimSequence &S = *Anim->Sequences[AnimIndex];
 
-		FArchive *Ar = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s/%s.md5anim", OriginalAnim->Name, *S.Name);
+		FArchive *Ar = CreateExportArchive(OriginalAnim, EFileArchiveOptions::TextFile, "%s/%s.md5anim", OriginalAnim->Name, *S.Name);
 		if (!Ar)
 		{
 			if (AnimIndex == 0)	// if file overwrite is disabled and file already exists, don't save animations at all

@@ -515,7 +515,7 @@ void FArchive::Printf(const char *fmt, ...)
 
 #endif // _WIN32 / __APPLE__
 
-FFileArchive::FFileArchive(const char *Filename, unsigned InOptions)
+FFileArchive::FFileArchive(const char *Filename, EFileArchiveOptions InOptions)
 :	Options(InOptions)
 ,	f(NULL)
 ,	Buffer(NULL)
@@ -573,7 +573,7 @@ bool FFileArchive::OpenFile()
 	char Mode[4];
 	char* s = Mode;
 	*s++ = IsLoading ? 'r' : 'w';
-	if (!(Options & FAO_TextFile))
+	if (!(Options & EFileArchiveOptions::TextFile))
 	{
 		*s++ = 'b';
 	}
@@ -581,7 +581,7 @@ bool FFileArchive::OpenFile()
 
 	f = fopen64(FullName, Mode);
 	if (f) return true;			// success
-	if (!(Options & FAO_NoOpenError))
+	if (!(Options & EFileArchiveOptions::NoOpenError))
 	{
 		appError("Can't open file (%s) %s", strerror(errno), FullName);
 	}
@@ -590,7 +590,7 @@ bool FFileArchive::OpenFile()
 	unguard;
 }
 
-FFileReader::FFileReader(const char *Filename, unsigned InOptions)
+FFileReader::FFileReader(const char *Filename, EFileArchiveOptions InOptions)
 :	FFileArchive(Filename, InOptions)
 ,	SeekPos(-1)
 ,	FileSize(-1)
@@ -767,7 +767,7 @@ int64 FFileReader::GetFileSize64() const
 
 bool FFileReader::IsEof() const
 {
-	if (Options & FAO_TextFile)
+	if (EnumHasAnyFlags(Options, EFileArchiveOptions::TextFile))
 	{
 		// We're tracking file position as it returned by our read operations, however "text file" means
 		// skipping "\r" characters, so position may not match.
@@ -782,7 +782,7 @@ static TArray<FFileWriter*> GFileWriters;
 static CMutex GFileWritersMutex;
 #endif
 
-FFileWriter::FFileWriter(const char *Filename, unsigned InOptions)
+FFileWriter::FFileWriter(const char *Filename, EFileArchiveOptions InOptions)
 :	FFileArchive(Filename, InOptions)
 ,	FileSize(0)
 ,	ArPos64(0)
