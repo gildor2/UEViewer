@@ -1082,7 +1082,7 @@ int main(int argc, const char** argv)
 
 		//DHK
 		//if using wildcard for maps, enable these
-		FString sPattern = "/Game/BlackLegend/Maps/Chapter1";
+		FString sPattern = "/Game/BlackLegend/Maps/Chapter2";
 		const char* c = "*.umap";
 
 		//if NOT using wildcard for maps, enable these

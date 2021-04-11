@@ -43,7 +43,7 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 		return;
 	}
 
-	FArchive* Ar = CreateExportArchive(Mat, FAO_TextFile, "%s.mat", Mat->Name);
+	FArchive* Ar = CreateExportArchive(Mat, EFileArchiveOptions::TextFile, "%s.mat", Mat->Name);
 	if (!Ar) return;
 
 	TArray<UObject*> ToExport;
@@ -65,7 +65,7 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 	PROC(Mask);
 
 	// Dump material properties to a separate file
-	FArchive* PropAr = CreateExportArchive(Mat, FAO_TextFile, "%s.props.txt", Mat->Name);
+	FArchive* PropAr = CreateExportArchive(Mat, EFileArchiveOptions::TextFile, "%s.props.txt", Mat->Name);
 	if (PropAr)
 	{
 		Mat->GetTypeinfo()->SaveProps(Mat, *PropAr);

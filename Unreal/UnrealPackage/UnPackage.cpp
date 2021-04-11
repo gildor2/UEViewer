@@ -261,7 +261,12 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	FArchive* baseLoader = NULL;
 	if (FileInfo)
 	{
-		baseLoader = FileInfo->CreateReader();
+		baseLoader = FileInfo->CreateReader(true);
+		if (!baseLoader)
+		{
+			// Failed to open the file
+			return;
+		}
 	}
 	else
 	{
@@ -272,7 +277,7 @@ UnPackage::UnPackage(const char *filename, const CGameFileInfo* fileInfo, bool s
 	Loader = CreateLoader(filename, baseLoader);
 	if (!Loader)
 	{
-		// File is too small
+		// Bad file, can't open
 		return;
 	}
 

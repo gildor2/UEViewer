@@ -337,10 +337,20 @@ public:
 	guard(UnPackage::CreateLoader);
 
 	// setup FArchive
-	FArchive* Loader = (baseLoader) ? baseLoader : new FFileReader(filename);
-
-	if (Loader->GetFileSize() < 16)
+	FArchive* Loader = (baseLoader) ? baseLoader : new FFileReader(filename, EFileArchiveOptions::OpenWarning);
+	if (!Loader)
 	{
+		return NULL;
+	}
+
+	// Verify the file size first, taking into account that it might be too large to open (requires 64-bit size support).
+	int64 FileSize = Loader->GetFileSize64();
+	if (FileSize < 16 || FileSize >= MAX_FILE_SIZE_32)
+	{
+		if (FileSize > 1024)
+		{
+			appPrintf("WARNING: package file %s is too large (%d Mb), ignoring\n", filename, int32(FileSize >> 20));
+		}
 		// The file is too small, possibly invalid one.
 		if (!baseLoader)
 			delete Loader;
