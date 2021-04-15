@@ -41,6 +41,8 @@ static CVec3 GetBoneScale(const FReferenceSkeleton& Skel, const TArray<FTransfor
 
 	CVec3 Scale;
 	Scale.Set(1, 1, 1);
+	// Get the parent bone, ignore scale of the current one
+	BoneIndex = Skel.RefBoneInfo[BoneIndex].ParentIndex;
 
 	while (BoneIndex >= 0)
 	{
@@ -867,8 +869,9 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			Dst->RetargetBasePose.Add(BonePosition);
 #if DEBUG_RETARGET
 			if (BoneTransform.Scale3D.X != 1.0f || BoneTransform.Scale3D.Y != 1.0f || BoneTransform.Scale3D.Z != 1.0f)
-				appPrintf("Retarget: bone %d (%s) has scale %g %g %g\n", &BoneTransform - RetargetTransforms->GetData(), "?", VECTOR_ARG(BoneTransform.Scale3D));
-#endif
+				appPrintf("Retarget: bone %d (%s) has scale %g %g %g\n", &BoneTransform - RetargetTransforms->GetData(),
+					*AnimSet->TrackBoneNames[&BoneTransform - RetargetTransforms->GetData()], VECTOR_ARG(BoneTransform.Scale3D));
+#endif // DEBUG_RETARGET
 		}
 	}
 

@@ -161,7 +161,7 @@ void Export3D(const UVertMesh *Mesh)
 	FArchive *Ar;
 
 	// export mesh data
-	Ar = CreateExportArchive(Mesh, 0, "%s_d.3d", Mesh->Name);
+	Ar = CreateExportArchive(Mesh, EFileArchiveOptions::Default, "%s_d.3d", Mesh->Name);
 	if (!Ar)		// can't create or overwrite is disabled
 		return;
 
@@ -169,7 +169,7 @@ void Export3D(const UVertMesh *Mesh)
 	delete Ar;
 
 	// export animation frames
-	Ar = CreateExportArchive(Mesh, 0, "%s_a.3d", Mesh->Name);
+	Ar = CreateExportArchive(Mesh, EFileArchiveOptions::Default, "%s_a.3d", Mesh->Name);
 	if (Ar)
 	{
 		ExportAnims(Mesh, *Ar);
@@ -178,7 +178,7 @@ void Export3D(const UVertMesh *Mesh)
 	// export script file
 	if (GExportScripts)
 	{
-		Ar = CreateExportArchive(Mesh, FAO_TextFile, "%s.uc", Mesh->Name);
+		Ar = CreateExportArchive(Mesh, EFileArchiveOptions::TextFile, "%s.uc", Mesh->Name);
 		if (Ar)
 		{
 			ExportScript(Mesh, *Ar);
