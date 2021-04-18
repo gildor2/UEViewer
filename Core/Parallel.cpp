@@ -270,8 +270,6 @@ void CThread::Start()
 		thread->Run();
 	} CATCH_CRASH {
 		// Lock other threads - only one will raise the error
-		//todo: Note: if multiple threads will crash, they'll corrupt error history with
-		//   simultaneous writing to GError.
 		//todo: drop appNotify context, it's meaningless in thread
 		static volatile int lock;
 		if (InterlockedAdd(&lock, 1) != 0)
@@ -279,9 +277,16 @@ void CThread::Start()
 			while (true) Sleep(1000);
 		}
 
-		appPrintf("\nException in thread %d:\n", CurrentId());
+		// Add thread Id to the call stack
+		GError.SetPrefix("Thread");
+		char buf[256];
+		appSprintf(ARRAY_ARG(buf), "%d\n", CurrentId());
+		GError.LogHistory(buf);
+
+		// Handle error
 		GError.HandleError();
 
+		// Terminate the thread
 		exit(1);
 	}
 
