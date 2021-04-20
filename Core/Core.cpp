@@ -26,7 +26,7 @@ static CMutex GLogMutex;
 
 static FILE* GLogFile = fopen("log.txt", "w+");//DHK //was NULL;
 
-void appOpenLogFile(const char* filename)
+void appOpenLogFile(const char *filename)
 {
 	if (GLogFile) fclose(GLogFile);
 
@@ -36,7 +36,7 @@ void appOpenLogFile(const char* filename)
 }
 
 
-void appPrintf(const char* fmt, ...)
+void appPrintf(const char *fmt, ...)
 {
 	guard(appPrintf);
 
@@ -70,8 +70,12 @@ void appPrintf(const char* fmt, ...)
 
 CErrorContext GError;
 
-void appError(const char* fmt, ...)
+void appError(const char *fmt, ...)
 {
+#if THREADING
+	if (!GError.ShouldLogThisThread()) THROW;
+#endif
+
 	va_list	argptr;
 	va_start(argptr, fmt);
 	char buf[4096];
@@ -90,7 +94,7 @@ void appError(const char* fmt, ...)
 #endif
 
 #if DO_GUARD
-	//	appNotify("ERROR: %s\n", buf);
+//	appNotify("ERROR: %s\n", buf);
 	strcpy(GError.History, buf);
 	appStrcatn(ARRAY_ARG(GError.History), "\n");
 	THROW;
@@ -104,7 +108,7 @@ void appError(const char* fmt, ...)
 
 static char NotifyHeader[512];
 
-void appSetNotifyHeader(const char* fmt, ...)
+void appSetNotifyHeader(const char *fmt, ...)
 {
 	if (!fmt)
 	{
@@ -118,7 +122,7 @@ void appSetNotifyHeader(const char* fmt, ...)
 }
 
 
-void appNotify(const char* fmt, ...)
+void appNotify(const char *fmt, ...)
 {
 	va_list	argptr;
 	va_start(argptr, fmt);
@@ -137,7 +141,7 @@ void appNotify(const char* fmt, ...)
 	// a bit ugly code: printing the same thing into 3 streams
 
 	// print to notify file
-	if (FILE* f = fopen("notify.log", "a"))
+	if (FILE *f = fopen("notify.log", "a"))
 	{
 		if (NotifyHeader[0])
 			fprintf(f, "\n******** %s ********\n\n", NotifyHeader);
@@ -177,6 +181,10 @@ void CErrorContext::HandleError()
 
 void CErrorContext::StandardHandler()
 {
+	// Do not print error message twice (e.g. when StandardHandler is called from worker thread, then from main thread)
+	if (IsErrorLogged) return;
+	IsErrorLogged = true;
+
 	void (*PrintFunc)(const char*, ...);
 	PrintFunc = GError.SuppressLog ? appPrintf : appNotify;
 
@@ -195,7 +203,23 @@ void CErrorContext::StandardHandler()
 
 #if DO_GUARD
 
-void CErrorContext::LogHistory(const char* part)
+#if THREADING
+
+bool CErrorContext::ShouldLogThisThread()
+{
+	int ThreadId = CThread::CurrentId();
+	if (ErrorThreadId == 0)
+	{
+		//todo: this operation is not thread-safe
+		ErrorThreadId = ThreadId;
+		return true;
+	}
+	return ErrorThreadId == ThreadId;
+}
+
+#endif // THREADING
+
+void CErrorContext::LogHistory(const char *part)
 {
 	if (!History[0])
 		strcpy(History, "General Protection Fault !\n");
@@ -204,14 +228,21 @@ void CErrorContext::LogHistory(const char* part)
 
 void CErrorContext::SetPrefix(const char* prefix)
 {
+#if THREADING
+	if (!GError.ShouldLogThisThread()) return;
+#endif
 	char buf[512];
 	appSprintf(ARRAY_ARG(buf), GError.FmtNeedArrow ? " <- %s: " : "%s: ", prefix);
 	GError.LogHistory(buf);
 	GError.FmtNeedArrow = false;
 }
 
-void CErrorContext::UnwindThrow(const char* fmt, ...)
+void CErrorContext::UnwindThrow(const char *fmt, ...)
 {
+#if THREADING
+	if (!GError.ShouldLogThisThread()) THROW;
+#endif
+
 	char buf[512];
 	va_list argptr;
 
@@ -219,7 +250,7 @@ void CErrorContext::UnwindThrow(const char* fmt, ...)
 	if (GError.FmtNeedArrow)
 	{
 		strcpy(buf, " <- ");
-		vsnprintf(buf + 4, ARRAY_COUNT(buf) - 4, fmt, argptr);
+		vsnprintf(buf+4, ARRAY_COUNT(buf)-4, fmt, argptr);
 	}
 	else
 	{
@@ -243,9 +274,9 @@ void CErrorContext::UnwindThrow(const char* fmt, ...)
 #define VA_BUFSIZE		2048
 
 // name of this function is a short form of "VarArgs"
-const char* va(const char* format, ...)
+const char *va(const char *format, ...)
 {
-	//	guardSlow(va);
+//	guardSlow(va);
 
 	static char buf[VA_BUFSIZE];
 	static int bufPos = 0;
@@ -256,7 +287,7 @@ const char* va(const char* format, ...)
 	va_start(argptr, format);
 
 	// print
-	char* str = buf + bufPos;
+	char *str = buf + bufPos;
 	int len = vsnprintf(str, VA_BUFSIZE - bufPos, format, argptr);
 	if (len < 0 && bufPos > 0)
 	{
@@ -278,7 +309,7 @@ const char* va(const char* format, ...)
 	bufPos += len + 1;
 	return str;
 
-	//	unguardSlow;
+//	unguardSlow;
 }
 
 
@@ -291,7 +322,7 @@ char* appStrdup(const char* str)
 }
 
 
-int appSprintf(char* dest, int size, const char* fmt, ...)
+int appSprintf(char *dest, int size, const char *fmt, ...)
 {
 	va_list	argptr;
 	va_start(argptr, fmt);
@@ -305,7 +336,7 @@ int appSprintf(char* dest, int size, const char* fmt, ...)
 
 
 // Unicode appSprintf
-int appSprintf(wchar_t* dest, int size, const wchar_t* fmt, ...)
+int appSprintf(wchar_t *dest, int size, const wchar_t *fmt, ...)
 {
 	va_list	argptr;
 	va_start(argptr, fmt);
@@ -318,7 +349,7 @@ int appSprintf(wchar_t* dest, int size, const wchar_t* fmt, ...)
 }
 
 
-void appStrncpyz(char* dst, const char* src, int count)
+void appStrncpyz(char *dst, const char *src, int count)
 {
 	if (count <= 0) return;	// zero-length string
 
@@ -337,7 +368,7 @@ void appStrncpyz(char* dst, const char* src, int count)
 }
 
 
-void appStrncpylwr(char* dst, const char* src, int count)
+void appStrncpylwr(char *dst, const char *src, int count)
 {
 	if (count <= 0) return;
 
@@ -356,29 +387,29 @@ void appStrncpylwr(char* dst, const char* src, int count)
 }
 
 
-void appStrcatn(char* dst, int count, const char* src)
+void appStrcatn(char *dst, int count, const char *src)
 {
-	char* p = strchr(dst, 0);
+	char *p = strchr(dst, 0);
 	int maxLen = count - (p - dst);
 	if (maxLen > 1)
 		appStrncpyz(p, src, maxLen);
 }
 
 
-const char* appStristr(const char* s1, const char* s2)
+const char *appStristr(const char *s1, const char *s2)
 {
 	char buf1[1024], buf2[1024];
 	appStrncpylwr(buf1, s1, ARRAY_COUNT(buf1));
 	appStrncpylwr(buf2, s2, ARRAY_COUNT(buf2));
-	char* s = strstr(buf1, buf2);
+	char *s = strstr(buf1, buf2);
 	if (!s) return NULL;
 	return s1 + (s - buf1);
 }
 
-void appNormalizeFilename(char* filename)
+void appNormalizeFilename(char *filename)
 {
-	char* src = filename;
-	char* dst = filename;
+	char *src = filename;
+	char *dst = filename;
 	char prev = 0;
 	while (true)
 	{
@@ -404,15 +435,15 @@ void appNormalizeFilename(char* filename)
 
 // This function compares text strings, one of which can have wildcards ('*' or '?').
 static bool WildTextCompare(
-	const char* pTameText,   // A string without wildcards
-	const char* pWildText    // A (potentially) corresponding string with wildcards
+	const char *pTameText,   // A string without wildcards
+	const char *pWildText    // A (potentially) corresponding string with wildcards
 )
 {
 	// These two values are set when we observe a wildcard character.  They
 	// represent the locations, in the two strings, from which we start once
 	// we've observed it.
-	const char* pTameBookmark = NULL;
-	const char* pWildBookmark = NULL;
+	const char *pTameBookmark = NULL;
+	const char *pWildBookmark = NULL;
 
 	// Walk the text strings one character at a time.
 	while (true)
@@ -498,7 +529,7 @@ static bool WildTextCompare(
 	}
 }
 
-bool appMatchWildcard(const char* name, const char* mask, bool ignoreCase)
+bool appMatchWildcard(const char *name, const char *mask, bool ignoreCase)
 {
 	guard(appMatchWildcard);
 
@@ -519,7 +550,7 @@ bool appMatchWildcard(const char* name, const char* mask, bool ignoreCase)
 	unguard;
 }
 
-bool appContainsWildcard(const char* string)
+bool appContainsWildcard(const char *string)
 {
 	if (strchr(string, '*')) return true;
 	if (strchr(string, ',')) return true;
@@ -546,7 +577,7 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 	size_t len = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	// Allocate buffer, we'll never release it
-	char* buffer = (char*)appMalloc(len + 1);
+	char* buffer = (char*)appMalloc(len+1);
 	// Read contents. Note that on Windows, fread will skip 'r' characters in text mode.
 	len = fread(buffer, 1, len, f);
 	if (len == 0)
@@ -603,7 +634,7 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 					{
 						// Quotes in the middle of parameter (-path="..." etc) - include spaces
 						s++;
-						while (*s != '"' && *s != '\n' && *s != 0)
+						while (*s != '"'&& *s != '\n' && *s != 0)
 						{
 							s++;
 						}
@@ -627,7 +658,7 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 		if (pass == 0)
 		{
 			// Allocate argv[] array (will never release it)
-			outArgv = new const char* [argc + 1];
+			outArgv = new const char*[argc+1];
 			outArgv[0] = "";			// placeholder for executable name
 			outArgv[argc] = NULL;		// next-after-last is NULL
 			outArgc = argc;
@@ -642,7 +673,7 @@ void appParseResponseFile(const char* filename, int& outArgc, const char**& outA
 	File helpers
 -----------------------------------------------------------------------------*/
 
-void appMakeDirectory(const char* dirname)
+void appMakeDirectory(const char *dirname)
 {
 	if (!dirname[0]) return;
 	// Win32 and Unix: there is no API to create directory chains
@@ -651,7 +682,7 @@ void appMakeDirectory(const char* dirname)
 	appStrncpyz(Name, dirname, ARRAY_COUNT(Name));
 	appNormalizeFilename(Name);
 
-	for (char* s = Name; /* empty */; s++)
+	for (char *s = Name; /* empty */ ; s++)
 	{
 		char c = *s;
 		if (c != '/' && c != 0)
@@ -669,13 +700,13 @@ void appMakeDirectory(const char* dirname)
 	}
 }
 
-void appMakeDirectoryForFile(const char* filename)
+void appMakeDirectoryForFile(const char *filename)
 {
 	char Name[256];
 	appStrncpyz(Name, filename, ARRAY_COUNT(Name));
 	appNormalizeFilename(Name);
 
-	char* s = strrchr(Name, '/');
+	char *s = strrchr(Name, '/');
 	if (s)
 	{
 		*s = 0;
@@ -690,7 +721,7 @@ void appMakeDirectoryForFile(const char* filename)
 #define stat _stati64
 #endif
 
-unsigned appGetFileType(const char* filename)
+unsigned appGetFileType(const char *filename)
 {
 	char Name[256];
 	appStrncpyz(Name, filename, ARRAY_COUNT(Name));

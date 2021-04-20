@@ -560,10 +560,15 @@ void CSkelMeshInstance::UpdateSkeleton()
 					// Use translation from the animation. Already set, do nothing.
 					break;
 				case EBoneRetargetingMode::Mesh:
-					// Use translation from the mesh.
-					NewBonePosition = Bone.Position;
-					// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
-					BoneUpdateCounts[i] += 3;
+					{
+						CVec3 SourceTrans = AnimSeq1->RetargetBasePose.Num()
+							? AnimSeq1->RetargetBasePose[AnimBoneIndex].Position
+							: Bone.Position;
+						// Use translation from the mesh.
+						NewBonePosition = SourceTrans;
+						// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
+						BoneUpdateCounts[i] += 3;
+					}
 					break;
 				case EBoneRetargetingMode::AnimationScaled:
 					{

@@ -523,6 +523,7 @@ struct CErrorContext
 	bool IsSwError;
 	// Suppress logging error message to a file (in a case of user mistake)
 	bool SuppressLog;
+	bool IsErrorLogged;
 
 protected:
 	// Used for error history formatting
@@ -531,6 +532,11 @@ protected:
 	ErrorHandlerType ErrorHandler;
 
 public:
+#if THREADING
+	int ErrorThreadId;
+	bool ShouldLogThisThread();
+#endif
+
 	// Call stack
 	char History[2048];
 
@@ -567,7 +573,6 @@ public:
 	// Log error message to console and notify.log, do NOT exit
 	void StandardHandler();
 
-protected:
 	void LogHistory(const char *part);
 };
 
