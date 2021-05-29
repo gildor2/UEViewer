@@ -41,9 +41,9 @@ Tools/**/*.pdb
 Tools/UITest/vs/Debug/
 Tools/UITest/vs/Release/
 
-# ooz library
-libs/oodle/*.h
-libs/oodle/*.cpp
+# oodle library
+libs/oodle/include
+libs/oodle/lib
 
 # oodle dll
 libs/oo2core*.dll

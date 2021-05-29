@@ -553,6 +553,14 @@ extern "C" FILE* __cdecl __acrt_iob_func(unsigned Index)
 	return (FILE*)((char*)__iob_func() + Index * Align(CRT_FILE_SIZE, sizeof(char*)));
 }
 
+// Required for Oodle, the CRT implementation just forwards the call to terminate()
+void terminate();
+
+extern "C" void __std_terminate()
+{
+	terminate();
+}
+
 #endif // OLDCRT
 
 #endif // _WIN32

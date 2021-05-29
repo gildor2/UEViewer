@@ -11,7 +11,8 @@ OPTIMIZE   = size
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
 
 !if !defined($OLDCRT)		# allow overriding of OLDCRT in parent project
-OLDCRT     = 1				# set to 0 (or comment the line) to use "native" compiler's CRT
+OLDCRT     = 0				# set to 0 (or comment the line) to use "native" compiler's CRT
+							# Changed 29.05.2021: Oodle static libraries requires more modern CRT which is not available in MSVCRT.dll
 !endif
 
 !if defined(TRACY)
@@ -165,12 +166,8 @@ sources(COMP_LIBS) = {
 pop(INCLUDES)
 pop(DEFINES)
 
-!if -e "$R/libs/oodle/kraken.cpp"
-	DEFINES += HAS_OODLE
-	sources(COMP_LIBS) = {
-		$R/libs/oodle/*.cpp
-	}
-!endif
+# oodle SDK support
+!include $R/libs/oodle/oodle.project
 
 sources(MOBILE_LIBS) = {
 	$R/libs/PowerVR/*.cpp
@@ -205,6 +202,12 @@ OPTIONS   += $WARNINGS
 	DEFINES += MAX_DEBUG
 	OBJDIR  = $OBJDIR-debug
 	OPTIMIZE = none
+!else
+	!if ("$OLDCRT" ne "1") && ("$COMPILER" eq "VisualC")
+		# Use static CRT for release Windows builds without use of MSVCRT.dll
+		LIBC = static
+		LINKFLAGS += -NODEFAULTLIB:libcmt
+	!endif
 !endif
 
 !if defined(TRACY)
@@ -218,8 +221,8 @@ OPTIONS   += $WARNINGS
 
 !if "$PLATFORM" eq "win32"
 	INCLUDES += $R/libs/includewin32
-	LIBRARIES = $R/libs/SDL2/x86
+	LIBRARIES += $R/libs/SDL2/x86
 !elif "$PLATFORM" eq "win64"
 	INCLUDES += $R/libs/includewin32
-	LIBRARIES = $R/libs/SDL2/x64
+	LIBRARIES += $R/libs/SDL2/x64
 !endif
