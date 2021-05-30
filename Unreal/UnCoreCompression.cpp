@@ -379,6 +379,13 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	}
 #endif // SMITE
 
+#if MASSEFF
+	if (GForceGame == GAME_MassEffectLE)
+	{
+		if (Flags == 0x400) Flags = COMPRESS_OODLE;
+	}
+#endif // MASSEFF
+
 #if TAO_YUAN
 	if (GForceGame == GAME_TaoYuan)	// note: GForceGame is required (to not pass 'Game' here);
 	{

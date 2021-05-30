@@ -148,7 +148,7 @@ void UAnimSequence::Serialize(FArchive &Ar)
 		RawAnimationBulkData.Serialize(Ar);
 		unguard;
 	}
-	if (Ar.Game == GAME_MassEffect3) goto old_code;		// Mass Effect 3 has no RawAnimationData
+	if (Ar.Game == GAME_MassEffect3 || Ar.Game == GAME_MassEffectLE) goto old_code;		// Mass Effect 3 has no RawAnimationData
 #endif // MASSEFF
 #if MOH2010
 	if (Ar.Game == GAME_MOH2010) goto old_code;
@@ -595,7 +595,7 @@ void UAnimSet::ConvertAnims()
 
 #if MASSEFF
 	UBioAnimSetData *BioData = NULL;
-	if ((ArGame >= GAME_MassEffect && ArGame <= GAME_MassEffect3) && !TrackBoneNames.Num() && Sequences.Num())
+	if ((ArGame >= GAME_MassEffect && ArGame <= GAME_MassEffectLE) && !TrackBoneNames.Num() && Sequences.Num())
 	{
 		// Mass Effect has separated TrackBoneNames from UAnimSet to UBioAnimSetData
 		BioData = Sequences[0]->m_pBioAnimSetData;

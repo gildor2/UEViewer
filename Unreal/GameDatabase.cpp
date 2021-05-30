@@ -126,6 +126,7 @@ const GameInfo GListOfGames[] = {
 		G("Mass Effect",   mass,  GAME_MassEffect ),
 		G("Mass Effect 2", mass2, GAME_MassEffect2),
 		G("Mass Effect 3", mass3, GAME_MassEffect3),
+		G("Mass Effect Legendary Edition", massl, GAME_MassEffectLE),
 #	endif
 #	if A51
 		G("BlackSite: Area 51", a51, GAME_A51),
@@ -841,6 +842,13 @@ void FArchive::DetectGame()
 		SET(GAME_MassEffect2);
 	if (ArVer == 684 && (ArLicenseeVer == 185 || ArLicenseeVer == 194)) // 185 = demo, 194 = release
 		SET(GAME_MassEffect3);
+	if ((ArVer == 684 && ArLicenseeVer == 171) ||		// ME1 LE
+		(ArVer == 684 && ArLicenseeVer == 168) ||		// ME2 LE
+		(ArVer == 685 && ArLicenseeVer == 205))			// ME3 LE
+	{
+		SET(GAME_MassEffectLE);
+		GForceGame = GAME_MassEffectLE;					// for making non-standard compression flags known
+	}
 #endif
 #if MKVSDC
 	if ( (ArVer == 402 && ArLicenseeVer == 30) ||		//!! has extra tag; MK vs DC

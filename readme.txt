@@ -216,6 +216,9 @@ Oodle
 
 Changes
 ~~~~~~~
+30.05.2021
+- Mass Effect Legendary Edition support
+
 29.05.2021
 - replaced ooz library with oodle SDK shipped with UE4.27 source code
 

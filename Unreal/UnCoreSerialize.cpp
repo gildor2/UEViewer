@@ -1554,6 +1554,12 @@ void FByteBulkData::SerializeDataChunk(FArchive &Ar)
 		appReadCompressedChunk(Ar, BulkData, DataSize, COMPRESS_LZO_ENC_BNS);
 	}
 #endif
+#if MASSEFF
+	else if (Ar.Game == GAME_MassEffectLE && (BulkDataFlags & 0x1000))
+	{
+		appReadCompressedChunk(Ar, BulkData, DataSize, COMPRESS_OODLE);
+	}
+#endif
 	else
 	{
 		// uncompressed block

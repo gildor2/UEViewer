@@ -148,7 +148,7 @@ void UTexture2D::Serialize(FArchive &Ar)
 	if (Ar.Game == GAME_Borderlands && Ar.ArLicenseeVer >= 46) Ar.Seek(Ar.Tell() + 16);	// Borderlands 1,2; some hash; version unknown!!
 #endif
 #if MASSEFF
-	if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
+	if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffectLE)
 	{
 		int unkFC;
 		if (Ar.ArLicenseeVer >= 65) Ar << unkFC;
