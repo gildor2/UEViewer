@@ -68,7 +68,7 @@ public:
 
 // UGFxMovieInfo is DC Universe Online USwfMovie analogue
 
-#define REGISTER_3RDP_CLASSES3		\
+#define REGISTER_3RDP_CLASSES		\
 	REGISTER_CLASS(USwfMovie)		\
 	REGISTER_CLASS_ALIAS(USwfMovie, UGFxMovieInfo) \
 	REGISTER_CLASS(UFaceFXAnimSet)	\

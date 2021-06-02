@@ -64,7 +64,7 @@ To launch a build process without a batch, simply execute
     bash build.sh
 
 ### Windows 64-bit
-Despite we're providing only 32-but builds of UE Viewer, it is possible to compile it for 64-bit platform. To do that, you
+Despite only 32-bit builds of UE Viewer being provided, it is possible to compile it for 64-bit platform. To do that, you
 should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-win32` to `vc-win64`. Also 64-bit build could
 be initiated with launching
 

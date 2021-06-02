@@ -209,13 +209,19 @@ detex
   (c) Harm Hanemaaijer
   https://github.com/hglm/detex
 
-ooz
-  (c) Powzix
-  https://github.com/powzix/ooz
+Oodle
+  (c) Epic Games
+  http://www.radgametools.com/oodle.htm
 
 
 Changes
 ~~~~~~~
+30.05.2021
+- Mass Effect Legendary Edition support
+
+29.05.2021
+- replaced ooz library with oodle SDK shipped with UE4.27 source code
+
 06.04.2021
 - added UE4 SkeletalMesh socket support
 

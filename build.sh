@@ -74,8 +74,16 @@ last_revision=${last_revision##* }		# cut "#define ..."
 [ "$PLATFORM" ] || PLATFORM="vc-win32"
 
 # force PLATFORM=linux under Linux OS
-[ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ] && PLATFORM="linux"
-[[ "$OSTYPE" == "darwin"* ]] && PLATFORM=osx
+if [ "$OSTYPE" == "linux-gnu" ] || [ "$OSTYPE" == "linux" ]; then
+	# PLATFORM="linux" - old case, now we'll recognize 32 or 64 bit OS for proper use of oodle.project
+	if [ $(uname -m) == 'x86_64' ]; then
+		PLATFORM="linux64"
+	else
+		PLATFORM="linux32"
+	fi
+elif [ "$OSTYPE" == "darwin"* ]; then
+	PLATFORM=osx
+fi
 #[ "$PLATFORM" == "linux" ] && PLATFORM="linux64"
 
 if [ "${PLATFORM:0:3}" == "vc-" ]; then

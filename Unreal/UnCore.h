@@ -380,6 +380,7 @@ enum EGame
 		GAME_MassEffect,
 		GAME_MassEffect2,
 		GAME_MassEffect3,
+		GAME_MassEffectLE,
 		GAME_R6Vegas2,
 		GAME_MirrorEdge,
 		GAME_TLR,
