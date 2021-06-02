@@ -45,4 +45,8 @@ OODLE_LIB_PATH=
 	LIBINCLUDES += $R/libs/oodle/include
 	LIBRARIES += $R/libs/oodle/$OODLE_LIB_PATH
 	STDLIBS += $OODLE_LIB_FILE
+	!if "$COMPILER" eq "VisualC"
+		# Ensure compatible CRT will be used when linking with Win32 Oodle static libraries
+		LINKFLAGS += -NODEFAULTLIB:libcmt
+	!endif
 !endif
