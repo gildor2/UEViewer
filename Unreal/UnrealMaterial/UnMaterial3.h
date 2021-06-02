@@ -90,6 +90,7 @@ enum ETextureCompressionSettings
 #if MASSEFF
 	TC_NormalmapHQ,
 	TC_NormalmapLQ,
+	TC_NormalmapBC7,			// ME LE
 #endif
 #if DAYSGONE
 	TC_BendDefault,
@@ -122,6 +123,7 @@ _ENUM(ETextureCompressionSettings)
 #if MASSEFF
 	_E(TC_NormalmapHQ),
 	_E(TC_NormalmapLQ),
+	_E(TC_NormalmapBC7),
 #endif
 #if DAYSGONE
 	_E(TC_BendDefault),

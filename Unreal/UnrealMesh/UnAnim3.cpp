@@ -141,7 +141,7 @@ void UAnimSequence::Serialize(FArchive &Ar)
 	if (Ar.Game == GAME_Turok) return;
 #endif
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110)
+	if ((Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110) || (Ar.Game == GAME_MassEffectLE && Ar.ArLicenseeVer == 168)) // ME2 or ME2LE
 	{
 		guard(SerializeMassEffect2);
 		FByteBulkData RawAnimationBulkData;
