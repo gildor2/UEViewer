@@ -4,6 +4,7 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 #include "UnPackageUE3Reader.h"
+#include "UE4Version.h"			// for VER_UE4_NON_OUTER_PACKAGE_IMPORT
 
 #include "GameDatabase.h"		// for GetGameTag()
 
@@ -229,6 +230,14 @@ void FObjectImport::Serialize(FArchive& Ar)
 
 	// this code is the same for all engine versions
 	Ar << ClassPackage << ClassName << PackageIndex << ObjectName;
+
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4_BASE && Ar.ArVer >= VER_UE4_NON_OUTER_PACKAGE_IMPORT && Ar.ContainsEditorData())
+	{
+		FName PackageName;
+		Ar << PackageName;
+	}
+#endif // UNREAL4
 
 #if MKVSDC
 	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)

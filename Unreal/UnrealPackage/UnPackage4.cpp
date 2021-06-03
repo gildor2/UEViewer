@@ -197,10 +197,19 @@ void FPackageFileSummary::Serialize4(FArchive &Ar)
 	// guid
 	Ar << Guid;
 
-	if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER && Ar.ArVer < VER_UE4_NON_OUTER_PACKAGE_IMPORT && Ar.ContainsEditorData())
+	if (Ar.ContainsEditorData())
 	{
-		FGuid PersistentGuid, OwnerPersistentGuid;
-		Ar << PersistentGuid << OwnerPersistentGuid;
+		if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER)
+		{
+			FGuid PersistentGuid;
+			Ar << PersistentGuid;
+		}
+
+		if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER && Ar.ArVer < VER_UE4_NON_OUTER_PACKAGE_IMPORT)
+		{
+			FGuid OwnerPersistentGuid;
+			Ar << OwnerPersistentGuid;
+		}
 	}
 
 	// generations
