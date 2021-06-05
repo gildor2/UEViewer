@@ -166,8 +166,8 @@ static CGameFileInfo* GameFileHash[GAME_FILE_HASH_SIZE];
 struct CGameFolderInfo
 {
 	FString Name;
-	uint16 HashNext;		// index in GameFileHash array
-	uint16 NumFiles;		// number of files located in this folder
+	int		HashNext;		// index in GameFileHash array
+	int		NumFiles;		// number of files located in this folder
 
 	CGameFolderInfo()
 	: HashNext(0)
