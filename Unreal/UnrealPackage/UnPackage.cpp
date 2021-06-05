@@ -848,8 +848,6 @@ int UnPackage::FindExport(const char *name, const char *className, int firstInde
 {
 	guard(UnPackage::FindExport);
 
-	// Do the first pass with comparing string pointers instead of using stricmp. We're using
-	// global name pool for all name tables, so this should work in most cases.
 	FastNameComparer cmp(name);
 	for (int i = firstIndex; i < Summary.ExportCount; i++)
 	{
@@ -859,7 +857,7 @@ int UnPackage::FindExport(const char *name, const char *className, int firstInde
 		{
 			// if class name specified - compare it too
 			const char* foundClassName = GetClassNameFor(Exp);
-			if (className && (foundClassName != className)) // pointer comparison again
+			if (className && stricmp(foundClassName, className) != 0)
 				continue;
 			return i;
 		}
