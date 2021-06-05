@@ -1200,6 +1200,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 				if (!ItemType)
 				{
 					appPrintf("WARNING: structure type %s is unknown, skipping array %s::%s\n", Prop->TypeName, Name, Prop->Name);
+					Ar.Seek(StopPos);
 				}
 				else if (DataCount)
 				{
