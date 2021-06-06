@@ -61,7 +61,7 @@ void UTexture3::Serialize(FArchive &Ar)
 	}
 #endif // APB
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect3) return;
+	if ((Ar.Game == GAME_MassEffect3) || (Ar.Game == GAME_MassEffectLE && Ar.ArLicenseeVer >= 205)) return; // ME3 or ME3LE
 #endif
 #if BIOSHOCK3
 	if (Ar.Game == GAME_Bioshock3) return;

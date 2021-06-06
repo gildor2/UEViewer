@@ -4,6 +4,7 @@
 #include "UnObject.h"
 #include "UnPackage.h"
 #include "UnPackageUE3Reader.h"
+#include "UE4Version.h"			// for VER_UE4_NON_OUTER_PACKAGE_IMPORT
 
 #include "GameDatabase.h"		// for GetGameTag()
 
@@ -229,6 +230,14 @@ void FObjectImport::Serialize(FArchive& Ar)
 
 	// this code is the same for all engine versions
 	Ar << ClassPackage << ClassName << PackageIndex << ObjectName;
+
+#if UNREAL4
+	if (Ar.Game >= GAME_UE4_BASE && Ar.ArVer >= VER_UE4_NON_OUTER_PACKAGE_IMPORT && Ar.ContainsEditorData())
+	{
+		FName PackageName;
+		Ar << PackageName;
+	}
+#endif // UNREAL4
 
 #if MKVSDC
 	if (Ar.Game == GAME_MK && Ar.ArVer >= 677)
@@ -839,8 +848,6 @@ int UnPackage::FindExport(const char *name, const char *className, int firstInde
 {
 	guard(UnPackage::FindExport);
 
-	// Do the first pass with comparing string pointers instead of using stricmp. We're using
-	// global name pool for all name tables, so this should work in most cases.
 	FastNameComparer cmp(name);
 	for (int i = firstIndex; i < Summary.ExportCount; i++)
 	{
@@ -850,7 +857,7 @@ int UnPackage::FindExport(const char *name, const char *className, int firstInde
 		{
 			// if class name specified - compare it too
 			const char* foundClassName = GetClassNameFor(Exp);
-			if (className && (foundClassName != className)) // pointer comparison again
+			if (className && stricmp(foundClassName, className) != 0)
 				continue;
 			return i;
 		}

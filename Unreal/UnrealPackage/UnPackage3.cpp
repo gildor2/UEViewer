@@ -95,7 +95,7 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 	Ar << PackageFlags;
 
 #if MASSEFF
-	if ((Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194) && (PackageFlags & PKG_Cooked)) // not true for Legendary Edition
+	if ((((Ar.Game == GAME_MassEffect3 || Ar.Game == GAME_MassEffectLE) && Ar.ArLicenseeVer >= 194)) && (PackageFlags & PKG_Cooked)) // ME3 or ME3LE
 	{
 		int32 unk88;
 		Ar << unk88;
