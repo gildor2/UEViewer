@@ -87,6 +87,7 @@ struct FTexturePlatformData
 		// see TextureDerivedData.cpp, SerializePlatformData()
 		guard(FTexturePlatformData<<);
 		Ar << D.SizeX << D.SizeY << D.NumSlices;
+		D.NumSlices &= 0x3fffffff; // 2 higher bits are BitMask_CubeMap and BitMask_HasOptData since UE4.24
 
 #if GEARS4
 		if (Ar.Game == GAME_Gears4)
