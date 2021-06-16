@@ -159,6 +159,8 @@ BEGIN("UMaterialInstance")
 	MAP(ScalarParameterValues, 12)
 	MAP(VectorParameterValues, 13)
 	MAP(TextureParameterValues, 14)
+	MAP(RuntimeVirtualTextureParameterValues, 15)
+	MAP(FontParameterValues, 16)
 	MAP(BasePropertyOverrides, 17)
 	MAP(StaticParameters, 18)
 	DROP_OBJ_ARRAY(20)					//todo: TArray<UObject*> CachedReferencedTextures
