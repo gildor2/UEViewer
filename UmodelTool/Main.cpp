@@ -178,7 +178,7 @@ static void RegisterUnreal3rdPartyClasses()
 {
 #if UNREAL3
 	BEGIN_CLASS_TABLE
-		REGISTER_3RDP_CLASSES3 //DHK was REGISTER_3RDP_CLASSES
+		REGISTER_3RDP_CLASSES
 		END_CLASS_TABLE
 #endif
 }
@@ -1082,7 +1082,7 @@ int main(int argc, const char** argv)
 
 		//DHK
 		//if using wildcard for maps, enable these
-		FString sPattern = "/Game/Maps/Zone_0/Prologue/";
+		FString sPattern = "/Game/Levels/Fortress/";
 		const char* c = "*.umap";
 
 		//if NOT using wildcard for maps, enable these
