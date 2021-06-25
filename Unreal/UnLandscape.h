@@ -17,7 +17,8 @@ public:
 		PROP_VECTOR(RelativeScale3D)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USceneComponent::Serialize);
 		Super::Serialize(Ar);
@@ -49,7 +50,8 @@ public:
 		PROP_OBJ(RootComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(ULandscapeGizmoActiveActor::Serialize);
 		Super::Serialize(Ar);
@@ -70,7 +72,8 @@ public:
 		PROP_STRUC(LayerUsageDebugColor, FLinearColor)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(ULandscapeLayerInfoObject::Serialize);
 		Super::Serialize(Ar);
@@ -130,7 +133,8 @@ public:
 		PROP_OBJ(AttachParent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(ULandscapeHeightfieldCollisionComponent::Serialize);
 		Super::Serialize(Ar);
@@ -173,8 +177,8 @@ public:
 		PROP_INT(SectionBaseY)
 		PROP_VECTOR(RelativeLocation)
 		PROP_ARRAY(MaterialInstances, PropType::UObject)
-		PROP_ARRAY(LODIndexToMaterialIndex, "byte")
-		PROP_ARRAY(MaterialIndexToDisabledTessellationMaterial, "byte")
+		PROP_ARRAY(LODIndexToMaterialIndex, PropType::Byte)
+		PROP_ARRAY(MaterialIndexToDisabledTessellationMaterial, PropType::Byte)
 		PROP_STRUC(WeightmapScaleBias, FVector4)
 		PROP_FLOAT(WeightmapSubsectionOffset)
 		PROP_STRUC(HeightmapScaleBias, FVector4)
@@ -189,7 +193,8 @@ public:
 		PROP_OBJ(AttachParent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(ULandscapeComponent::Serialize);
 		Super::Serialize(Ar);
@@ -226,7 +231,8 @@ public:
 		PROP_OBJ(RootComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(ULandscape::Serialize);
 		Super::Serialize(Ar);
@@ -300,7 +306,7 @@ public:
 	byte Mobility; //TEnumAsByte<EComponentMobility::Type> Mobility;
 
 	BEGIN_PROP_TABLE
-		PROP_ARRAY(SortedInstances, "int")
+		PROP_ARRAY(SortedInstances, PropType::Int)
 		PROP_INT(NumBuiltInstances)
 		PROP_STRUC(BuiltInstanceBounds, FBox)
 		PROP_STRUC(CacheMeshExtendedBounds, FBoxSphereBounds)
@@ -308,7 +314,7 @@ public:
 		PROP_INT(InstancingRandomSeed)
 		PROP_INT(InstanceStartCullDistance)
 		PROP_INT(InstanceEndCullDistance)
-		PROP_ARRAY(InstanceReorderTable, "int")
+		PROP_ARRAY(InstanceReorderTable, PropType::Int)
 		PROP_OBJ(StaticMesh)
 		PROP_INT(OverriddenLightMapRes)
 		PROP_ARRAY(StreamingTextureData, "FStreamingTextureBuildInfo")
@@ -324,7 +330,8 @@ public:
 		PROP_BYTE(Mobility)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UFoliageInstancedStaticMeshComponent::Serialize);
 		Super::Serialize(Ar);
@@ -363,7 +370,8 @@ public:
 		PROP_INT(ChangeCount)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UFoliageType_InstancedStaticMesh::Serialize);
 		Super::Serialize(Ar);
@@ -382,7 +390,8 @@ public:
 		PROP_OBJ(RootComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UInstancedFoliageActor::Serialize);
 		Super::Serialize(Ar);
