@@ -295,6 +295,7 @@ struct FPostProcessSettings
 	DECLARE_STRUCT(FPostProcessSettings)
 
 	UTexture* LensFlareBokehShape;
+	UTextureCube4* AmbientCubemap;
 
 	FVector4 ColorSaturation;
 	FVector4 ColorContrast;
@@ -437,7 +438,32 @@ struct FPostProcessSettings
 	bool bOverride_ScreenSpaceReflectionIntensity;
 	bool bOverride_ScreenSpaceReflectionQuality;
 	bool bOverride_ScreenSpaceReflectionMaxRoughness;
+	bool bOverride_DepthOfFieldFocalDistance;
+	bool bOverride_DepthOfFieldDepthBlurRadius;
+	bool bOverride_DepthOfFieldDepthBlurAmount;
+	bool bOverride_DepthOfFieldMethod;
+	bool bOverride_MobileHQGaussian;
+	bool bOverride_DepthOfFieldFstop;
+	bool bOverride_AutoExposureCalibrationConstant;
+	bool bOverride_DepthOfFieldFocalRegion;
+	bool bOverride_DepthOfFieldNearTransitionRegion;
+	bool bOverride_DepthOfFieldFarTransitionRegion;
+	bool bOverride_DepthOfFieldScale;
+	bool bOverride_DepthOfFieldMaxBokehSize;
+	bool bOverride_DepthOfFieldNearBlurSize;
+	bool bOverride_DepthOfFieldFarBlurSize;
+	bool bOverride_MotionBlurAmount;
+	bool bOverride_MotionBlurMax;
+	bool bOverride_MotionBlurPerObjectSize;
 
+	float HistogramLogMin;
+	float HistogramLogMax;
+	float AutoExposureCalibrationConstant;
+	float LensFlareThreshold;
+	float GrainJitter;
+	float DepthOfFieldScale;
+	float DepthOfFieldMaxBokehSize;
+	float DepthOfFieldFstop;
 	float FilmToe;
 	float BloomSizeScale;
 	float AutoExposureBias;
@@ -456,54 +482,41 @@ struct FPostProcessSettings
 	float SceneFringeIntensity;
 	float ChromaticAberrationStartOffset;
 	float VignetteIntensity;
+	float FilmSlope;
+	float AmbientCubemapIntensity;
+	float DepthOfFieldFocalDistance;
+	float DepthOfFieldDepthBlurRadius;
+	float DepthOfFieldDepthBlurAmount;
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(LensFlareBokehShape)
-		PROP_STRUC(ColorSaturation, FVector4)
-		PROP_STRUC(ColorContrast, FVector4)
-		PROP_STRUC(ColorGamma, FVector4)
-		PROP_STRUC(ColorGain, FVector4)
-		PROP_STRUC(ColorOffset, FVector4)
-		PROP_STRUC(ColorSaturationShadows, FVector4)
-		PROP_STRUC(ColorContrastShadows, FVector4)
-		PROP_STRUC(ColorGammaShadows, FVector4)
-		PROP_STRUC(ColorGainShadows, FVector4)
-		PROP_STRUC(ColorOffsetShadows, FVector4)
-		PROP_STRUC(ColorSaturationMidtones, FVector4)
-		PROP_STRUC(ColorContrastMidtones, FVector4)
-		PROP_STRUC(ColorGammaMidtones, FVector4)
-		PROP_STRUC(ColorGainMidtones, FVector4)
-		PROP_STRUC(ColorOffsetMidtones, FVector4)
-		PROP_STRUC(ColorSaturationHighlights, FVector4)
-		PROP_STRUC(ColorContrastHighlights, FVector4)
-		PROP_STRUC(ColorGammaHighlights, FVector4)
-		PROP_STRUC(ColorGainHighlights, FVector4)
-		PROP_STRUC(ColorOffsetHighlights, FVector4)
-		PROP_FLOAT(SceneFringeIntensity)
-		PROP_FLOAT(ChromaticAberrationStartOffset)
-		PROP_FLOAT(VignetteIntensity)
-		PROP_FLOAT(FilmToe)
-		PROP_FLOAT(BloomSizeScale)
-		PROP_FLOAT(AutoExposureBias)
-		PROP_FLOAT(AmbientOcclusionIntensity)
-		PROP_FLOAT(AmbientOcclusionRadius)
-		PROP_FLOAT(IndirectLightingIntensity)
-		PROP_FLOAT(ScreenSpaceReflectionIntensity)
-		PROP_FLOAT(ScreenSpaceReflectionQuality)
-		PROP_FLOAT(BloomIntensity)
-		PROP_FLOAT(AutoExposureMinBrightness)
-		PROP_FLOAT(AutoExposureMaxBrightness)
-		PROP_FLOAT(AutoExposureSpeedUp)
-		PROP_FLOAT(AutoExposureSpeedDown)
-		PROP_FLOAT(LensFlareIntensity)
-		PROP_FLOAT(LensFlareBokehSize)
-		PROP_FLOAT(BloomIntensity)
-		PROP_FLOAT(AutoExposureMinBrightness)
-		PROP_FLOAT(AutoExposureMaxBrightness)
-		PROP_FLOAT(AutoExposureSpeedUp)
-		PROP_FLOAT(AutoExposureSpeedDown)
-		PROP_FLOAT(LensFlareIntensity)
-		PROP_FLOAT(LensFlareBokehSize)
+		PROP_OBJ(AmbientCubemap)
+		PROP_VECTOR4(ColorSaturation)
+		PROP_VECTOR4(ColorContrast)
+		PROP_VECTOR4(ColorGamma)
+		PROP_VECTOR4(ColorGain)
+		PROP_VECTOR4(ColorOffset)
+		PROP_VECTOR4(ColorSaturationShadows)
+		PROP_VECTOR4(ColorContrastShadows)
+		PROP_VECTOR4(ColorGammaShadows)
+		PROP_VECTOR4(ColorGainShadows)
+		PROP_VECTOR4(ColorOffsetShadows)
+		PROP_VECTOR4(ColorSaturationMidtones)
+		PROP_VECTOR4(ColorContrastMidtones)
+		PROP_VECTOR4(ColorGammaMidtones)
+		PROP_VECTOR4(ColorGainMidtones)
+		PROP_VECTOR4(ColorOffsetMidtones)
+		PROP_VECTOR4(ColorSaturationHighlights)
+		PROP_VECTOR4(ColorContrastHighlights)
+		PROP_VECTOR4(ColorGammaHighlights)
+		PROP_VECTOR4(ColorGainHighlights)
+		PROP_VECTOR4(ColorOffsetHighlights)
+		PROP_BOOL(bOverride_DepthOfFieldFstop)
+		PROP_BOOL(bOverride_DepthOfFieldFocalDistance)
+		PROP_BOOL(bOverride_DepthOfFieldDepthBlurRadius)
+		PROP_BOOL(bOverride_DepthOfFieldDepthBlurAmount)
+		PROP_BOOL(bOverride_DepthOfFieldMethod)
+		PROP_BOOL(bOverride_MobileHQGaussian)
 		PROP_BOOL(bOverride_IndirectLightingIntensity)
 		PROP_BOOL(bOverride_ScreenSpaceReflectionIntensity)
 		PROP_BOOL(bOverride_ScreenSpaceReflectionQuality)
@@ -624,12 +637,62 @@ struct FPostProcessSettings
 		PROP_BOOL(bOverride_AmbientOcclusionMipThreshold)
 		PROP_BOOL(bOverride_AmbientOcclusionTemporalBlendWeight)
 		PROP_BOOL(bOverride_AnamorphicAspectRatio)
+		PROP_BOOL(bOverride_AutoExposureCalibrationConstant)
+		PROP_BOOL(bOverride_DepthOfFieldFocalRegion)
+		PROP_BOOL(bOverride_DepthOfFieldNearTransitionRegion)
+		PROP_BOOL(bOverride_DepthOfFieldFarTransitionRegion)
+		PROP_BOOL(bOverride_DepthOfFieldScale)
+		PROP_BOOL(bOverride_DepthOfFieldMaxBokehSize)
+		PROP_BOOL(bOverride_DepthOfFieldNearBlurSize)
+		PROP_BOOL(bOverride_DepthOfFieldFarBlurSize)
+		PROP_BOOL(bOverride_MotionBlurAmount)
+		PROP_BOOL(bOverride_MotionBlurMax)
+		PROP_BOOL(bOverride_MotionBlurPerObjectSize)
+		PROP_FLOAT(HistogramLogMin)
+		PROP_FLOAT(HistogramLogMax)
+		PROP_FLOAT(AutoExposureCalibrationConstant)
+		PROP_FLOAT(LensFlareThreshold)
+		PROP_FLOAT(GrainJitter)
+		PROP_FLOAT(DepthOfFieldScale)
+		PROP_FLOAT(DepthOfFieldMaxBokehSize)
+		PROP_FLOAT(FilmSlope)
+		PROP_FLOAT(AmbientCubemapIntensity)
+		PROP_FLOAT(DepthOfFieldFocalDistance)
+		PROP_FLOAT(DepthOfFieldDepthBlurRadius)
+		PROP_FLOAT(SceneFringeIntensity)
+		PROP_FLOAT(ChromaticAberrationStartOffset)
+		PROP_FLOAT(VignetteIntensity)
+		PROP_FLOAT(FilmToe)
+		PROP_FLOAT(BloomSizeScale)
+		PROP_FLOAT(AutoExposureBias)
+		PROP_FLOAT(AmbientOcclusionIntensity)
+		PROP_FLOAT(AmbientOcclusionRadius)
+		PROP_FLOAT(IndirectLightingIntensity)
+		PROP_FLOAT(ScreenSpaceReflectionIntensity)
+		PROP_FLOAT(ScreenSpaceReflectionQuality)
+		PROP_FLOAT(BloomIntensity)
+		PROP_FLOAT(AutoExposureMinBrightness)
+		PROP_FLOAT(AutoExposureMaxBrightness)
+		PROP_FLOAT(AutoExposureSpeedUp)
+		PROP_FLOAT(AutoExposureSpeedDown)
+		PROP_FLOAT(LensFlareIntensity)
+		PROP_FLOAT(LensFlareBokehSize)
+		PROP_FLOAT(BloomIntensity)
+		PROP_FLOAT(AutoExposureMinBrightness)
+		PROP_FLOAT(AutoExposureMaxBrightness)
+		PROP_FLOAT(AutoExposureSpeedUp)
+		PROP_FLOAT(AutoExposureSpeedDown)
+		PROP_FLOAT(LensFlareIntensity)
+		PROP_FLOAT(LensFlareBokehSize)
+		PROP_FLOAT(DepthOfFieldFstop)
+		PROP_FLOAT(DepthOfFieldDepthBlurAmount)
 		END_PROP_TABLE
 
 		friend FArchive& operator<<(FArchive& Ar, FPostProcessSettings& Settings)
 	{
 		return Ar
 			<< Settings.LensFlareBokehShape
+			<< Settings.AmbientCubemap
 			<< Settings.ColorSaturation
 			<< Settings.ColorContrast
 			<< Settings.ColorGamma
@@ -650,24 +713,12 @@ struct FPostProcessSettings
 			<< Settings.ColorGammaHighlights
 			<< Settings.ColorGainHighlights
 			<< Settings.ColorOffsetHighlights
-			<< Settings.SceneFringeIntensity
-			<< Settings.ChromaticAberrationStartOffset
-			<< Settings.VignetteIntensity
-			<< Settings.FilmToe
-			<< Settings.BloomSizeScale
-			<< Settings.AutoExposureBias
-			<< Settings.AmbientOcclusionIntensity
-			<< Settings.AmbientOcclusionRadius
-			<< Settings.IndirectLightingIntensity
-			<< Settings.ScreenSpaceReflectionIntensity
-			<< Settings.ScreenSpaceReflectionQuality
-			<< Settings.BloomIntensity
-			<< Settings.AutoExposureMinBrightness
-			<< Settings.AutoExposureMaxBrightness
-			<< Settings.AutoExposureSpeedUp
-			<< Settings.AutoExposureSpeedDown
-			<< Settings.LensFlareIntensity
-			<< Settings.LensFlareBokehSize
+			<< Settings.bOverride_DepthOfFieldFstop
+			<< Settings.bOverride_DepthOfFieldFocalDistance
+			<< Settings.bOverride_DepthOfFieldDepthBlurRadius
+			<< Settings.bOverride_DepthOfFieldDepthBlurAmount
+			<< Settings.bOverride_DepthOfFieldMethod
+			<< Settings.bOverride_MobileHQGaussian
 			<< Settings.bOverride_IndirectLightingIntensity
 			<< Settings.bOverride_ScreenSpaceReflectionIntensity
 			<< Settings.bOverride_ScreenSpaceReflectionQuality
@@ -787,7 +838,49 @@ struct FPostProcessSettings
 			<< Settings.bOverride_AmbientOcclusionMipScale
 			<< Settings.bOverride_AmbientOcclusionMipThreshold
 			<< Settings.bOverride_AmbientOcclusionTemporalBlendWeight
-			<< Settings.bOverride_AnamorphicAspectRatio;
+			<< Settings.bOverride_AnamorphicAspectRatio
+			<< Settings.bOverride_AutoExposureCalibrationConstant
+			<< Settings.bOverride_DepthOfFieldFocalRegion
+			<< Settings.bOverride_DepthOfFieldNearTransitionRegion
+			<< Settings.bOverride_DepthOfFieldFarTransitionRegion
+			<< Settings.bOverride_DepthOfFieldScale
+			<< Settings.bOverride_DepthOfFieldMaxBokehSize
+			<< Settings.bOverride_DepthOfFieldNearBlurSize
+			<< Settings.bOverride_DepthOfFieldFarBlurSize
+			<< Settings.bOverride_MotionBlurAmount
+			<< Settings.bOverride_MotionBlurMax
+			<< Settings.bOverride_MotionBlurPerObjectSize
+			<< Settings.HistogramLogMin
+			<< Settings.HistogramLogMax
+			<< Settings.AutoExposureCalibrationConstant
+			<< Settings.LensFlareThreshold
+			<< Settings.GrainJitter
+			<< Settings.DepthOfFieldScale
+			<< Settings.DepthOfFieldMaxBokehSize
+			<< Settings.SceneFringeIntensity
+			<< Settings.ChromaticAberrationStartOffset
+			<< Settings.VignetteIntensity
+			<< Settings.FilmToe
+			<< Settings.BloomSizeScale
+			<< Settings.AutoExposureBias
+			<< Settings.AmbientOcclusionIntensity
+			<< Settings.AmbientOcclusionRadius
+			<< Settings.IndirectLightingIntensity
+			<< Settings.ScreenSpaceReflectionIntensity
+			<< Settings.ScreenSpaceReflectionQuality
+			<< Settings.BloomIntensity
+			<< Settings.AutoExposureMinBrightness
+			<< Settings.AutoExposureMaxBrightness
+			<< Settings.AutoExposureSpeedUp
+			<< Settings.AutoExposureSpeedDown
+			<< Settings.LensFlareIntensity
+			<< Settings.LensFlareBokehSize
+			<< Settings.FilmSlope
+			<< Settings.AmbientCubemapIntensity
+			<< Settings.DepthOfFieldFocalDistance
+			<< Settings.DepthOfFieldDepthBlurRadius
+			<< Settings.DepthOfFieldDepthBlurAmount
+			<< Settings.DepthOfFieldFstop;
 	}
 };
 

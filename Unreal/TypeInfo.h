@@ -246,6 +246,7 @@ namespace PropType
 #define PROP_OBJ(Field)			_PROP_BASE(Field, PropType::UObject, UObject*)
 // Structure types; note: structure names corresponds to F<StrucName> C++ struc
 #define PROP_VECTOR(Field)		_PROP_BASE(Field, PropType::FVector, FVector)
+#define PROP_VECTOR4(Field)		_PROP_BASE(Field, PropType::FVector4, FVector4) //DHK
 #define PROP_ROTATOR(Field)		_PROP_BASE(Field, PropType::FRotator, FRotator)
 #define PROP_COLOR(Field)		_PROP_BASE(Field, PropType::FColor, FColor)
 
