@@ -49,8 +49,8 @@ _ENUM(ESpawnActorCollisionHandlingMethod)
 class UBrush : public UObject
 {
 	DECLARE_CLASS(UBrush, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UBrush::Serialize);
@@ -63,8 +63,8 @@ public:
 class UBrushComponent : public UObject
 {
 	DECLARE_CLASS(UBrushComponent, UObject);
-public:
 
+public:
 	FVector RelativeLocation;
 	FRotator RelativeRotation;
 	FVector RelativeScale3D;
@@ -75,7 +75,8 @@ public:
 		PROP_VECTOR(RelativeScale3D)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UBrushComponent::Serialize);
 		Super::Serialize(Ar);
@@ -87,8 +88,8 @@ public:
 class UAkAudioBank : public UObject
 {
 	DECLARE_CLASS(UAkAudioBank, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UAkAudioBank::Serialize);
@@ -101,15 +102,16 @@ public:
 class UAkAudioEvent : public UObject
 {
 	DECLARE_CLASS(UAkAudioEvent, UObject);
-public:
 
+public:
 	UAkAudioBank* RequiredBank;
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(RequiredBank)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UAkAudioEvent::Serialize);
 		Super::Serialize(Ar);
@@ -121,8 +123,8 @@ public:
 class UAkComponent : public UObject
 {
 	DECLARE_CLASS(UAkComponent, UObject);
-public:
 
+public:
 	FVector RelativeLocation;
 	FRotator RelativeRotation;
 	FVector RelativeScale3D;
@@ -135,7 +137,8 @@ public:
 		PROP_OBJ(AkAudioEvent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UAkComponent::Serialize);
 		Super::Serialize(Ar);
@@ -147,15 +150,16 @@ public:
 class UAkAmbientSound : public UObject
 {
 	DECLARE_CLASS(UAkAmbientSound, UObject);
-public:
 
+public:
 	UAkComponent* AkComponent;
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(AkComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UAkAmbientSound::Serialize);
 		Super::Serialize(Ar);
@@ -167,15 +171,16 @@ public:
 class UAudioVolume : public UObject
 {
 	DECLARE_CLASS(UAudioVolume, UObject);
-public:
 
+public:
 	UBrushComponent* BrushComponent;
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(BrushComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UAudioVolume::Serialize);
 		Super::Serialize(Ar);
@@ -187,8 +192,8 @@ public:
 class USoundCue : public UObject
 {
 	DECLARE_CLASS(USoundCue, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USoundCue::Serialize);
@@ -201,8 +206,8 @@ public:
 class UAudioComponent : public UObject
 {
 	DECLARE_CLASS(UAudioComponent, UObject);
-public:
 
+public:
 	USoundCue* Sound;
 	FVector RelativeLocation;
 	FRotator RelativeRotation;
@@ -215,7 +220,8 @@ public:
 		PROP_VECTOR(RelativeScale3D)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UAudioComponent::Serialize);
 		Super::Serialize(Ar);
@@ -228,8 +234,8 @@ public:
 class UBodySetup : public UObject
 {
 	DECLARE_CLASS(UBodySetup, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UBodySetup::Serialize);
@@ -242,8 +248,8 @@ public:
 class UModel : public UObject
 {
 	DECLARE_CLASS(UModel, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UModel::Serialize);
@@ -257,8 +263,8 @@ public:
 class ULightmassImportanceVolume : public UObject
 {
 	DECLARE_CLASS(ULightmassImportanceVolume, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(ULightmassImportanceVolume::Serialize);
@@ -895,7 +901,8 @@ public:
 		PROP_INT(PolyFlags)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UPostProcessVolume::Serialize);
 		Super::Serialize(Ar);
@@ -907,8 +914,8 @@ public:
 class UPrecomputedVisibilityVolume : public UObject
 {
 	DECLARE_CLASS(UPrecomputedVisibilityVolume, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UPrecomputedVisibilityVolume::Serialize);
@@ -921,6 +928,7 @@ public:
 class UEmitter : public UObject
 {
 	DECLARE_CLASS(UEmitter, UObject);
+
 public:
 	virtual void Serialize(FArchive& Ar)
 	{
@@ -934,6 +942,7 @@ public:
 class UParticleSystem : public UObject
 {
 	DECLARE_CLASS(UParticleSystem, UObject);
+
 public:
 	virtual void Serialize(FArchive& Ar)
 	{
@@ -947,6 +956,7 @@ public:
 class UParticleSystemComponent : public UObject
 {
 	DECLARE_CLASS(UParticleSystemComponent, UObject);
+
 public:
 
 	UParticleSystem* Template;
@@ -959,7 +969,8 @@ public:
 		PROP_VECTOR(RelativeLocation)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UParticleSystemComponent::Serialize);
 		Super::Serialize(Ar);
@@ -971,8 +982,8 @@ public:
 class UNiagaraComponent : public UObject
 {
 	DECLARE_CLASS(UNiagaraComponent, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UNiagaraComponent::Serialize);
@@ -985,8 +996,8 @@ public:
 class UDecalComponent : public UObject
 {
 	DECLARE_CLASS(UDecalComponent, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UDecalComponent::Serialize);
@@ -999,8 +1010,8 @@ public:
 class UNiagaraActor : public UObject
 {
 	DECLARE_CLASS(UNiagaraActor, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UNiagaraActor::Serialize);
@@ -1024,7 +1035,8 @@ public:
 		PROP_VECTOR(RelativeScale3D)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USceneComponent::Serialize);
 		Super::Serialize(Ar);
@@ -1056,7 +1068,8 @@ public:
 		PROP_VECTOR(RelativeScale3D)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USkeletalMeshComponent::Serialize);
 		Super::Serialize(Ar);
@@ -1068,8 +1081,8 @@ public:
 class USkeletalMeshActor : public UObject
 {
 	DECLARE_CLASS(USkeletalMeshActor, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USkeletalMeshActor::Serialize);
@@ -1082,8 +1095,8 @@ public:
 class UStaticMeshComponent : public UObject
 {
 	DECLARE_CLASS(UStaticMeshComponent, UObject);
-public:
 
+public:
 	UStaticMesh4* StaticMesh;
 	FVector RelativeLocation;
 	FRotator RelativeRotation;
@@ -1096,7 +1109,8 @@ public:
 		PROP_VECTOR(RelativeScale3D)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UStaticMeshComponent::Serialize);
 		//Ar.Seek(Ar.Tell() + 0x04);
@@ -1117,7 +1131,8 @@ public:
 		PROP_OBJ(StaticMeshComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UStaticMeshActor::Serialize);
 		Super::Serialize(Ar);
@@ -1128,8 +1143,8 @@ public:
 class UWorldSettings : public UObject
 {
 	DECLARE_CLASS(UWorldSettings, UObject);
-public:
 
+public:
 	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UWorldSettings::Serialize);
@@ -1142,15 +1157,16 @@ public:
 class ULevel : public UObject
 {
 	DECLARE_CLASS(ULevel, UObject);
-public:
 
+public:
 	UWorldSettings* WorldSettings;
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(WorldSettings)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(ULevel::Serialize);
 		Super::Serialize(Ar);
@@ -1174,7 +1190,8 @@ public:
 		PROP_VECTOR(RelativeLocation)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USphereReflectionCaptureComponent::Serialize);
 		Super::Serialize(Ar);
@@ -1186,8 +1203,8 @@ public:
 class UPointLightComponent : public UObject
 {
 	DECLARE_CLASS(UPointLightComponent, UObject);
-public:
 
+public:
 	FVector RelativeLocation;
 	FRotator RelativeRotation;
 	FRotator RelativeScale3D;
@@ -1212,7 +1229,8 @@ public:
 		PROP_FLOAT(VolumetricScatteringIntensity)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UPointLightComponent::Serialize);
 		Super::Serialize(Ar);
@@ -1224,15 +1242,16 @@ public:
 class UPointLight : public UObject
 {
 	DECLARE_CLASS(UPointLight, UObject);
-public:
 
+public:
 	UPointLightComponent* PointLightComponent;
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(PointLightComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(UPointLight::Serialize);
 		Super::Serialize(Ar);
@@ -1244,8 +1263,8 @@ public:
 class USpotLightComponent : public UObject
 {
 	DECLARE_CLASS(USpotLightComponent, UObject);
-public:
 
+public:
 	FVector RelativeLocation;
 	FRotator RelativeRotation;
 	FVector RelativeScale3D;
@@ -1294,7 +1313,8 @@ public:
 		PROP_FLOAT(ShadowBias)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USpotLightComponent::Serialize);
 		Super::Serialize(Ar);
@@ -1306,15 +1326,16 @@ public:
 class USpotLight : public UObject
 {
 	DECLARE_CLASS(USpotLight, UObject);
-public:
 
+public:
 	USpotLightComponent* SpotLightComponent;
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(SpotLightComponent)
 		END_PROP_TABLE
 
-		virtual void Serialize(FArchive& Ar)
+public:
+	virtual void Serialize(FArchive& Ar)
 	{
 		guard(USpotLight::Serialize);
 		Super::Serialize(Ar);

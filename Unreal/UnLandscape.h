@@ -6,6 +6,7 @@
 class USceneComponent : public UObject
 {
 	DECLARE_CLASS(USceneComponent, UObject);
+
 public:
 	FVector RelativeLocation;
 	FRotator RelativeRotation;
@@ -30,6 +31,7 @@ public:
 class UPhysicalMaterial : public UObject
 {
 	DECLARE_CLASS(UPhysicalMaterial, UObject);
+
 public:
 	virtual void Serialize(FArchive& Ar)
 	{
@@ -43,6 +45,7 @@ public:
 class ULandscapeGizmoActiveActor : public UObject
 {
 	DECLARE_CLASS(ULandscapeGizmoActiveActor, UObject);
+
 public:
 	USceneComponent* RootComponent;
 
@@ -63,6 +66,7 @@ public:
 class ULandscapeLayerInfoObject : public UObject
 {
 	DECLARE_CLASS(ULandscapeLayerInfoObject, UObject);
+
 public:
 	FName LayerName;
 	FLinearColor LayerUsageDebugColor;
@@ -106,6 +110,7 @@ struct FWeightmapLayerAllocationInfo
 class ULandscapeHeightfieldCollisionComponent : public UObject
 {
 	DECLARE_CLASS(ULandscapeHeightfieldCollisionComponent, UObject);
+
 public:
 	TArray<ULandscapeLayerInfoObject*> ComponentLayerInfos;
 	int32 SectionBaseX;
@@ -146,6 +151,7 @@ public:
 class ULandscapeComponent : public UObject
 {
 	DECLARE_CLASS(ULandscapeComponent, UObject);
+
 public:
 	int32 ComponentSizeQuads;
 	int32 SubsectionSizeQuads;
@@ -206,6 +212,7 @@ public:
 class ULandscape : public UObject
 {
 	DECLARE_CLASS(ULandscape, UObject);
+
 public:
 	FGuid LandscapeGuid;
 	float LOD0ScreenSize;
@@ -281,6 +288,7 @@ struct FStreamingTextureBuildInfo
 class UFoliageInstancedStaticMeshComponent : public UObject
 {
 	DECLARE_CLASS(UFoliageInstancedStaticMeshComponent, UObject);
+
 public:
 	TArray<int32> SortedInstances;
 	int32 NumBuiltInstances;
@@ -343,6 +351,7 @@ public:
 class UFoliageType_InstancedStaticMesh : public UObject
 {
 	DECLARE_CLASS(UFoliageType_InstancedStaticMesh, UObject);
+
 public:
 	UStaticMesh* Mesh;
 	FGuid UpdateGuid;
@@ -383,6 +392,7 @@ public:
 class UInstancedFoliageActor : public UObject
 {
 	DECLARE_CLASS(UInstancedFoliageActor, UObject);
+
 public:
 	USceneComponent* RootComponent;
 
