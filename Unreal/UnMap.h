@@ -45,28 +45,6 @@ _ENUM(ESpawnActorCollisionHandlingMethod)
 //end
 
 //TODO scene=brush component
-class USceneComponent : public UObject
-{
-	DECLARE_CLASS(USceneComponent, UObject);
-public:
-	FVector RelativeLocation;
-	FRotator RelativeRotation;
-	FVector RelativeScale3D;
-
-	BEGIN_PROP_TABLE
-		PROP_VECTOR(RelativeLocation)
-		PROP_ROTATOR(RelativeRotation)
-		PROP_VECTOR(RelativeScale3D)
-		END_PROP_TABLE
-
-		virtual void Serialize(FArchive& Ar)
-	{
-		guard(USceneComponent::Serialize);
-		Super::Serialize(Ar);
-		DROP_REMAINING_DATA(Ar);
-		unguard;
-	}
-};
 
 class UBrush : public UObject
 {
@@ -899,7 +877,7 @@ public:
 	bool bEnabled;
 	bool bUnbound;
 	ESpawnActorCollisionHandlingMethod SpawnCollisionHandlingMethod;
-	USceneComponent* RootComponent;
+	UBrushComponent* RootComponent;//same as SceneComponent in Landscape.h
 	int32 PolyFlags;
 
 	BEGIN_PROP_TABLE
@@ -1055,62 +1033,11 @@ public:
 	}
 };*/
 
-class UPhysicalMaterial : public UObject
-{
-	DECLARE_CLASS(UPhysicalMaterial, UObject);
-public:
-	virtual void Serialize(FArchive& Ar)
-	{
-		guard(UPhysicalMaterial::Serialize);
-		Super::Serialize(Ar);
-		DROP_REMAINING_DATA(Ar);
-		unguard;
-	}
-};
-
 //TODO
 /*
 	FBodyInstance
 	RuntimeFloatCurve
 */
-
-struct FFloatInterval
-{
-	DECLARE_STRUCT(FFloatInterval)
-
-	float Min;
-	float Max;
-
-	BEGIN_PROP_TABLE
-		PROP_FLOAT(Min)
-		PROP_FLOAT(Max)
-		END_PROP_TABLE
-
-		friend FArchive& operator<<(FArchive& Ar, FFloatInterval& Interval)
-	{
-		return Ar << Interval.Min << Interval.Max;
-	}
-};
-
-struct FStreamingTextureBuildInfo
-{
-	DECLARE_STRUCT(FStreamingTextureBuildInfo)
-
-	int32 PackedRelativeBox;
-	int32 TextureLevelIndex;
-	float TexelFactor;
-
-	BEGIN_PROP_TABLE
-		PROP_INT(PackedRelativeBox)
-		PROP_INT(TextureLevelIndex)
-		PROP_FLOAT(TexelFactor)
-		END_PROP_TABLE
-
-		friend FArchive& operator<<(FArchive& Ar, FStreamingTextureBuildInfo& Info)
-	{
-		return Ar << Info.PackedRelativeBox << Info.TextureLevelIndex << Info.TexelFactor;
-	}
-};
 
 class USkeletalMeshComponent : public UObject
 {
@@ -1402,7 +1329,6 @@ public:
 */
 
 #define REGISTER_UNMAP_CLASSES4 \
- REGISTER_CLASS(USceneComponent) \
  REGISTER_CLASS(UBrush) \
  REGISTER_CLASS(UBrushComponent) \
  REGISTER_CLASS(UAkAudioBank) \
@@ -1424,8 +1350,6 @@ public:
  REGISTER_CLASS(UNiagaraComponent) \
  REGISTER_CLASS(UNiagaraActor) \
  REGISTER_CLASS(UDecalComponent) \
- REGISTER_CLASS(UPhysicalMaterial) \
- REGISTER_CLASS(FFloatInterval) \
  REGISTER_CLASS(USkeletalMeshComponent) \
  REGISTER_CLASS(USkeletalMeshActor) \
  REGISTER_CLASS(UStaticMeshComponent) \
@@ -1436,8 +1360,7 @@ public:
  REGISTER_CLASS(UPointLightComponent) \
  REGISTER_CLASS(UPointLight) \
  REGISTER_CLASS(USpotLightComponent) \
- REGISTER_CLASS(USpotLight) \
- REGISTER_CLASS(FStreamingTextureBuildInfo)
+ REGISTER_CLASS(USpotLight)
 
 #define REGISTER_LIGHT_ENUMS_U4 \
 	REGISTER_ENUM(ELightUnits) \

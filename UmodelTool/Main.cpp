@@ -22,6 +22,7 @@
 #include "UnSound.h"
 #include "UnThirdParty.h"
 #include "UnMap.h"
+#include "UnLandscape.h"
 
 #include "Exporters/Exporters.h"
 
@@ -142,6 +143,7 @@ static void RegisterUnrealClasses4()
 		REGISTER_MATERIAL_CLASSES_U4
 		REGISTER_EXPRESSION_CLASSES
 		REGISTER_UNMAP_CLASSES4 //DHK Add
+		REGISTER_LANDSCAPE_CLASSES //DHK Add
 		END_CLASS_TABLE
 		REGISTER_LIGHT_ENUMS_U4 //DHK Add
 		REGISTER_MATERIAL_ENUMS_U4
