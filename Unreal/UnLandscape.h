@@ -101,7 +101,8 @@ struct FWeightmapLayerAllocationInfo
 		PROP_BYTE(WeightmapTextureChannel)
 		END_PROP_TABLE
 
-		friend FArchive& operator<<(FArchive& Ar, FWeightmapLayerAllocationInfo& Info)
+public:
+	friend FArchive& operator<<(FArchive& Ar, FWeightmapLayerAllocationInfo& Info)
 	{
 		return Ar << Info.LayerInfo << Info.WeightmapTextureIndex << Info.WeightmapTextureChannel;
 	}
@@ -259,7 +260,8 @@ struct FFloatInterval
 		PROP_FLOAT(Max)
 		END_PROP_TABLE
 
-		friend FArchive& operator<<(FArchive& Ar, FFloatInterval& Interval)
+public:
+	friend FArchive& operator<<(FArchive& Ar, FFloatInterval& Interval)
 	{
 		return Ar << Interval.Min << Interval.Max;
 	}
@@ -279,7 +281,8 @@ struct FStreamingTextureBuildInfo
 		PROP_FLOAT(TexelFactor)
 		END_PROP_TABLE
 
-		friend FArchive& operator<<(FArchive& Ar, FStreamingTextureBuildInfo& Info)
+public:
+	friend FArchive& operator<<(FArchive& Ar, FStreamingTextureBuildInfo& Info)
 	{
 		return Ar << Info.PackedRelativeBox << Info.TextureLevelIndex << Info.TexelFactor;
 	}

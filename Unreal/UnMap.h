@@ -672,7 +672,8 @@ struct FPostProcessSettings
 		PROP_FLOAT(DepthOfFieldDepthBlurAmount)
 		END_PROP_TABLE
 
-		friend FArchive& operator<<(FArchive& Ar, FPostProcessSettings& Settings)
+public:
+	friend FArchive& operator<<(FArchive& Ar, FPostProcessSettings& Settings)
 	{
 		return Ar
 			<< Settings.LensFlareBokehShape
