@@ -1,4 +1,4 @@
-//DHK
+//DHK_BEGIN
 
 #ifndef __UNMAP_H__
 #define __UNMAP_H__
@@ -1385,7 +1385,7 @@ public:
  REGISTER_CLASS(USpotLightComponent) \
  REGISTER_CLASS(USpotLight)
 
-#define REGISTER_LIGHT_ENUMS_U4 \
+#define REGISTER_MISC_ENUMS_U4 \
 	REGISTER_ENUM(ELightUnits) \
 	REGISTER_ENUM(ESpawnActorCollisionHandlingMethod)
 
@@ -1393,3 +1393,5 @@ public:
 
 
 #endif // __UNMAP_H__
+
+//DHK_END

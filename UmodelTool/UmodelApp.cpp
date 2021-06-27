@@ -34,6 +34,9 @@
 #include "UE4AesKeyDialog.h"
 #include "PackageScanDialog.h"
 #include "SettingsDialog.h"
+#include "../Unreal/UnLandscape.h"
+
+//#include "../libs/CImg/CImg.h"
 #endif
 
 
@@ -283,26 +286,53 @@ bool CUmodelApp::ShowPackageUI()
 			appPrintf("Operation interrupted by user.\n");
 		}
 
-		//DHK
+		/*
+		* Adding mode for context menu Export of Heightmap/weightmap(s)
+		*/
+		//DHK_BEGIN
 		if (mode == UIPackageDialog::TEXTURE)
 		{
 			if (Packages.Num() != 1)
 			{
-				appPrintf("One package selected please \n");
+				appPrintf("Only qty 1 .umap package selected please \n");
 			}
 			else
 			{
 				FString sExt = FString(Packages[0]->FileInfo->GetExtension());
 				if (sExt != "umap")
 				{
-					appPrintf("Not a umap \n");
+					appPrintf("Not a umap, canceling... \n");
 				}
 				else
 				{
-					appPrintf("Done \n");
+					appPrintf("Starting exporting map textures\n");
+					
+					TArray<const ULandscapeComponent*> LandscapeComponents;
+					int nWeightmaps = 0;
+
+					//X/Y for the size of the destination textures
+					int nX = 0;
+					int nY = 0;
+					
+					for (int i = 0; i < UObject::GObjObjects.Num(); i++)
+					{
+						const UObject* obj = UObject::GObjObjects[i];
+						if (obj->IsA("LandscapeComponent"))
+						{
+							const ULandscapeComponent* _landscapeComponent = (ULandscapeComponent*)obj;
+							nWeightmaps = max(nWeightmaps, _landscapeComponent->WeightmapTextures.Num());//Some landscapes have more than 1.
+							nX = max(nX, (_landscapeComponent->SectionBaseX + _landscapeComponent->ComponentSizeQuads) * _landscapeComponent->NumSubsections);
+							nY = max(nY, (_landscapeComponent->SectionBaseY + _landscapeComponent->ComponentSizeQuads) * _landscapeComponent->NumSubsections);
+
+							LandscapeComponents.Add(_landscapeComponent);
+						}
+					}
+
+					appPrintf("Done exporting map textures\n");
 				}
 			}
 		}
+		//DHK_END
 
 		progress.CloseDialog();
 

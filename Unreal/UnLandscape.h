@@ -1,5 +1,8 @@
+//DHK_BEGIN
+
 #ifndef __UNLANDSCAPE_H__
 #define __UNLANDSCAPE_H__
+#include "UnrealMaterial/UnMaterial3.h"
 
 #if UNREAL4
 
@@ -434,3 +437,5 @@ public:
 /*REGISTER_CLASS(UFoliageInstancedStaticMeshComponent) \
  REGISTER_CLASS(UFoliageType_InstancedStaticMesh) \
  REGISTER_CLASS(UInstancedFoliageActor)*/
+
+//DHK_END

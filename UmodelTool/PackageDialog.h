@@ -16,7 +16,7 @@ public:
 		APPEND,
 		EXPORT,
 		CANCEL,
-		TEXTURE,
+		TEXTURE,//DHK Adding result for context menu Export of Heightmap/weightmap(s)
 	};
 
 	EResult Show();

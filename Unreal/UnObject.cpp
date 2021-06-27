@@ -350,7 +350,7 @@ static const struct
 #endif
 #if UNREAL4
 	F(AttributeProperty),
-	F(LazyObjectProperty),//DHK
+	F(LazyObjectProperty),//DHK Adding LazyObjectProperty as a FGuid type for Landscape Component
 	F(SoftObjectProperty),
 	F(AssetObjectProperty),
 	F(AssetSubclassProperty),
@@ -1142,7 +1142,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 		PROP_DBG("%s", *PROP(FName));
 		break;
 
-	//DHK
+	//DHK Adding LazyObjectProperty as a FGuid type for Landscape Component
 	case NAME_LazyObjectProperty:
 		Ar << PROP(FGuid);
 		PROP_DBG("%s", "(guid)");
@@ -2020,7 +2020,10 @@ BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FColor)
 	PROP_BYTE(A)
 END_PROP_TABLE_EXTERNAL
 
-//DHK
+/*
+* Adding FVector4 and FGuid properties to accommodate Landscape Components properties
+*/
+//DHK_BEGIN
 BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FVector4)
 PROP_BYTE(X)
 PROP_BYTE(Y)
@@ -2034,7 +2037,7 @@ PROP_BYTE(B)
 PROP_BYTE(C)
 PROP_BYTE(D)
 END_PROP_TABLE_EXTERNAL
-//end DHK
+//DHK_END
 
 #if UNREAL3
 
@@ -2079,8 +2082,13 @@ void RegisterCoreClasses()
 		REGISTER_CLASS_EXTERNAL(FQuat)
 		REGISTER_CLASS_EXTERNAL(FRotator)
 		REGISTER_CLASS_EXTERNAL(FColor)
-		REGISTER_CLASS_EXTERNAL(FVector4)//DHK
-		REGISTER_CLASS_EXTERNAL(FGuid)//DHK
+		/*
+		* Adding FVector4 and FGuid properties to accommodate Landscape Components properties
+		*/
+		//DHK_BEGIN
+		REGISTER_CLASS_EXTERNAL(FVector4)
+		REGISTER_CLASS_EXTERNAL(FGuid)
+		//DHK_END
 	#if UNREAL3
 		REGISTER_CLASS_EXTERNAL(FLinearColor)
 		REGISTER_CLASS_EXTERNAL(FBoxSphereBounds)

@@ -371,9 +371,14 @@ void UIPackageDialog::InitUI()
 		+ NewMenuSeparator()
 		+ NewMenuItem("Save packages")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::SavePackages, this))
+		/*
+		* Adding context menu for Export of Heightmap/weightmap(s)
+		*/
+		//DHK_BEGIN
 		+ NewMenuSeparator()
 		+ NewMenuItem("Export Heightmap/Weightmap(s)")
 		.SetCallback(BIND_LAMBDA([this]() { CloseDialog(TEXTURE); })) 
+		//DHK_END
 		+ NewMenuSeparator()
 		+ NewMenuItem("Copy package path")
 		.SetCallback(BIND_MEMBER(&UIPackageDialog::CopyPackagePaths, this))
