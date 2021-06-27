@@ -16,6 +16,7 @@ public:
 		APPEND,
 		EXPORT,
 		CANCEL,
+		TEXTURE,
 	};
 
 	EResult Show();

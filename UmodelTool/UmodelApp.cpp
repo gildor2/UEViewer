@@ -283,6 +283,27 @@ bool CUmodelApp::ShowPackageUI()
 			appPrintf("Operation interrupted by user.\n");
 		}
 
+		//DHK
+		if (mode == UIPackageDialog::TEXTURE)
+		{
+			if (Packages.Num() != 1)
+			{
+				appPrintf("One package selected please \n");
+			}
+			else
+			{
+				FString sExt = FString(Packages[0]->FileInfo->GetExtension());
+				if (sExt != "umap")
+				{
+					appPrintf("Not a umap \n");
+				}
+				else
+				{
+					appPrintf("Done \n");
+				}
+			}
+		}
+
 		progress.CloseDialog();
 
 		// Viewer was released if we're releasing package which is currently used for viewing.

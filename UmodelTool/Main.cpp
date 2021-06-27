@@ -1084,7 +1084,7 @@ int main(int argc, const char** argv)
 
 		//DHK
 		//if using wildcard for maps, enable these
-		FString sPattern = "/Game/Levels/Fortress/";
+		FString sPattern = "/Game/Levels/Zeffo/Venator/";
 		const char* c = "*.umap";
 
 		//if NOT using wildcard for maps, enable these

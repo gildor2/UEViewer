@@ -350,6 +350,7 @@ static const struct
 #endif
 #if UNREAL4
 	F(AttributeProperty),
+	F(LazyObjectProperty),//DHK
 	F(SoftObjectProperty),
 	F(AssetObjectProperty),
 	F(AssetSubclassProperty),
@@ -1139,6 +1140,12 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 		CHECK_TYPE(PropType::FName);
 		Ar << PROP(FName);
 		PROP_DBG("%s", *PROP(FName));
+		break;
+
+	//DHK
+	case NAME_LazyObjectProperty:
+		Ar << PROP(FGuid);
+		PROP_DBG("%s", "(guid)");
 		break;
 
 	case NAME_ClassProperty:
@@ -2013,6 +2020,22 @@ BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FColor)
 	PROP_BYTE(A)
 END_PROP_TABLE_EXTERNAL
 
+//DHK
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FVector4)
+PROP_BYTE(X)
+PROP_BYTE(Y)
+PROP_BYTE(Z)
+PROP_BYTE(W)
+END_PROP_TABLE_EXTERNAL
+
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FGuid)
+PROP_BYTE(A)
+PROP_BYTE(B)
+PROP_BYTE(C)
+PROP_BYTE(D)
+END_PROP_TABLE_EXTERNAL
+//end DHK
+
 #if UNREAL3
 
 BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FLinearColor)
@@ -2056,6 +2079,8 @@ void RegisterCoreClasses()
 		REGISTER_CLASS_EXTERNAL(FQuat)
 		REGISTER_CLASS_EXTERNAL(FRotator)
 		REGISTER_CLASS_EXTERNAL(FColor)
+		REGISTER_CLASS_EXTERNAL(FVector4)//DHK
+		REGISTER_CLASS_EXTERNAL(FGuid)//DHK
 	#if UNREAL3
 		REGISTER_CLASS_EXTERNAL(FLinearColor)
 		REGISTER_CLASS_EXTERNAL(FBoxSphereBounds)

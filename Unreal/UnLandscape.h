@@ -174,6 +174,7 @@ public:
 	FGuid MapBuildDataId;
 	FGuid StateId;
 	int32 VisibilityId;
+	int32 CollisionMipLevel;
 	UObject* AttachParent;
 
 	BEGIN_PROP_TABLE
@@ -197,6 +198,7 @@ public:
 		PROP_STRUC(MapBuildDataId, FGuid)
 		PROP_STRUC(StateId, FGuid)
 		PROP_INT(VisibilityId)
+		PROP_INT(CollisionMipLevel)
 		PROP_OBJ(AttachParent)
 		END_PROP_TABLE
 
@@ -288,7 +290,7 @@ public:
 	}
 };
 
-class UFoliageInstancedStaticMeshComponent : public UObject
+/*class UFoliageInstancedStaticMeshComponent : public UObject
 {
 	DECLARE_CLASS(UFoliageInstancedStaticMeshComponent, UObject);
 
@@ -319,7 +321,7 @@ public:
 	BEGIN_PROP_TABLE
 		PROP_ARRAY(SortedInstances, PropType::Int)
 		PROP_INT(NumBuiltInstances)
-		PROP_STRUC(BuiltInstanceBounds, FBox)
+		PROP_STRUC(BuiltInstanceBounds, Box)
 		PROP_STRUC(CacheMeshExtendedBounds, FBoxSphereBounds)
 		PROP_INT(InstanceCountToRender)
 		PROP_INT(InstancingRandomSeed)
@@ -370,7 +372,7 @@ public:
 
 	BEGIN_PROP_TABLE
 		PROP_OBJ(Mesh)
-		PROP_STRUC(UpdateGuid, FGuid)
+		PROP_STRUC(UpdateGuid, FGuid)//FGuid
 		PROP_FLOAT(Density)
 		PROP_STRUC(ScaleX, FFloatInterval)
 		PROP_STRUC(ZOffset, FFloatInterval)
@@ -411,7 +413,7 @@ public:
 		DROP_REMAINING_DATA(Ar);
 		unguard;
 	}
-};
+};*/
 
 #define REGISTER_LANDSCAPE_CLASSES \
  REGISTER_CLASS(USceneComponent) \
@@ -424,11 +426,11 @@ public:
  REGISTER_CLASS(ULandscapeComponent) \
  REGISTER_CLASS(ULandscape) \
  REGISTER_CLASS(FFloatInterval) \
- REGISTER_CLASS(FStreamingTextureBuildInfo) \
- REGISTER_CLASS(UFoliageInstancedStaticMeshComponent) \
- REGISTER_CLASS(UFoliageType_InstancedStaticMesh) \
- REGISTER_CLASS(UInstancedFoliageActor)
-
+ REGISTER_CLASS(FStreamingTextureBuildInfo)
 #endif // UNREAL4
 
 #endif // __UNLANDSCAPE_H__
+
+/*REGISTER_CLASS(UFoliageInstancedStaticMeshComponent) \
+ REGISTER_CLASS(UFoliageType_InstancedStaticMesh) \
+ REGISTER_CLASS(UInstancedFoliageActor)*/
