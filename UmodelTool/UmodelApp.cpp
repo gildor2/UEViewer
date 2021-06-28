@@ -309,10 +309,11 @@ bool CUmodelApp::ShowPackageUI()
 					
 					TArray<const ULandscapeComponent*> LandscapeComponents;
 					int nWeightmaps = 0;
+					int nNumSubsections = 0;
 
 					//X/Y for the size of the destination textures
-					int nX = 0;
-					int nY = 0;
+					int MaxWidth = 0;
+					int MaxHeight = 0;
 					
 					for (int i = 0; i < UObject::GObjObjects.Num(); i++)
 					{
@@ -321,14 +322,73 @@ bool CUmodelApp::ShowPackageUI()
 						{
 							const ULandscapeComponent* _landscapeComponent = (ULandscapeComponent*)obj;
 							nWeightmaps = max(nWeightmaps, _landscapeComponent->WeightmapTextures.Num());//Some landscapes have more than 1.
-							nX = max(nX, (_landscapeComponent->SectionBaseX + _landscapeComponent->ComponentSizeQuads) * _landscapeComponent->NumSubsections);
-							nY = max(nY, (_landscapeComponent->SectionBaseY + _landscapeComponent->ComponentSizeQuads) * _landscapeComponent->NumSubsections);
+							nNumSubsections = max(nNumSubsections, _landscapeComponent->NumSubsections);
+							MaxWidth = max(MaxWidth, (_landscapeComponent->SectionBaseX + _landscapeComponent->ComponentSizeQuads) * nNumSubsections);
+							MaxHeight = max(MaxHeight, (_landscapeComponent->SectionBaseY + _landscapeComponent->ComponentSizeQuads) * nNumSubsections);
 
 							LandscapeComponents.Add(_landscapeComponent);
 						}
 					}
 
-					appPrintf("Done exporting map textures\n");
+					if (LandscapeComponents.Num() == 0)//no landscape in umap
+					{
+						appPrintf("No landscape found in umap, canceling... \n");
+
+					}
+					else
+					{
+						if (nNumSubsections != 1)
+						{
+							appError("nNumSubsections is not 1 but %i, doublecheck your logic (maybe is 2?) !!!", nNumSubsections);
+						}
+
+						int nPixelSize = 4;
+						byte* FinalHeightmap = new byte[(MaxWidth + 1) * (MaxHeight + 1) * nPixelSize];
+						for (int i = 0; i < (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize; i++)
+						{
+							FinalHeightmap[i] = 0x00;
+						}
+
+						for (int i = 0; i < LandscapeComponents.Num(); i++)
+						{
+							const ULandscapeComponent* _LandscapeComponent = LandscapeComponents[i];
+							
+							CTextureData TexDataHeightmap;
+							_LandscapeComponent->HeightmapTexture->GetTextureData(TexDataHeightmap);
+							byte* TexChunkHeighmap = TexDataHeightmap.Decompress();
+							
+							int nTileSize = MaxWidth + 1;//assume square
+							for (int yChunk = 0; yChunk < _LandscapeComponent->HeightmapTexture->SizeY; yChunk++)
+							{
+								for (int xChunk = 0; xChunk < _LandscapeComponent->HeightmapTexture->SizeX; xChunk++)
+								{
+									//RGBA
+									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 0] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 0];
+									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 1] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 1];
+									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 2] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 2];
+									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 3] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 3];
+								}
+							}
+						}
+
+						const char* ObjectName = "Heightmap";
+						char filename[256];
+						appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s.tga", Packages[0]->Name, ObjectName);
+						int retry = 1;
+						while (appFileExists(filename))
+						{
+							// if file exists, append an index
+							appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s_%02d.tga", Packages[0]->Name, ObjectName, ++retry);
+						}
+						appPrintf("Writing screenshot %s\n", filename);
+						appMakeDirectoryForFile(filename);
+						FFileWriter Ar(filename);
+
+						WriteTGA(Ar, MaxWidth + 1, MaxHeight + 1, FinalHeightmap);
+						delete FinalHeightmap;
+
+						appPrintf("Done exporting map textures\n");
+					}
 				}
 			}
 		}
