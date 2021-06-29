@@ -293,131 +293,6 @@ public:
 	}
 };
 
-/*class UFoliageInstancedStaticMeshComponent : public UObject
-{
-	DECLARE_CLASS(UFoliageInstancedStaticMeshComponent, UObject);
-
-public:
-	TArray<int32> SortedInstances;
-	int32 NumBuiltInstances;
-	FBox BuiltInstanceBounds;
-	FBoxSphereBounds CacheMeshExtendedBounds;
-	int32 InstanceCountToRender;
-	int32 InstancingRandomSeed;
-	int32 InstanceStartCullDistance;
-	int32 InstanceEndCullDistance;
-	TArray<int32> InstanceReorderTable;
-	UStaticMesh* StaticMesh;
-	int32 OverriddenLightMapRes;
-	TArray<FStreamingTextureBuildInfo> StreamingTextureData;
-	bool bReceivesDecals;
-	bool bHasPerInstanceHitProxies;
-	bool CastShadow;
-	bool bAffectDynamicIndirectLighting;
-	bool bAffectDistanceFieldLighting;
-	bool bCastStaticShadow;
-	int32 VisibilityId;
-	//FBodyInstance BodyInstance;//TODO
-	UObject* AttachParent;
-	byte Mobility; //TEnumAsByte<EComponentMobility::Type> Mobility;
-
-	BEGIN_PROP_TABLE
-		PROP_ARRAY(SortedInstances, PropType::Int)
-		PROP_INT(NumBuiltInstances)
-		PROP_STRUC(BuiltInstanceBounds, Box)
-		PROP_STRUC(CacheMeshExtendedBounds, FBoxSphereBounds)
-		PROP_INT(InstanceCountToRender)
-		PROP_INT(InstancingRandomSeed)
-		PROP_INT(InstanceStartCullDistance)
-		PROP_INT(InstanceEndCullDistance)
-		PROP_ARRAY(InstanceReorderTable, PropType::Int)
-		PROP_OBJ(StaticMesh)
-		PROP_INT(OverriddenLightMapRes)
-		PROP_ARRAY(StreamingTextureData, "FStreamingTextureBuildInfo")
-		PROP_BOOL(bReceivesDecals)
-		PROP_BOOL(bHasPerInstanceHitProxies)
-		PROP_BOOL(CastShadow)
-		PROP_BOOL(bAffectDynamicIndirectLighting)
-		PROP_BOOL(bAffectDistanceFieldLighting)
-		PROP_BOOL(bCastStaticShadow)
-		PROP_INT(VisibilityId)
-		//TODO FBodyInstance
-		PROP_OBJ(AttachParent)
-		PROP_BYTE(Mobility)
-		END_PROP_TABLE
-
-public:
-	virtual void Serialize(FArchive& Ar)
-	{
-		guard(UFoliageInstancedStaticMeshComponent::Serialize);
-		Super::Serialize(Ar);
-		DROP_REMAINING_DATA(Ar);
-		unguard;
-	}
-};
-
-class UFoliageType_InstancedStaticMesh : public UObject
-{
-	DECLARE_CLASS(UFoliageType_InstancedStaticMesh, UObject);
-
-public:
-	UStaticMesh* Mesh;
-	FGuid UpdateGuid;
-	float Density;
-	FFloatInterval ScaleX;
-	FFloatInterval ZOffset;
-	FBoxSphereBounds MeshBounds;
-	FVector LowBoundOriginRadius;
-	bool bCastStaticShadow;
-	int32 OverriddenLightMapRes;
-	//FRuntimeFloatCurve ScaleCurve;//TODO
-	int32 ChangeCount;
-
-	BEGIN_PROP_TABLE
-		PROP_OBJ(Mesh)
-		PROP_STRUC(UpdateGuid, FGuid)//FGuid
-		PROP_FLOAT(Density)
-		PROP_STRUC(ScaleX, FFloatInterval)
-		PROP_STRUC(ZOffset, FFloatInterval)
-		PROP_STRUC(MeshBounds, FBoxSphereBounds)
-		PROP_VECTOR(LowBoundOriginRadius)
-		PROP_BOOL(bCastStaticShadow)
-		PROP_INT(OverriddenLightMapRes)
-		//TODO FRuntimeFloatCurve
-		PROP_INT(ChangeCount)
-		END_PROP_TABLE
-
-public:
-	virtual void Serialize(FArchive& Ar)
-	{
-		guard(UFoliageType_InstancedStaticMesh::Serialize);
-		Super::Serialize(Ar);
-		DROP_REMAINING_DATA(Ar);
-		unguard;
-	}
-};
-
-class UInstancedFoliageActor : public UObject
-{
-	DECLARE_CLASS(UInstancedFoliageActor, UObject);
-
-public:
-	USceneComponent* RootComponent;
-
-	BEGIN_PROP_TABLE
-		PROP_OBJ(RootComponent)
-		END_PROP_TABLE
-
-public:
-	virtual void Serialize(FArchive& Ar)
-	{
-		guard(UInstancedFoliageActor::Serialize);
-		Super::Serialize(Ar);
-		DROP_REMAINING_DATA(Ar);
-		unguard;
-	}
-};*/
-
 #define REGISTER_LANDSCAPE_CLASSES \
  REGISTER_CLASS(USceneComponent) \
  REGISTER_CLASS(UPhysicalMaterial) \
@@ -427,15 +302,9 @@ public:
  REGISTER_CLASS(FWeightmapLayerAllocationInfo) \
  REGISTER_CLASS(ULandscapeHeightfieldCollisionComponent) \
  REGISTER_CLASS(ULandscapeComponent) \
- REGISTER_CLASS(ULandscape) \
- REGISTER_CLASS(FFloatInterval) \
- REGISTER_CLASS(FStreamingTextureBuildInfo)
+ REGISTER_CLASS(ULandscape) 
 #endif // UNREAL4
 
 #endif // __UNLANDSCAPE_H__
-
-/*REGISTER_CLASS(UFoliageInstancedStaticMeshComponent) \
- REGISTER_CLASS(UFoliageType_InstancedStaticMesh) \
- REGISTER_CLASS(UInstancedFoliageActor)*/
 
 //DHK_END
