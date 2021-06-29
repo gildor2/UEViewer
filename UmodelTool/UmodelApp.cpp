@@ -343,10 +343,12 @@ bool CUmodelApp::ShowPackageUI()
 						}
 
 						int nPixelSize = 4;
+
+						//Heightmap
 						byte* FinalHeightmap = new byte[(MaxWidth + 1) * (MaxHeight + 1) * nPixelSize];
 						for (int i = 0; i < (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize; i++)
 						{
-							FinalHeightmap[i] = 0x00;
+							FinalHeightmap[i] = 0x00;//fill black
 						}
 
 						for (int i = 0; i < LandscapeComponents.Num(); i++)
@@ -371,21 +373,49 @@ bool CUmodelApp::ShowPackageUI()
 							}
 						}
 
-						const char* ObjectName = "Heightmap";
-						char filename[256];
-						appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s.tga", Packages[0]->Name, ObjectName);
-						int retry = 1;
-						while (appFileExists(filename))
-						{
-							// if file exists, append an index
-							appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s_%02d.tga", Packages[0]->Name, ObjectName, ++retry);
-						}
-						appPrintf("Writing screenshot %s\n", filename);
-						appMakeDirectoryForFile(filename);
-						FFileWriter Ar(filename);
+						//Extract Heightmap
+						ExtractTextureMap(Packages[0]->Name, MaxWidth + 1, MaxHeight + 1, FinalHeightmap, 1);//1 not needed, default is Heightmap
 
-						WriteTGA(Ar, MaxWidth + 1, MaxHeight + 1, FinalHeightmap);
-						delete FinalHeightmap;
+						//Weightmap(s)
+						for (int w = 0; w < nWeightmaps; w++)
+						{
+							byte* FinalWeightmap = new byte[(MaxWidth + 1) * (MaxHeight + 1) * nPixelSize];
+							for (int i = 0; i < (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize; i++)
+							{
+								FinalWeightmap[i] = 0x00;//fill black
+							}
+
+							for (int i = 0; i < LandscapeComponents.Num(); i++)
+							{
+								const ULandscapeComponent* _LandscapeComponent = LandscapeComponents[i];
+
+								//extra check, some landscape components may lack information for this specific weight map, so we skip
+								if (_LandscapeComponent->WeightmapTextures.Num() <= w)
+								{
+									continue;
+								}
+
+								CTextureData TexDataWeightmap;
+								_LandscapeComponent->WeightmapTextures[w]->GetTextureData(TexDataWeightmap);
+								byte* TexChunkHeighmap = TexDataWeightmap.Decompress();
+
+								int nTileSize = MaxWidth + 1;//assume square
+								for (int yChunk = 0; yChunk < _LandscapeComponent->WeightmapTextures[w]->SizeY; yChunk++)
+								{
+									for (int xChunk = 0; xChunk < _LandscapeComponent->WeightmapTextures[w]->SizeX; xChunk++)
+									{
+										//RGBA
+										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 0] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 0];
+										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 1] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 1];
+										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 2] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 2];
+										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 3] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 3];
+									}
+								}
+							}
+
+							//Extract Weightmap
+							ExtractTextureMap(Packages[0]->Name, MaxWidth + 1, MaxHeight + 1, FinalWeightmap, 2);//any but 1 means Weightmap
+						}
 
 						appPrintf("Done exporting map textures\n");
 					}
@@ -425,6 +455,26 @@ void CUmodelApp::ShowErrorDialog()
 	UIErrorDialog errorDialog;
 	errorDialog.Show();
 }
+
+//DHK_BEGIN
+void CUmodelApp::ExtractTextureMap(const char* PackageName, int width, int height, byte* TextureMapArray, int TextureType /* = 1*/)
+{
+	char filename[256];
+	appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s.tga", PackageName, TextureType == 1 ? "Heightmap" : "Weightmap");
+	int retry = 1;
+	while (appFileExists(filename))
+	{
+		// if file exists, append an index
+		appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s_%02d.tga", PackageName, TextureType == 1 ? "Heightmap" : "Weightmap", ++retry);
+	}
+	appPrintf("Writing texture map %s\n", filename);
+	appMakeDirectoryForFile(filename);
+	FFileWriter Ar(filename);
+
+	WriteTGA(Ar, width, height, TextureMapArray);
+	delete TextureMapArray;
+}
+//DHK_END
 
 #if UNREAL4
 int CUmodelApp::ShowUE4UnversionedPackageDialog(int verMin, int verMax)
