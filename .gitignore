@@ -32,7 +32,6 @@ umodel.cfg
 
 # Executable files and pdb
 umodel.pdb
-SDL2.dll
 Tools/**/*.exe
 Tools/**/*.pdb
 *todo.md
@@ -51,4 +50,6 @@ Tools/PackageExtract/oo2core*.dll
 
 # PackageExtract - ignore all extracted stuff
 Tools/PackageExtract/**/
+
+#Logs
 log.txt
