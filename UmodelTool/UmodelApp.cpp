@@ -364,11 +364,17 @@ bool CUmodelApp::ShowPackageUI()
 							{
 								for (int xChunk = 0; xChunk < _LandscapeComponent->HeightmapTexture->SizeX; xChunk++)
 								{
-									//RGBA
-									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 0] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 0];
-									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 1] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 1];
-									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 2] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 2];
-									FinalHeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 3] = TexChunkHeighmap[yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize + 3];
+									int nFinalIndex = (yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize;
+									int nChunkIndex = yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize;
+
+									if (nFinalIndex <= (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize)
+									{
+										//RGBA
+										FinalHeightmap[nFinalIndex + 0] = TexChunkHeighmap[nChunkIndex + 0];
+										FinalHeightmap[nFinalIndex + 1] = TexChunkHeighmap[nChunkIndex + 1];
+										FinalHeightmap[nFinalIndex + 2] = TexChunkHeighmap[nChunkIndex + 2];
+										FinalHeightmap[nFinalIndex + 3] = TexChunkHeighmap[nChunkIndex + 3];
+									}
 								}
 							}
 						}
