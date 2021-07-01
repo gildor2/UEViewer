@@ -295,6 +295,13 @@ struct FStaticMeshVertexBuffer4
 	USkeletalMesh
 -----------------------------------------------------------------------------*/
 
+// FSkeletalMeshLODInfo is in cpp file to let use forward declaration of some types
+FSkeletalMeshLODInfo::FSkeletalMeshLODInfo()
+{}
+
+FSkeletalMeshLODInfo::~FSkeletalMeshLODInfo()
+{}
+
 struct FRecomputeTangentCustomVersion
 {
 	enum Type
@@ -850,7 +857,7 @@ struct FSkelMeshSection4
 		if (Ar.Game == GAME_Paragon) return;
 #endif
 
-		if (Ar.Game < GAME_UE4(27) || !StripFlags.IsClassDataStripped(1)) // DuplicatedVertices
+		if (Ar.Game < GAME_UE4(23) || !StripFlags.IsClassDataStripped(1)) // DuplicatedVertices, introduced in UE4.23
 		{
 			FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
 			Ar << DuplicatedVerticesBuffer;
@@ -2141,13 +2148,6 @@ UStaticMesh4::~UStaticMesh4()
 {
 	delete ConvertedMesh;
 }
-
-FSkeletalMeshLODInfo::FSkeletalMeshLODInfo()
-{}
-
-FSkeletalMeshLODInfo::~FSkeletalMeshLODInfo()
-{}
-
 
 // Ambient occlusion data
 // When changed, constant DISTANCEFIELD_DERIVEDDATA_VER TEXT is updated
