@@ -1704,7 +1704,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp);
 	#endif
 		int ArrayIndex = 0;
-		const char* PropName = FindUnversionedProp(PropIndex, ArrayIndex);
+		const char* PropName = FindUnversionedProp(PropIndex, ArrayIndex, Ar.Game);
 	#if DEBUG_PROPS
 		DUMP_ARC_BYTES(Ar, 32, "-> ...");
 	#endif

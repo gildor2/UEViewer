@@ -748,8 +748,6 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 //	DBG("----------- Skeleton %s: %d seq, %d bones -----------\n", Name, Anims.Num(), ReferenceSkeleton.RefBoneInfo.Num());
 
 	int NumTracks = Seq->GetNumTracks();
-	// Store UAnimSequence in 'OriginalAnims' array, we just need it from time to time
-	OriginalAnims.Add(Seq);
 
 #if DEBUG_DECOMPRESS
 	appPrintf("Sequence %s: %d bones, %d offsets (%g per bone), %d frames, %d compressed data\n"
@@ -808,6 +806,9 @@ void USkeleton::ConvertAnims(UAnimSequence4* Seq)
 			Seq->Name, Seq->CompressedTrackOffsets.Num(), NumTracks * offsetsPerBone);
 		return;
 	}
+
+	// Store UAnimSequence in 'OriginalAnims' array, we just need it from time to time
+	OriginalAnims.Add(Seq);
 
 	// Create CAnimSequence
 	CAnimSequence *Dst = new CAnimSequence(Seq);

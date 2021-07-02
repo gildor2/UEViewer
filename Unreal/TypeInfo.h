@@ -157,7 +157,7 @@ struct CTypeInfo
 
 #if UNREAL4
 	void SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) const;
-	const char* FindUnversionedProp(int PropIndex, int& OutArrayIndex) const;
+	const char* FindUnversionedProp(int InPropIndex, int& OutArrayIndex, int InGame) const;
 #endif
 
 	void ReadUnrealProperty(FArchive& Ar, struct FPropertyTag& Tag, void* ObjectData, int PropTagPos) const;

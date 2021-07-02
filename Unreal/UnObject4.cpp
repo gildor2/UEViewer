@@ -39,11 +39,12 @@ constexpr int MakeBitmaskWithOffset()
 struct PropInfo
 {
 	// Name of the property, should exist in class's property table (BEGIN_PROP_TABLE...)
-	// If starts with '#', the property is ignored, and the name is actually a type name.
+	// If starts with '#', the property is ignored, and the following string is a property's type name.
 	const char* Name;
-	int			Index;
-	// When PropMask is not zero, more than one property is specified with this entry.
-	// PropMask of value '1' means 2 properties: { Index, Index + 1 }
+	// Index of the property.
+	int			PropIndex;
+	// When PropMask is not zero, more than one property is specified within this entry.
+	// PropMask of value '1' means 2 properties: { PropIndex, PropIndex + 1 }
 	uint32		PropMask;
 };
 
@@ -254,23 +255,28 @@ END
 struct ParentInfo
 {
 	const char* ThisName;
-	const char* ParentName; // this could be a UE4 class name which is NOT defined here
+	const char* ParentName; // this could be a UE4 class name which is NOT defined in this table
 	int NumProps;
+	int MinEngineVersion = 0; // allow changing type information with newer engine versions
 };
 
+// Note: parent classes should be defined after children, so the whole table could be iterated with a single pass
 static const ParentInfo ParentData[] =
 {
-	// Parent classes should be defined after children, so the whole table could be iterated with a single pass
+	// Texture classes
 	{ "UTextureCube4", "UTexture3", 0 },
 	{ "UTexture2D", "UTexture3", 6 },
 	{ "UTexture3", "UStreamableRenderAsset", 15 },
+	// Mesh classes
 	{ "USkeletalMesh4", "UStreamableRenderAsset", 28 },
 	{ "UStaticMesh4", "UStreamableRenderAsset", 25 },
-	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // just 1 UObject* property
+	// Material classes
+	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // contains just a single UObject* property
 	{ "UMaterialInstance", "UMaterialInterface", 21 },
 	{ "UMaterial3", "UMaterialInterface", 117 },
 	{ "UAnimSequence4", "UAnimSequenceBase", 18 },
 	{ "UAnimSequenceBase", "UAnimationAsset", 4 },
+	// Structures
 	{ "FStaticSwitchParameter", "FStaticParameterBase", 1 },
 	{ "FStaticComponentMaskParameter", "FStaticParameterBase", 4 },
 	{ "FStaticTerrainLayerWeightParameter", "FStaticParameterBase", 2 },
@@ -278,39 +284,66 @@ static const ParentInfo ParentData[] =
 	{ "FAnimNotifyEvent", "FAnimLinkableElement", 17 },
 };
 
-const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) const
+struct FindPropInfo
+{
+	const char* TypeName;
+	const CTypeInfo* Type;
+	int PropIndex;
+
+	FindPropInfo()
+	: TypeName(NULL)
+	, Type(NULL)
+	, PropIndex(INDEX_NONE)
+	{}
+};
+
+static void FindTypeForProperty(FindPropInfo& Info, int Game)
+{
+	//todo: Can optimize with checking if class name starts with 'U', but: CTypeInfo::Name skips 'U', plus there could be FSomething (structs).
+	//todo: Can cache information about parent type. Store NULL to avoid iteration of the whole table when no parent information stored (e.g. UStreamableRenderAsset).
+	for (const ParentInfo& Parent : ParentData)
+	{
+		if (Info.PropIndex < Parent.NumProps)
+		{
+			// Fast reject
+			continue;
+		}
+		if (Parent.MinEngineVersion && Game < Parent.MinEngineVersion)
+		{
+			// This is a type info for a newer engine
+			continue;
+		}
+		// Compare types: use exact name comparison insted of CurrentType->IsA(...), so we could
+		// skip some type information in PropData[]
+		if (strcmp(Info.TypeName, Parent.ThisName) == 0)
+		{
+			// Types are matching, redirect Info to parent type
+			Info.TypeName = Parent.ParentName;
+			Info.Type = FindStructType(Info.TypeName);
+			Info.PropIndex -= Parent.NumProps;
+		}
+	}
+}
+
+/*-----------------------------------------------------------------------------
+	Interface function for finding a property by its index
+-----------------------------------------------------------------------------*/
+
+const char* CTypeInfo::FindUnversionedProp(int InPropIndex, int& OutArrayIndex, int InGame) const
 {
 	guard(CTypeInfo::FindUnversionedProp);
 
 	OutArrayIndex = 0;
 
-	const char* CurrentClassName = Name;
-	const CTypeInfo* CurrentType = this;
+	// Find type info for this property, and offset its index to match class inheritance
+	FindPropInfo FoundProp;
+	FoundProp.TypeName = Name;
+	FoundProp.Type = this;
+	FoundProp.PropIndex = InPropIndex;
+	FindTypeForProperty(FoundProp, InGame);
 
-	//todo: can optimize with checking if class name starts with 'U', but: CTypeInfo::Name skips 'U', plus there could be FSomething (structs)
-	for (const ParentInfo& Parent : ParentData)
-	{
-		// Fast reject
-		if (PropIndex < Parent.NumProps)
-			continue;
-		// Compare types
-//		if (CurrentType)
-//		{
-//			if (!CurrentType->IsA(Parent.ThisName + 1))
-//				continue;
-//		}
-//		else
-//		{
-			if (strcmp(CurrentClassName, Parent.ThisName) != 0)
-				continue;
-//		}
-		// Types are matching, redirect to parent
-		CurrentClassName = Parent.ParentName;
-		CurrentType = FindStructType(CurrentClassName);
-		PropIndex -= Parent.NumProps;
-	}
-
-	// Find a field
+	// Now we have FoundProp filled with type information. The desired property is inside this class,
+	// all parent classes are resolved. Find a field itself.
 	const PropInfo* p;
 	const PropInfo* end;
 
@@ -324,21 +357,26 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		// because of inheritance, so don't "break" a loop when we've scanned some class, check
 		// other classes too
 		bool IsOurClass;
-		// Use exact name comparison to allow intermediate parents which aren't declared in PropData[]
-		// if (CurrentType)
-		//	IsOurClass = CurrentType->IsA(p->Name + 1);
-		// else
-			IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
+		// Use exact name comparison to allow intermediate parents which aren't declared in PropData[].
+		// Doing the same in FindTypeForProperty().
+		IsOurClass = stricmp(p->Name, FoundProp.TypeName) == 0;
 
+		// Loop over PropInfo entries, either find a property or an end of the current class information.
 		while (++p < end && p->Name)
 		{
-			if (!IsOurClass) continue;
+			if (!IsOurClass)
+			{
+				// We're just waiting for the end of class, to try matching type name again
+				continue;
+			}
+
 			if (p->PropMask)
 			{
-				uint32 IndexWithOffset = PropIndex - p->Index;
+				// It is used only for DROP_... macros.
+				uint32 IndexWithOffset = FoundProp.PropIndex - p->PropIndex;
 				if (IndexWithOffset > 32)
 				{
-					// 'uint' here, so negative values will also go here
+					// Note: negative values will appear as a large uint.
 					continue;
 				}
 				if ((IndexWithOffset == 0) ||						// we're implicitly storing first property
@@ -347,42 +385,45 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 					return p->Name;
 				}
 			}
-			else if (p->Index == PropIndex)
+			else if (p->PropIndex == FoundProp.PropIndex)
 			{
-				//todo: not supporting arrays here, arrays relies on class' property table matching layout
+				// Found a matching property.
+				//todo: not supporting arrays here, arrays relies on property table to match layout of CTypeInfo declaration
 				return p->Name;
 			}
 		}
+
 		if (IsOurClass)
 		{
 			// the class has been verified, and we didn't find a property
 			bClassFound = true;
 			break;
 		}
-		// skip END marker
+
+		// skip the END marker and continue with next type map
 		p++;
 	}
 
 	if (bClassFound)
 	{
-		// We have a declaration of the class, so don't fall back to PROP declaration
+		// We have a declaration of the class, but didn't find a property. Don't fall to CTypeInfo PROP declarations.
 		//todo: review later, actually can "return NULL" from inside the loop body
 		return NULL;
 	}
 
-	// The property not found. Try using CTypeInfo properties, assuming their layout matches UE
+	// Type information was not found. Try using CTypeInfo properties, assuming their layout matches UE4.
 	int CurrentPropIndex = 0;
-	if (CurrentType == NULL) appError("Enumerating properties of unknown type %s", CurrentClassName);
-	for (int Index = 0; Index < CurrentType->NumProps; Index++)
+	if (FoundProp.Type == NULL) appError("Enumerating properties of unknown type %s", FoundProp.TypeName);
+	for (int Index = 0; Index < FoundProp.Type->NumProps; Index++)
 	{
-		const CPropInfo& Prop = CurrentType->Props[Index];
+		const CPropInfo& Prop = FoundProp.Type->Props[Index];
 		if (Prop.Count >= 2)
 		{
 			// Static array, should count each item as a separate property
-			if (CurrentPropIndex + Prop.Count > PropIndex)
+			if (CurrentPropIndex + Prop.Count > FoundProp.PropIndex)
 			{
 				// The property is located inside this array
-				OutArrayIndex = PropIndex - CurrentPropIndex;
+				OutArrayIndex = FoundProp.PropIndex - CurrentPropIndex;
 				return Prop.Name;
 			}
 			CurrentPropIndex += Prop.Count;
@@ -390,7 +431,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		else
 		{
 			// The same code, but works as Count == 1 for any values
-			if (CurrentPropIndex == PropIndex)
+			if (CurrentPropIndex == FoundProp.PropIndex)
 			{
 				return Prop.Name;
 			}
