@@ -3008,7 +3008,7 @@ void UStaticMesh4::ConvertMesh()
 				fUV++;
 				Lod->ExtraUV[TexCoordIndex-1][i] = *CVT(fUV);
 			}
-			if (Lod->VertexColors)
+			if (Lod->VertexColors && SrcLod.ColorVertexBuffer.Data.Num() > 0) //DHK  && SrcLod.ColorVertexBuffer.Data.Num() > 0
 			{
 				Lod->VertexColors[i] = SrcLod.ColorVertexBuffer.Data[i];
 			}

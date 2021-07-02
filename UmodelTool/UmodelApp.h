@@ -68,7 +68,7 @@ public:
 	* Convenient method to dump texture maps to TGA, TextureType = 1 assumes Heightmap by default
 	*/
 	//DHK_BEGIN
-	void ExtractTextureMap(const char* PackageName, int width, int height, byte* TextureMapArray, int TextureType = 1);
+	void ExtractTextureMap(const char* PackageName, const char* ObjectName, int width, int height, byte* TextureMapArray, int TextureType = 1);
 	//DHK_END
 
 	#if UNREAL4

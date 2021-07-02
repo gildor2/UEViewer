@@ -136,7 +136,7 @@ public:
 		PROP_INT(CollisionSizeQuads)
 		PROP_FLOAT(CollisionScale)
 		PROP_STRUC(HeightfieldGuid, FGuid)
-		PROP_STRUC(CachedLocalBox, FBox)
+		//PROP_STRUC(CachedLocalBox, FBox)
 		PROP_STRUC(RenderComponent, FGuid)//TODO Lazy
 		PROP_ARRAY(CookedPhysicalMaterials, PropType::UObject)
 		PROP_OBJ(AttachParent)
@@ -163,6 +163,8 @@ public:
 	int32 SectionBaseX;
 	int32 SectionBaseY;
 	FVector RelativeLocation;
+	FRotator RelativeRotation;
+	FVector RelativeScale3D;
 	TArray<UMaterialInstanceConstant*> MaterialInstances;
 	TArray<byte> LODIndexToMaterialIndex;
 	TArray<byte> MaterialIndexToDisabledTessellationMaterial;
@@ -187,13 +189,15 @@ public:
 		PROP_INT(SectionBaseX)
 		PROP_INT(SectionBaseY)
 		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR(RelativeRotation)
+		PROP_VECTOR(RelativeScale3D)
 		PROP_ARRAY(MaterialInstances, PropType::UObject)
 		PROP_ARRAY(LODIndexToMaterialIndex, PropType::Byte)
 		PROP_ARRAY(MaterialIndexToDisabledTessellationMaterial, PropType::Byte)
 		PROP_STRUC(WeightmapScaleBias, FVector4)
 		PROP_FLOAT(WeightmapSubsectionOffset)
 		PROP_STRUC(HeightmapScaleBias, FVector4)
-		PROP_STRUC(CachedLocalBox, FBox)
+		//PROP_STRUC(CachedLocalBox, FBox)
 		PROP_STRUC(CollisionComponent, FGuid)
 		PROP_OBJ(HeightmapTexture)
 		PROP_ARRAY(WeightmapLayerAllocations, "FWeightmapLayerAllocationInfo")

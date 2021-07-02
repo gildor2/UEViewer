@@ -307,123 +307,160 @@ bool CUmodelApp::ShowPackageUI()
 				{
 					appPrintf("Starting exporting map textures\n");
 					
-					TArray<const ULandscapeComponent*> LandscapeComponents;
-					int nWeightmaps = 0;
-					int nNumSubsections = 0;
+					TArray<const ULandscape*> Landscapes;
 
-					//X/Y for the size of the destination textures
-					int MaxWidth = 0;
-					int MaxHeight = 0;
-					
 					for (int i = 0; i < UObject::GObjObjects.Num(); i++)
 					{
 						const UObject* obj = UObject::GObjObjects[i];
-						if (obj->IsA("LandscapeComponent"))
+						if (obj->IsA("Landscape"))
 						{
-							const ULandscapeComponent* _landscapeComponent = (ULandscapeComponent*)obj;
-							nWeightmaps = max(nWeightmaps, _landscapeComponent->WeightmapTextures.Num());//Some landscapes have more than 1.
-							nNumSubsections = max(nNumSubsections, _landscapeComponent->NumSubsections);
-							MaxWidth = max(MaxWidth, (_landscapeComponent->SectionBaseX + _landscapeComponent->ComponentSizeQuads) * nNumSubsections);
-							MaxHeight = max(MaxHeight, (_landscapeComponent->SectionBaseY + _landscapeComponent->ComponentSizeQuads) * nNumSubsections);
+							const ULandscape* _landscape = (ULandscape*)obj;
 
-							LandscapeComponents.Add(_landscapeComponent);
+							Landscapes.Add(_landscape);
 						}
 					}
 
-					if (LandscapeComponents.Num() == 0)//no landscape in umap
+					if (Landscapes.Num() == 0)
 					{
 						appPrintf("No landscape found in umap, canceling... \n");
-
 					}
 					else
+					{ 
+						for (int i = 0; i < Landscapes.Num(); i++)
 					{
-						if (nNumSubsections != 1)
+						const ULandscape* _landscape = Landscapes[i];
+
+						int nWeightmaps = 0;
+						int nNumSubsections = 0;
+
+						//X/Y for the size of the destination textures
+						int MaxWidth = 0;
+						int MaxHeight = 0;
+
+						//sometimes < 0
+						int MinWidth = 0;
+						int MinHeight = 0;
+
+						for (int i = 0; i < _landscape->LandscapeComponents.Num(); i++)
 						{
-							appError("nNumSubsections is not 1 but %i, doublecheck your logic (maybe is 2?) !!!", nNumSubsections);
+								const ULandscapeComponent* _landscapeComponent = _landscape->LandscapeComponents[i];
+								nWeightmaps = max(nWeightmaps, _landscapeComponent->WeightmapTextures.Num());//Some landscapes have more than 1.
+								nNumSubsections = max(nNumSubsections, _landscapeComponent->NumSubsections);
+								MaxWidth = max(MaxWidth, (_landscapeComponent->SectionBaseX + _landscapeComponent->ComponentSizeQuads) * nNumSubsections);
+								MaxHeight = max(MaxHeight, (_landscapeComponent->SectionBaseY + _landscapeComponent->ComponentSizeQuads) * nNumSubsections);
+								MinWidth = min(MinWidth, _landscapeComponent->SectionBaseX);
+								MinHeight = min(MinHeight, _landscapeComponent->SectionBaseY);
 						}
 
-						int nPixelSize = 4;
+						if (MinWidth < 0)
+							MaxWidth = MaxWidth - MinWidth;
+						if (MinHeight < 0)
+							MaxHeight = MaxHeight - MinHeight;
 
-						//Heightmap
-						byte* FinalHeightmap = new byte[(MaxWidth + 1) * (MaxHeight + 1) * nPixelSize];
-						for (int i = 0; i < (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize; i++)
+						if (_landscape->LandscapeComponents.Num() == 0)
 						{
-							FinalHeightmap[i] = 0x00;//fill black
+							appPrintf("no landscape components in landscape, canceling... \n");
+
 						}
-
-						for (int i = 0; i < LandscapeComponents.Num(); i++)
+						else
 						{
-							const ULandscapeComponent* _LandscapeComponent = LandscapeComponents[i];
-							
-							CTextureData TexDataHeightmap;
-							_LandscapeComponent->HeightmapTexture->GetTextureData(TexDataHeightmap);
-							byte* TexChunkHeighmap = TexDataHeightmap.Decompress();
-							
-							int nTileSize = MaxWidth + 1;//assume square
-							for (int yChunk = 0; yChunk < _LandscapeComponent->HeightmapTexture->SizeY; yChunk++)
+							if (nNumSubsections != 1)
 							{
-								for (int xChunk = 0; xChunk < _LandscapeComponent->HeightmapTexture->SizeX; xChunk++)
-								{
-									int nFinalIndex = (yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize;
-									int nChunkIndex = yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize;
-
-									if (nFinalIndex <= (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize)
-									{
-										//RGBA
-										FinalHeightmap[nFinalIndex + 0] = TexChunkHeighmap[nChunkIndex + 0];
-										FinalHeightmap[nFinalIndex + 1] = TexChunkHeighmap[nChunkIndex + 1];
-										FinalHeightmap[nFinalIndex + 2] = TexChunkHeighmap[nChunkIndex + 2];
-										FinalHeightmap[nFinalIndex + 3] = TexChunkHeighmap[nChunkIndex + 3];
-									}
-								}
+								appError("nNumSubsections is not 1 but %i, doublecheck your logic (maybe is 2?) !!!", nNumSubsections);
 							}
-						}
 
-						//Extract Heightmap
-						ExtractTextureMap(Packages[0]->Name, MaxWidth + 1, MaxHeight + 1, FinalHeightmap, 1);//1 not needed, default is Heightmap
+							int nPixelSize = 4;
 
-						//Weightmap(s)
-						for (int w = 0; w < nWeightmaps; w++)
-						{
-							byte* FinalWeightmap = new byte[(MaxWidth + 1) * (MaxHeight + 1) * nPixelSize];
+							//Heightmap
+							byte* FinalHeightmap = new byte[(MaxWidth + 1) * (MaxHeight + 1) * nPixelSize];
 							for (int i = 0; i < (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize; i++)
 							{
-								FinalWeightmap[i] = 0x00;//fill black
+								FinalHeightmap[i] = 0x00;//fill black
 							}
 
-							for (int i = 0; i < LandscapeComponents.Num(); i++)
+							for (int i = 0; i < _landscape->LandscapeComponents.Num(); i++)
 							{
-								const ULandscapeComponent* _LandscapeComponent = LandscapeComponents[i];
+								const ULandscapeComponent* _LandscapeComponent = _landscape->LandscapeComponents[i];
 
-								//extra check, some landscape components may lack information for this specific weight map, so we skip
-								if (_LandscapeComponent->WeightmapTextures.Num() <= w)
-								{
-									continue;
-								}
-
-								CTextureData TexDataWeightmap;
-								_LandscapeComponent->WeightmapTextures[w]->GetTextureData(TexDataWeightmap);
-								byte* TexChunkHeighmap = TexDataWeightmap.Decompress();
+								CTextureData TexDataHeightmap;
+								_LandscapeComponent->HeightmapTexture->GetTextureData(TexDataHeightmap);
+								byte* TexChunkHeighmap = TexDataHeightmap.Decompress();
 
 								int nTileSize = MaxWidth + 1;//assume square
-								for (int yChunk = 0; yChunk < _LandscapeComponent->WeightmapTextures[w]->SizeY; yChunk++)
+								for (int yChunk = 0; yChunk < _LandscapeComponent->HeightmapTexture->SizeY; yChunk++)
 								{
-									for (int xChunk = 0; xChunk < _LandscapeComponent->WeightmapTextures[w]->SizeX; xChunk++)
+									for (int xChunk = 0; xChunk < _LandscapeComponent->HeightmapTexture->SizeX; xChunk++)
 									{
-										//RGBA
-										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 0] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 0];
-										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 1] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 1];
-										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 2] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 2];
-										FinalWeightmap[(yChunk + _LandscapeComponent->SectionBaseY) * nTileSize * nPixelSize + (xChunk + _LandscapeComponent->SectionBaseX) * nPixelSize + 3] = TexChunkHeighmap[yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize + 3];
+										int nFinalIndex = (yChunk + _LandscapeComponent->SectionBaseY - MinHeight) * nTileSize * nPixelSize + 
+											              (xChunk + _LandscapeComponent->SectionBaseX - MinWidth) * nPixelSize;
+										int nChunkIndex = yChunk * _LandscapeComponent->HeightmapTexture->SizeY * nPixelSize + xChunk * nPixelSize;
+
+										if (nFinalIndex <= (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize)
+										{
+											//RGBA
+											FinalHeightmap[nFinalIndex + 0] = TexChunkHeighmap[nChunkIndex + 0];
+											FinalHeightmap[nFinalIndex + 1] = TexChunkHeighmap[nChunkIndex + 1];
+											FinalHeightmap[nFinalIndex + 2] = TexChunkHeighmap[nChunkIndex + 2];
+											FinalHeightmap[nFinalIndex + 3] = TexChunkHeighmap[nChunkIndex + 3];
+										}
 									}
 								}
 							}
 
-							//Extract Weightmap
-							ExtractTextureMap(Packages[0]->Name, MaxWidth + 1, MaxHeight + 1, FinalWeightmap, 2);//any but 1 means Weightmap
-						}
+							//Extract Heightmap
+							ExtractTextureMap(Packages[0]->Name, _landscape->Name, MaxWidth + 1, MaxHeight + 1, FinalHeightmap, 1);//1 not needed, default is Heightmap
 
-						appPrintf("Done exporting map textures\n");
+							//Weightmap(s)
+							for (int w = 0; w < nWeightmaps; w++)
+							{
+								byte* FinalWeightmap = new byte[(MaxWidth + 1) * (MaxHeight + 1) * nPixelSize];
+								for (int i = 0; i < (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize; i++)
+								{
+									FinalWeightmap[i] = 0x00;//fill black
+								}
+
+								for (int i = 0; i < _landscape->LandscapeComponents.Num(); i++)
+								{
+									const ULandscapeComponent* _LandscapeComponent = _landscape->LandscapeComponents[i];
+
+									//extra check, some landscape components may lack information for this specific weight map, so we skip
+									if (_LandscapeComponent->WeightmapTextures.Num() <= w)
+									{
+										continue;
+									}
+
+									CTextureData TexDataWeightmap;
+									_LandscapeComponent->WeightmapTextures[w]->GetTextureData(TexDataWeightmap);
+									byte* TexChunkHeighmap = TexDataWeightmap.Decompress();
+
+									int nTileSize = MaxWidth + 1;//assume square
+									for (int yChunk = 0; yChunk < _LandscapeComponent->WeightmapTextures[w]->SizeY; yChunk++)
+									{
+										for (int xChunk = 0; xChunk < _LandscapeComponent->WeightmapTextures[w]->SizeX; xChunk++)
+										{
+											int nFinalIndex = (yChunk + _LandscapeComponent->SectionBaseY - MinHeight) * nTileSize * nPixelSize +
+												(xChunk + _LandscapeComponent->SectionBaseX - MinWidth) * nPixelSize;
+											int nChunkIndex = yChunk * _LandscapeComponent->WeightmapTextures[w]->SizeY * nPixelSize + xChunk * nPixelSize;
+
+											if (nFinalIndex <= (MaxWidth + 1) * (MaxHeight + 1) * nPixelSize)
+											{
+												//RGBA
+												FinalWeightmap[nFinalIndex + 0] = TexChunkHeighmap[nChunkIndex + 0];
+												FinalWeightmap[nFinalIndex + 1] = TexChunkHeighmap[nChunkIndex + 1];
+												FinalWeightmap[nFinalIndex + 2] = TexChunkHeighmap[nChunkIndex + 2];
+												FinalWeightmap[nFinalIndex + 3] = TexChunkHeighmap[nChunkIndex + 3];
+											}
+										}
+									}
+								}
+
+								//Extract Weightmap
+								ExtractTextureMap(Packages[0]->Name, _landscape->Name, MaxWidth + 1, MaxHeight + 1, FinalWeightmap, 2);//any but 1 means Weightmap
+							}
+
+							appPrintf("Done exporting map textures\n");
+						}
+					}					
 					}
 				}
 			}
@@ -463,15 +500,15 @@ void CUmodelApp::ShowErrorDialog()
 }
 
 //DHK_BEGIN
-void CUmodelApp::ExtractTextureMap(const char* PackageName, int width, int height, byte* TextureMapArray, int TextureType /* = 1*/)
+void CUmodelApp::ExtractTextureMap(const char* PackageName, const char* ObjectName, int width, int height, byte* TextureMapArray, int TextureType /* = 1*/)
 {
 	char filename[256];
-	appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s.tga", PackageName, TextureType == 1 ? "Heightmap" : "Weightmap");
+	appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s%s.tga", PackageName, ObjectName, TextureType == 1 ? "Heightmap" : "Weightmap");
 	int retry = 1;
 	while (appFileExists(filename))
 	{
 		// if file exists, append an index
-		appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s_%02d.tga", PackageName, TextureType == 1 ? "Heightmap" : "Weightmap", ++retry);
+		appSprintf(ARRAY_ARG(filename), SCREENSHOTS_DIR "/%s%s%s_%02d.tga", PackageName, ObjectName, TextureType == 1 ? "Heightmap" : "Weightmap", ++retry);
 	}
 	appPrintf("Writing texture map %s\n", filename);
 	appMakeDirectoryForFile(filename);
