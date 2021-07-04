@@ -25,6 +25,32 @@
         "*.project": "perl"
     },
     "files.trimTrailingWhitespace": true,
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}",
+        "${workspaceFolder}/Core",
+        "${workspaceFolder}/Unreal",
+        "${workspaceFolder}/UmodelTool",
+        "${workspaceFolder}/libs",
+        "${workspaceFolder}/libs/include",
+        "${workspaceFolder}/libs/includewin32",
+        "${workspaceFolder}/UI"
+    ],
+    "C_Cpp.default.defines": [
+        "MAX_DEBUG",
+        "RENDERING",
+        "HAS_UI"
+    ],
+    "C_Cpp.default.forcedInclude": [
+        "${workspaceFolder}/Unreal/GameDefines.h"
+    ],
+    "C_Cpp.default.cStandard": "c11",
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.default.intelliSenseMode": "msvc-x64",
+    "C_Cpp.default.browse.path": [
+        "${workspaceFolder}"
+    ],
+    "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true,
+    "C_Cpp.default.browse.databaseFilename": "",
     "cSpell.words": [
 		"FCOLOR",
 		"FGPU",

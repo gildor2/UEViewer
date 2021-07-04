@@ -6,7 +6,7 @@
 		{
 			"label": "Build",
 			"type": "shell",
-			"command": "./build.sh --debug",
+			"command": "./build.sh ${input:BuildOptions}",
 			"group": {
 				"kind": "build",
 				"isDefault": true
@@ -21,7 +21,7 @@
 		{
 			"label": "Compile",
 			"type": "shell",
-			"command": "./build.sh --debug --file \"${relativeFile}\"",
+			"command": "./build.sh ${input:BuildOptions} --file \"${relativeFile}\"",
 			"presentation": {
 				"reveal": "always",
 				"showReuseMessage": false,
@@ -57,13 +57,21 @@
 			},
 			"problemMatcher": ""
 		}
-	]
+	],
     "inputs": [
+		// Requesting a customConfigurationVariables from c_cpp_properties.json (undocumented, may be changed in a future_
+		// https://stackoverflow.com/a/62404215
+        {
+            "id": "BuildOptions",
+            "type": "command",
+            "command": "cpptools.activeConfigCustomVariable",
+            "args": "BuildOptions"
+        },
         {
             "id": "ue4const",
+            "type": "promptString",
             "description": "UE4 C++ constant:",
-            "default": "",
-            "type": "promptString"
+            "default": ""
         },
-    ]
+ 	]
 }

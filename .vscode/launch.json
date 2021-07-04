@@ -9,7 +9,7 @@
 			"name": "(No arguments)",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/umodel.exe",
+			"program": "${workspaceFolder}/${input:ExeName}",
 			"args": [],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
@@ -21,7 +21,7 @@
 			"name": "Volatile (cmdline.cfg)",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/umodel.exe",
+			"program": "${workspaceFolder}/${input:ExeName}",
 			"args": [ "@${workspaceFolder}/docs/cmdline.cfg" ],
 			"cwd": "${workspaceFolder}",
 			"logging": { "moduleLoad": false },
@@ -38,5 +38,15 @@
 			"logging": { "moduleLoad": false },
 			"visualizerFile": "${workspaceFolder}/Tools/umodel.natvis"
 		}
-	]
+	],
+    "inputs": [
+		// Requesting a customConfigurationVariables from c_cpp_properties.json (undocumented, may be changed in a future_
+		// https://stackoverflow.com/a/62404215
+        {
+            "id": "ExeName",
+            "type": "command",
+            "command": "cpptools.activeConfigCustomVariable",
+            "args": "ExeName"
+        }
+ 	]
 }
