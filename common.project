@@ -202,11 +202,6 @@ OPTIONS   += $WARNINGS
 	DEFINES += MAX_DEBUG
 	OBJDIR  = $OBJDIR-debug
 	OPTIMIZE = none
-!else
-	!if ("$OLDCRT" ne "1") && ("$COMPILER" eq "VisualC")
-		# Use static CRT for release Windows builds without use of MSVCRT.dll
-		LIBC = static
-	!endif
 !endif
 
 !if defined(TRACY)
