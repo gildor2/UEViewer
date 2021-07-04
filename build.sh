@@ -46,13 +46,18 @@ function DebugPrint()
 }
 
 #-------------------------------------------------------------
-# Setup default project when running this script directly
+# Setup default project when running this script directly. Used to build UmodelTool.
 
 function SetupDefaultProject()
 {
-	[ "$project" ] || project="UmodelTool/umodel"		# setup default project name
-	[ "$root"    ] || root="."
-	[ "$render"  ] || render=1
+	project="UmodelTool/umodel"
+	root="."
+	render=1
+	local ExeName="umodel"
+	[ "$debug" ] && ExeName+="-debug"
+	[ "$profile" ] && ExeName+="-profile"
+	[ "$PLATFORM" == "vc-win64" ] && ExeName+="_64"
+	GENMAKE_OPTIONS+=" EXE_NAME=$ExeName"
 }
 
 #-------------------------------------------------------------
@@ -123,7 +128,7 @@ function DetectVisualStudioVersion()
 	# Adjust vc_ver to found one
 	vc_ver=$found_vc_year
 	DebugPrint "Found: Visual Studio $found_vc_year at \"$workpath\", Version = $vc_ver"
-	GENMAKE_OPTIONS=VC_VER=$vc_ver					# specify compiler for genmake script
+	GENMAKE_OPTIONS+=" VC_VER=$vc_ver"				# specify compiler for genmake script
 }
 
 #-------------------------------------------------------------
@@ -224,7 +229,7 @@ EOF
 
 #-------------------------------------------------------------
 
-SetupDefaultProject
+[ "$project" ] || SetupDefaultProject
 GetBuildNumber
 DetectBuildPlatform
 

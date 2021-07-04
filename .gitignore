@@ -31,7 +31,8 @@ umodel.cfg
 !.vs/tasks.vs.json
 
 # Executable files and pdb
-umodel.pdb
+umodel[-_]*.exe
+umodel*.pdb
 SDL2.dll
 Tools/**/*.exe
 Tools/**/*.pdb

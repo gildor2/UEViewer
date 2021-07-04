@@ -4,13 +4,13 @@ LIBC       = shared
 #MAPFILES   = 1
 CONSOLE    = 1
 
-!if !defined($OPTIMIZE)		# allow overriding of OPTIMIZE in parent project
+!if !defined(OPTIMIZE)		# allow overriding of OPTIMIZE in parent project
 OPTIMIZE   = size
 !endif
 
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
 
-!if !defined($OLDCRT)		# allow overriding of OLDCRT in parent project
+!if !defined(OLDCRT)		# allow overriding of OLDCRT in parent project
 OLDCRT     = 0				# set to 0 (or comment the line) to use "native" compiler's CRT
 							# Changed 29.05.2021: Oodle static libraries requires more modern CRT which is not available in MSVCRT.dll
 !endif
@@ -33,7 +33,7 @@ CPP_STD = c++14				# allow modern C++ features
 							#!! todo: the standard has been changed for clang on macOS, check for "CPP_STD" below!
 
 !if "$COMPILER" eq "VisualC"
-	!if !defined($CPP_EXCEPT)
+	!if !defined(CPP_EXCEPT)
 		CPP_EXCEPT = 0									# used with WIN32_USE_SEH in Core.h
 	!endif
 	WINXP      = 1										# we're not using any modern Win32 features, so allow to worn at WinXP
@@ -198,7 +198,7 @@ STDLIBS   += SDL2		# disabled in macOS build
 INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
 OPTIONS   += $WARNINGS
 
-!if defined($DEBUG)
+!if defined(DEBUG)
 	DEFINES += MAX_DEBUG
 	OBJDIR  = $OBJDIR-debug
 	OPTIMIZE = none

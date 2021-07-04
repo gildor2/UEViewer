@@ -11,21 +11,21 @@
             "name": "Win32-Debug",
             "customConfigurationVariables": {
                 "BuildOptions": "--debug",
-				"ExeName": "umodel.exe"
+				"ExeName": "umodel-debug.exe"
 			}
         },
         {
             "name": "Win64-Release",
             "customConfigurationVariables": {
                 "BuildOptions": "--64",
-				"ExeName": "umodel.exe"
+				"ExeName": "umodel_64.exe"
 			}
         },
         {
             "name": "Win64-Debug",
             "customConfigurationVariables": {
                 "BuildOptions": "--64 --debug",
-				"ExeName": "umodel.exe"
+				"ExeName": "umodel-debug_64.exe"
 			}
         }
     ],
