@@ -33,7 +33,6 @@ umodel.cfg
 # Executable files and pdb
 umodel[-_]*.exe
 umodel*.pdb
-SDL2.dll
 Tools/**/*.exe
 Tools/**/*.pdb
 *todo.md

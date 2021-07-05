@@ -166,6 +166,9 @@ sources(COMP_LIBS) = {
 pop(INCLUDES)
 pop(DEFINES)
 
+# SDL2
+!include $R/libs/SDL2/SDL2.project
+
 # oodle SDK support
 !include $R/libs/oodle/oodle.project
 
@@ -192,9 +195,6 @@ sources(UE4_LIBS) = {
 #------------------------------------------------
 
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
-!if "$PLATFORM" ne "osx"
-STDLIBS   += SDL2		# disabled in macOS build
-!endif
 INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
 OPTIONS   += $WARNINGS
 
@@ -211,12 +211,4 @@ OPTIONS   += $WARNINGS
 	sources(MAIN) = {
 		libs/tracy/TracyClient.cpp
 	}
-!endif
-
-!if "$PLATFORM" eq "win32"
-	INCLUDES += $R/libs/includewin32
-	LIBRARIES += $R/libs/SDL2/x86
-!elif "$PLATFORM" eq "win64"
-	INCLUDES += $R/libs/includewin32
-	LIBRARIES += $R/libs/SDL2/x64
 !endif

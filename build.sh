@@ -251,13 +251,8 @@ GenerateMakefile
 # Perform a build
 # if $target is empty, whole project will be built, otherwise a single file
 case "$PLATFORM" in
-	"vc-win32")
+	"vc-win32"|"vc-win64")
 		Make $makefile $target || exit 1
-		[ $render -eq 1 ] && cp $root/libs/SDL2/x86/SDL2.dll .
-		;;
-	"vc-win64")
-		Make $makefile $target || exit 1
-		[ $render -eq 1 ] && cp $root/libs/SDL2/x64/SDL2.dll .
 		;;
 	"mingw32"|"cygwin")
 		PATH=/bin:/usr/bin:$PATH					# configure paths for Cygwin

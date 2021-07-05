@@ -216,6 +216,9 @@ Oodle
 
 Changes
 ~~~~~~~
+05.07.2021
+- providing Win32 and Win64 builds of UE Viewer
+
 30.05.2021
 - Mass Effect Legendary Edition support
 
