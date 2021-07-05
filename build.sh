@@ -1,7 +1,8 @@
 #!/bin/bash
 
 
-# Parse command line parameters
+# Parse the command line
+ExeName=
 
 while [ "$1" ]; do
 	case "$1" in
@@ -26,13 +27,17 @@ while [ "$1" ]; do
 			VC32TOOLS_OPTIONS="--64"
 			shift
 			;;
+		--exe)
+			ExeName=$2
+			shift 2
+			;;
 		--file)
 			# compile a single file from VSCode, should replace slashes
 			single_file=${2//\\//}
 			shift 2
 			;;
 		*)
-			echo "Usage: build.sh [--debug] [--profile] [--vc <version>] [--64] [--file <cpp file>]"
+			echo "Usage: build.sh [--debug] [--profile] [--vc <version>] [--64] [--exe <file.exe>] [--file <cpp file>]"
 			exit
 			;;
 	esac
@@ -53,10 +58,12 @@ function SetupDefaultProject()
 	project="UmodelTool/umodel"
 	root="."
 	render=1
-	local ExeName="umodel"
-	[ "$debug" ] && ExeName+="-debug"
-	[ "$profile" ] && ExeName+="-profile"
-	[ "$PLATFORM" == "vc-win64" ] && ExeName+="_64"
+	if [ -z "$ExeName" ]; then
+		ExeName="umodel"
+		[ "$debug" ] && ExeName+="-debug"
+		[ "$profile" ] && ExeName+="-profile"
+		[ "$PLATFORM" == "vc-win64" ] && ExeName+="_64"
+	fi
 	GENMAKE_OPTIONS+=" EXE_NAME=$ExeName"
 }
 
