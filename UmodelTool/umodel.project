@@ -39,4 +39,9 @@ sources(MAIN) = {
 !endif
 }
 
-target(executable, $PRJ, MAIN + COMP_LIBS + UE4_LIBS + IMG_LIBS + NV_LIBS + MOBILE_LIBS, MAIN)
+!if !defined(EXE_NAME)
+	EXE_NAME = $PRJ
+	!message NO EXE_NAME
+!endif
+
+target(executable, $EXE_NAME, MAIN + COMP_LIBS + UE4_LIBS + IMG_LIBS + NV_LIBS + MOBILE_LIBS, MAIN)

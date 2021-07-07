@@ -15,7 +15,7 @@ Options:
     --nobuild               prevent from umodel rebuilding
     --exe=<executable>      do not build when overrided (useful for testing with older exe from svn)
     --<game>                choose predefined game path; <game> = ut2|ut3|gow2 etc
-    --debug                 build with -debug option
+    --debug                 build with --debug option
     --profile               build with --profile option
     --clip					do not start umodel, copy the startup command to clipboard (Windows only)
     --help                  display this help message
@@ -282,6 +282,7 @@ for arg in "$@"; do		# using quoted $@ will allow to correctly separate argument
 		;;
 	--64)
 		buildopt=--64
+		win64=1
 		;;
 	--nobuild)
 		nobuild=1
@@ -293,9 +294,11 @@ for arg in "$@"; do		# using quoted $@ will allow to correctly separate argument
 	--debug)
 		buildopt="$buildopt --debug"
 		debugOpt=-debug
+		debug=1
 		;;
 	--profile)
 		buildopt="$buildopt --profile"
+		profile=1
 		;;
 	--clip)
 		launch_string_to_clipboard=1
@@ -318,7 +321,14 @@ done
 
 # rebuild umodel when not desired opposite
 if [ -z "$nobuild" ]; then
-	console_title "Building umodel ..."
+    # compute the name of umodel executable, copy-paste of SetupDefaultProject() code from build.sh
+	exe="umodel"
+	[ "$debug" ] && exe+="-debug"
+	[ "$profile" ] && exe+="-profile"
+	[ "$win64" ] && exe+="_64"
+	exe+=".exe"
+
+	console_title "Building $exe ..."
 	./build.sh $buildopt || exit 1
 fi
 

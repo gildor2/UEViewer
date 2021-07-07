@@ -47,6 +47,8 @@ OODLE_LIB_PATH=
 	STDLIBS += $OODLE_LIB_FILE
 	!if "$COMPILER" eq "VisualC"
 		# Ensure compatible CRT will be used when linking with Win32 Oodle static libraries
-		LINKFLAGS += -NODEFAULTLIB:libcmt
+		LINKFLAGS += -NODEFAULTLIB:msvcrt
+		# Use static CRT for release Windows builds without use of MSVCRT.dll
+		LIBC = static
 	!endif
 !endif

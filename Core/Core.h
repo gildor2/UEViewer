@@ -637,21 +637,17 @@ extern bool GUseDebugger;
 #endif
 
 
-#if RENDERING
-#	define appMilliseconds()		SDL_GetTicks()
-#else
-#	ifdef _WIN32
-#		if !defined(WINAPI) 	// detect <windows.h>
-		extern "C" {
-			__declspec(dllimport) unsigned long __stdcall GetTickCount();
-		}
-#		endif
-#	else
-		// Local implementation of GetTickCount() for non-Windows platforms
-		unsigned long GetTickCount();
+#ifdef _WIN32
+#	if !defined(WINAPI) 	// detect <windows.h>
+	extern "C" {
+		__declspec(dllimport) unsigned long __stdcall GetTickCount();
+	}
 #	endif
-#	define appMilliseconds()		GetTickCount()
-#endif // RENDERING
+#else
+	// Local implementation of GetTickCount() for non-Windows platforms
+	unsigned long GetTickCount();
+#endif
+#define appMilliseconds()		GetTickCount()
 
 // Allow operation of enum class as with regular integer
 #define BITFIELD_ENUM(Enum) \
