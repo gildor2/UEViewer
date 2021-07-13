@@ -40,6 +40,7 @@ struct PropInfo
 {
 	// Name of the property, should exist in class's property table (BEGIN_PROP_TABLE...)
 	// If starts with '#', the property is ignored, and the following string is a property's type name.
+	// If starts with '!', the property is ignored, and PropIndex defines the engine version constant.
 	const char* Name;
 	// Index of the property.
 	int			PropIndex;
@@ -51,6 +52,8 @@ struct PropInfo
 #define BEGIN(type)					{ type,  0,        0 },	// store class name as field name, index is not used
 #define MAP(name,index)				{ #name, index,    0 },	// field specification
 #define END							{ NULL,  0,        0 },	// end of class - mark with NULL name
+
+#define VERSION_BLOCK(version)		{ "!",   version,  0 },	// begin engine-specific block
 
 // Multi-property "drop" instructions
 #if _MSC_VER
@@ -68,14 +71,18 @@ struct PropInfo
 
 #define DROP_OBJ_ARRAY(index)		{ "#arr_int32", index, 0 }, // TArray<UObject*>
 
-/*
- * Class table. If class is missing here, it's assumed that its property list
- * matches property table (declared with BEGIN_PROP_TABLE).
- * Notes:
- * - Classes should go in order: child, parent, parent's parent ... If not, the parent
- *   class will be captured before the child, and the property index won't match.
- * - If property is not listed, SerializeUnversionedProperties4 will skip the property as int32.
- */
+// Class table. If class is missing here, it's assumed that its property list matches property table
+// (declared with BEGIN_PROP_TABLE).
+// Declaration rules:
+// - Classes should go in order: child, parent, parent's parent ... If not, the parent
+//   class will be captured before the child, and the property index won't match.
+// - If property is not listed, SerializeUnversionedProperties4 will assume the property is int32.
+// - VERSION_BLOCK has strict syntax
+//   - no multiple fields in DROP_.. macros
+//   - VERSION_BLOCK with higher version (newer one) should go before lower (older) version
+//   - VERSION_BLOCK should be ended with constant 0
+//   - all properties inside of the VERSION_BLOCK should go in ascending order
+
 static const PropInfo PropData[] =
 {
 BEGIN("UStaticMesh4")
@@ -260,7 +267,10 @@ struct ParentInfo
 	int MinEngineVersion = 0; // allow changing type information with newer engine versions
 };
 
-// Note: parent classes should be defined after children, so the whole table could be iterated with a single pass
+// Declaration rules:
+// - Parent classes should be defined after children, so the whole table could be iterated with a single pass.
+// - If there's engine-specific class declaration, newer engine declarations should go before the older ones.
+
 static const ParentInfo ParentData[] =
 {
 	// Texture classes
@@ -350,28 +360,60 @@ const char* CTypeInfo::FindUnversionedProp(int InPropIndex, int& OutArrayIndex, 
 	p = PropData;
 	end = PropData + ARRAY_COUNT(PropData);
 
-	bool bClassFound = false;
 	while (p < end)
 	{
-		// Note: StrucType could correspond to a few classes from the list about
-		// because of inheritance, so don't "break" a loop when we've scanned some class, check
-		// other classes too
-		bool IsOurClass;
 		// Use exact name comparison to allow intermediate parents which aren't declared in PropData[].
 		// Doing the same in FindTypeForProperty().
-		IsOurClass = stricmp(p->Name, FoundProp.TypeName) == 0;
+		if (stricmp(p->Name, FoundProp.TypeName) != 0)
+		{
+			// A different class, skip its declaration.
+			while (++p < end && p->Name != NULL)
+			{}
+			// skip the END marker and continue with next type map
+			p++;
+			continue;
+		}
+
+		bool bPatchingPropIndex = false;
+		int NumInsertedProps = 0;
 
 		// Loop over PropInfo entries, either find a property or an end of the current class information.
-		while (++p < end && p->Name)
+		while (++p < end && p->Name != NULL)
 		{
-			if (!IsOurClass)
+			if (p->Name[0] == '!')
 			{
-				// We're just waiting for the end of class, to try matching type name again
+				// Adjust the property index so it will match previous engine version
+				FoundProp.PropIndex -= NumInsertedProps;
+				NumInsertedProps = 0;
+				// This is the engine version block
+				int RequiredVersion = p->PropIndex;
+				bPatchingPropIndex = false;
+				if (InGame < RequiredVersion)
+				{
+					// Skip the whole block for the engine which is newer than loaded asset use
+					while (++p < end && p->Name != NULL && p->Name[0] != '!')
+					{}
+					// A step back, so next '++p' in outer loop will check this entry again
+					p--;
+				}
+				else if (RequiredVersion != 0)
+				{
+					// The engine version matches, so the following block will probably insert new properties
+					bPatchingPropIndex = true;
+				}
 				continue;
+			}
+
+			if (p->PropIndex <= FoundProp.PropIndex && bPatchingPropIndex)
+			{
+				// This property was inserted in this engine version, so we'll need to adjust
+				// property index at the end of version block to match previous engine version.
+				NumInsertedProps++;
 			}
 
 			if (p->PropMask)
 			{
+				assert(bPatchingPropIndex == false);				// no support for masks inside VERSION_BLOCK
 				// It is used only for DROP_... macros.
 				uint32 IndexWithOffset = FoundProp.PropIndex - p->PropIndex;
 				if (IndexWithOffset > 32)
@@ -388,26 +430,12 @@ const char* CTypeInfo::FindUnversionedProp(int InPropIndex, int& OutArrayIndex, 
 			else if (p->PropIndex == FoundProp.PropIndex)
 			{
 				// Found a matching property.
-				//todo: not supporting arrays here, arrays relies on property table to match layout of CTypeInfo declaration
+				//todo: we're not supporting arrays here, arrays relies on property table to match layout of CTypeInfo declaration
 				return p->Name;
 			}
 		}
 
-		if (IsOurClass)
-		{
-			// the class has been verified, and we didn't find a property
-			bClassFound = true;
-			break;
-		}
-
-		// skip the END marker and continue with next type map
-		p++;
-	}
-
-	if (bClassFound)
-	{
-		// We have a declaration of the class, but didn't find a property. Don't fall to CTypeInfo PROP declarations.
-		//todo: review later, actually can "return NULL" from inside the loop body
+		// The class has been verified, and we didn't find a property. Don't fall to CTypeInfo PROP declarations.
 		return NULL;
 	}
 
