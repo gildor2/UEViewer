@@ -299,6 +299,12 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 {
 	guard(UAnimSequence::DecodeTrans3Anims);
 
+	if (CompressedByteStream.Num() == 0)
+	{
+		// This situation is true for some sequences
+		return;
+	}
+
 	// read some counts first
 	FMemReader Reader1(Trans3Data.GetData(), Trans3Data.Num());
 	Reader1.SetupFrom(*Package);

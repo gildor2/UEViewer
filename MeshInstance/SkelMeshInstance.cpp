@@ -507,8 +507,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 			BoneDebug.AnimRotation = Bone.Orientation;
 #endif // SHOW_ANIM
 
-			// compute bone orientation
-			if (AnimSeq1 && AnimBoneIndex != INDEX_NONE && AnimSeq1->Tracks[AnimBoneIndex]->HasKeys())
+			// compute bone orientation, take care of empty Tracks array
+			if (AnimSeq1 && AnimBoneIndex != INDEX_NONE && AnimSeq1->Tracks.IsValidIndex(AnimBoneIndex) && AnimSeq1->Tracks[AnimBoneIndex]->HasKeys())
 			{
 				// get bone position from track
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
