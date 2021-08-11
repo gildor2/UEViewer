@@ -295,14 +295,14 @@ static void ReadArgonautsTimeArray(const TArray<unsigned> &SourceArray, int Firs
 
 #if TRANSFORMERS
 
-void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
+bool UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 {
 	guard(UAnimSequence::DecodeTrans3Anims);
 
 	if (CompressedByteStream.Num() == 0)
 	{
 		// This situation is true for some sequences
-		return;
+		return false;
 	}
 
 	// read some counts first
@@ -525,6 +525,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 		DBG(" - %s\n", *Owner->TrackBoneNames[Bone]);
 	}
 
+	return true;
 	unguard;
 }
 
@@ -710,12 +711,20 @@ void UAnimSet::ConvertAnims()
 		if (ArGame == GAME_Transformers && Seq->Trans3Data.Num())
 		{
 			CAnimSequence *Dst = new CAnimSequence(Seq);
-			AnimSet->Sequences.Add(Dst);
 			Dst->Name      = Seq->SequenceName;
 			Dst->NumFrames = Seq->NumFrames;
 			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
 			Dst->bAdditive = Seq->bIsAdditive;
-			Seq->DecodeTrans3Anims(Dst, this);
+
+			if (Seq->DecodeTrans3Anims(Dst, this))
+			{
+				AnimSet->Sequences.Add(Dst);
+			}
+			else
+			{
+				// Failed to decode, drop the track
+				delete Dst;
+			}
 			continue;
 		}
 #endif // TRANSFORMERS
