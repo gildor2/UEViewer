@@ -140,10 +140,10 @@ CSkelMeshViewer::CSkelMeshViewer(CSkeletalMesh* Mesh0, CApplication* Window)
 	TimeSinceCreate = -2;		// ignore first 2 frames: 1st frame will be called after mesh changing, 2nd frame could load textures etc
 
 #if SHOW_BOUNDS
-	appPrintf("Bounds.min = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Min));
-	appPrintf("Bounds.max = %g %g %g\n", FVECTOR_ARG(Mesh->BoundingBox.Max));
+	appPrintf("Bounds.min = %g %g %g\n", VECTOR_ARG(Mesh->BoundingBox.Min));
+	appPrintf("Bounds.max = %g %g %g\n", VECTOR_ARG(Mesh->BoundingBox.Max));
 	appPrintf("Origin     = %g %g %g\n", VECTOR_ARG(Mesh->MeshOrigin));
-	appPrintf("Sphere     = %g %g %g R=%g\n", FVECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
+	appPrintf("Sphere     = %g %g %g R=%g\n", VECTOR_ARG(Mesh->BoundingSphere), Mesh->BoundingSphere.R);
 #endif // SHOW_BOUNDS
 
 	unguard;
@@ -400,19 +400,26 @@ void CSkelMeshViewer::Draw2D()
 		}
 
 		const char *OnOffStatus = NULL;
-		switch ((EAnimRotationOnly)MeshInst->RotationMode)
+		switch ((EAnimRetargetingMode)MeshInst->RetargetingModeOverride)
 		{
-		case EAnimRotationOnly::AnimSet:
-			OnOffStatus = "use AnimSet data";
+		case EAnimRetargetingMode::AnimSet:
+			OnOffStatus = "default";
 			break;
-		case EAnimRotationOnly::ForceEnabled:
-			OnOffStatus = S_RED "force on";
+		case EAnimRetargetingMode::AnimRotationOnly:
+			OnOffStatus = S_YELLOW "force mesh translation";
 			break;
-		case EAnimRotationOnly::ForceDisabled:
-			OnOffStatus = S_RED "force off";
+		case EAnimRetargetingMode::NoRetargeting:
+			OnOffStatus = S_RED "disabled";
 			break;
 		}
-		DrawTextBottomLeft(S_GREEN "RotationOnly:" S_WHITE " %s", OnOffStatus);
+		if (DrawTextBottomLeftH(NULL, S_GREEN S_HYPERLINK("Retargeting:" S_WHITE " %s"), OnOffStatus))
+		{
+			// Allow retargeting toggle with a mouse click
+			if (MeshInst->RetargetingModeOverride == EAnimRetargetingMode::AnimSet)
+				SetRetargetingMode(EAnimRetargetingMode::NoRetargeting);
+			else
+				SetRetargetingMode(EAnimRetargetingMode::AnimSet);
+		}
 
 		const CAnimSequence* Seq = MeshInst->GetAnim(0);
 		if (Seq)
@@ -435,7 +442,7 @@ void CSkelMeshViewer::Draw2D()
 					AnimIndex+1, MeshInst->GetAnimCount(), *Seq->Name, Seq->Rate, Seq->NumFrames,
 					Seq->bAdditive ? S_RED" (additive)" : "");
 			}
-			DrawTextBottomRight(S_GREEN "Time:" S_WHITE " %4.1f/%d", MeshInst->GetAnimTime(0), Seq->NumFrames);
+			DrawTextBottomRight(S_GREEN "Frame:" S_WHITE " %4.1f/%d", MeshInst->GetAnimFrame(0), Seq->NumFrames);
 #if ANIM_DEBUG_INFO
 			const FString& DebugText = Seq->DebugInfo;
 			if (DebugText.Num())
@@ -625,7 +632,7 @@ void CSkelMeshViewer::ShowHelp()
 	DrawKeyHelp("F",      "focus camera on mesh");
 	DrawKeyHelp("Ctrl+B", "dump skeleton to console");
 	DrawKeyHelp("Ctrl+A", bIsUE4Mesh ? "find animations (UE4)" : "cycle mesh animation sets");
-	DrawKeyHelp("Ctrl+R", "toggle animation translaton mode");
+	DrawKeyHelp("Ctrl+R", "toggle animation retargeting mode");
 	DrawKeyHelp("Ctrl+T", "tag/untag mesh");
 	DrawKeyHelp("Ctrl+U", "display UV");
 }
@@ -832,11 +839,9 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 
 	case 'r'|KEY_CTRL:
 		{
-			int mode = MeshInst->RotationMode + 1;
-			if (mode >= (int)EAnimRotationOnly::Count) mode = 0;
-			MeshInst->RotationMode = mode;
-			for (CSkelMeshInstance* mesh : TaggedMeshes)
-				mesh->RotationMode = mode;
+			EAnimRetargetingMode mode = EAnimRetargetingMode((int)MeshInst->RetargetingModeOverride + 1);
+			if (mode >= EAnimRetargetingMode::Count) mode = EAnimRetargetingMode::AnimSet;
+			SetRetargetingMode(mode);
 		}
 		break;
 
@@ -855,6 +860,13 @@ void CSkelMeshViewer::ProcessKey(unsigned key)
 	unguard;
 }
 
+void CSkelMeshViewer::SetRetargetingMode(EAnimRetargetingMode NewMode)
+{
+	CSkelMeshInstance *MeshInst = static_cast<CSkelMeshInstance*>(Inst);
+	MeshInst->RetargetingModeOverride = NewMode;
+	for (CSkelMeshInstance* mesh : TaggedMeshes)
+		mesh->RetargetingModeOverride = NewMode;
+}
 
 void CSkelMeshViewer::AttachAnimSet()
 {

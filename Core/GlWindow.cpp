@@ -560,12 +560,11 @@ static void Shutdown()
 }
 
 
-//-----------------------------------------------------------------------------
-// Drawing text at 3D position
-//-----------------------------------------------------------------------------
+namespace Viewport
+{
 
 // Project 3D point to screen coordinates; return false when not in view frustum
-static bool ProjectToScreen(const CVec3 &pos, int scr[2])
+bool ProjectToScreen(const CVec3 &pos, int scr[2])
 {
 	CVec3	vec;
 	VectorSubtract(pos, viewOrigin, vec);
@@ -585,20 +584,7 @@ static bool ProjectToScreen(const CVec3 &pos, int scr[2])
 	return true;
 }
 
-
-void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
-{
-	int coords[2];
-	if (!ProjectToScreen(pos, coords)) return;
-
-	va_list	argptr;
-	va_start(argptr, text);
-	char msg[4096];
-	vsnprintf(ARRAY_ARG(msg), text, argptr);
-	va_end(argptr);
-
-	DrawTextPos(coords[0], coords[1], msg, color);
-}
+} // namespace Viewport
 
 
 //-----------------------------------------------------------------------------

@@ -33,11 +33,13 @@
 #define S_MAGENTA		"^5"
 #define S_CYAN			"^6"
 #define S_WHITE			"^7"
+#define S_GREY			"^8"
+#define S_ORANGE		"^9"
 
 // Hyperlink support
 #define S_HYPER_START	'{'
 #define S_HYPER_END		'}'
-#define S_HYPERLINK(text)	"{" text "}"
+#define S_HYPERLINK(text) "{" text "}"
 
 // Draw "stacked" text bound to the particular window corner
 void DrawTextLeft(const char* text, ...);
@@ -74,9 +76,10 @@ void PrepareFontTexture();
 void ClearTexts();
 void FlushTexts();
 
-// Internal function for drawing text at arbitrary 2D position
-void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink = false, bool bHighlightLink = false, ETextAnchor anchor = ETextAnchor::None);
+// Draw text at 3D space, with arbitrary color
+void DrawText3D(const CVec3 &pos, unsigned color, const char* text, ...);
 
+bool DrawText3DH(const CVec3 &pos, bool* isHover, unsigned color, const char* text, ...);
 
 // Allows to disable rendering of any texts on screen
 extern bool GShowDebugInfo;

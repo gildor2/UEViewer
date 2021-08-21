@@ -15,7 +15,7 @@
       "intelliSenseMode": "windows-msvc-x86",
       "environments": [
         {
-          "BuildOptions": ""
+          "BuildOptions": "--exe umodel.exe"
         }
       ]
     },
@@ -35,7 +35,7 @@
       "intelliSenseMode": "windows-msvc-x86",
       "environments": [
         {
-          "BuildOptions": "--debug"
+          "BuildOptions": "--debug --exe umodel.exe"
         }
       ]
     },
@@ -54,7 +54,7 @@
       "intelliSenseMode": "windows-msvc-x64",
       "environments": [
         {
-          "BuildOptions": "--64"
+          "BuildOptions": "--64 --exe umodel.exe"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "intelliSenseMode": "windows-msvc-x64",
       "environments": [
         {
-          "BuildOptions": "--64 --debug"
+          "BuildOptions": "--64 --debug --exe umodel.exe"
         }
       ]
     }

@@ -66,10 +66,6 @@ extern CVec3 viewOrigin;
 extern CAxis viewAxis;
 
 
-// Draw text at 3D space, with arbitrary color
-void DrawText3D(const CVec3 &pos, unsigned color, const char* text, ...);
-
-
 // Display help about particular ket, should be called from AppDisplayTexts()
 #define KEY_HELP_TAB	14
 void DrawKeyHelp(const char *Key, const char *Help);
@@ -95,6 +91,8 @@ extern Point MousePos;
 extern int MouseButtons;
 
 extern int MouseButtonsDelta;
+
+bool ProjectToScreen(const CVec3 &pos, int scr[2]);
 
 } // namespace Viewport
 

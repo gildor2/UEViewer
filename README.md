@@ -56,7 +56,7 @@ alternative it is possible to create a batch file which will temporarily modify 
 Here's an example of such file:
 
     @echo off
-    set PATH=%PATH%;C:\BuildTools\bin
+    set C:\BuildTools\bin;PATH=%PATH%
     bash build.sh
 
 To launch a build process without a batch, simply execute
@@ -64,7 +64,7 @@ To launch a build process without a batch, simply execute
     bash build.sh
 
 ### Windows 64-bit
-Despite we're providing only 32-but builds of UE Viewer, it is possible to compile it for 64-bit platform. To do that, you
+Despite only 32-bit builds of UE Viewer being provided, it is possible to compile it for 64-bit platform. To do that, you
 should change a variable in *build.sh*: *PLATFORM* should be changed from `vc-win32` to `vc-win64`. Also 64-bit build could
 be initiated with launching
 
@@ -89,7 +89,7 @@ UE Viewer is provided with initial support for macOS platform. I'm using VMWare 
 full testing. Therefore, some features are disabled:
 - no OpenGL support (no visualization) - it is explicitly disabled in *UmodelTool/Build.h*
 - no multithreading support - it's disabled in the same place
-  
+
 In other words, UE Viewer on macOS works just like a simple command-line exporter utility.
 
 

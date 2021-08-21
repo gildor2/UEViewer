@@ -739,9 +739,16 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		CompactFilePath(CombinedPath);
 		// serialize other fields
 		E.Serialize(InfoReader);
+
+		if (E.Size == 0)
+		{
+			// Happens with Jedi Fallen Order, seems assets are deleted in patches this way. If we'll continue registration,
+			// the existing (previous) asset might be overriden with zero-size file, and it won't be recognized as an asset anymore.
+			continue;
+		}
+
 		if (E.bEncrypted)
 		{
-//			appPrintf("Encrypted file: %s\n", *Filename);
 			NumEncryptedFiles++;
 		}
 		if (info.Version >= PakFile_Version_FNameBasedCompressionMethod)

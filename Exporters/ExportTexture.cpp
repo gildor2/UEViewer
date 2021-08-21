@@ -381,13 +381,13 @@ struct CTextureExportWorker
 
 		if (!HasSlices)
 		{
-			Ar = CreateExportArchive(Tex, 0, "%s.%s", Tex->Name, Ext);
+			Ar = CreateExportArchive(Tex, EFileArchiveOptions::Default, "%s.%s", Tex->Name, Ext);
 		}
 		else
 		{
 			ExportPath = GetExportPath(Tex);
 			ExportExt = Ext;
-			Ar = CreateExportArchive(Tex, 0, "%s/Side_0.%s", Tex->Name, Ext);
+			Ar = CreateExportArchive(Tex, EFileArchiveOptions::Default, "%s/Side_0.%s", Tex->Name, Ext);
 		}
 
 		if (Ar == NULL)
@@ -431,7 +431,7 @@ struct CTextureExportWorker
 				}
 				else
 				{
-					Ar = new FFileWriter(FullPath, FAO_NoOpenError);
+					Ar = new FFileWriter(FullPath, EFileArchiveOptions::NoOpenError);
 					if (!Ar->IsOpen())
 					{
 						appPrintf("Error creating file \"%s\" ...\n", FullPath);

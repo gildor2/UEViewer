@@ -7,6 +7,7 @@
 
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/StaticMesh.h"
+#include "TypeConvert.h"
 
 #include "Psk.h"
 #include "Exporters.h"
@@ -464,7 +465,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 		else
 			appSprintf(ARRAY_ARG(filename), "%s_Lod%d.%s", OriginalMesh->Name, Lod, Ext);
 
-		FArchive *Ar = CreateExportArchive(OriginalMesh, 0, "%s", filename);
+		FArchive *Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::Default, "%s", filename);
 		if (Ar)
 		{
 			ExportSkeletalMeshLod(*Mesh, MeshLod, *Ar);
@@ -482,7 +483,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 	// export script file
 	if (GExportScripts)
 	{
-		FArchive *Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.uc", OriginalMesh->Name);
+		FArchive *Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.uc", OriginalMesh->Name);
 		if (Ar)
 		{
 			ExportScript(Mesh, *Ar);
@@ -492,7 +493,7 @@ void ExportPsk(const CSkeletalMesh *Mesh)
 
 	if (OriginalMesh->GetTypeinfo()->NumProps)
 	{
-		FArchive* PropAr = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.props.txt", OriginalMesh->Name);
+		FArchive* PropAr = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.props.txt", OriginalMesh->Name);
 		if (PropAr)
 		{
 			OriginalMesh->GetTypeinfo()->SaveProps(OriginalMesh, *PropAr);
@@ -539,7 +540,7 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 {
 	guard(DoExportPsa);
 
-	FArchive* Ar0 = CreateExportArchive(OriginalAnim, 0, "%s.psa", OriginalAnim->Name);
+	FArchive* Ar0 = CreateExportArchive(OriginalAnim, EFileArchiveOptions::Default, "%s.psa", OriginalAnim->Name);
 	if (!Ar0) return;
 	FArchive &Ar = *Ar0;						// use "Ar << obj" instead of "(*Ar) << obj"
 
@@ -565,7 +566,16 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 		B.Flags       = 0;						// reserved
 		B.NumChildren = 0;						// unknown here
 		B.ParentIndex = (i > 0) ? 0 : -1;		// unknown for UAnimSet
-//		B.BonePos     =							// unknown here
+		B.BonePos.Length = 1.0f;
+		if (Anim->BonePositions.IsValidIndex(i))
+		{
+			// The AnimSet has bone transform information, store it in psa file (UE4+)
+			FQuat Q1;
+			CQuat Q2 = CVT(Q1);
+			Q1 = CVT(Q2);
+			B.BonePos.Position = CVT(Anim->BonePositions[i].Position);
+			B.BonePos.Orientation = CVT(Anim->BonePositions[i].Orientation);
+		}
 		Ar << B;
 	}
 
@@ -667,16 +677,16 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 
 	// generate configuration file with extended attributes
 
-	// Get statistics of each bone retargetting mode to see if we need a config or not
-	int ModeCounts[(int)EBoneRetargettingMode::Count];
+	// Get statistics of each bone retargeting mode to see if we need a config or not
+	int ModeCounts[(int)EBoneRetargetingMode::Count];
 	memset(ModeCounts, 0, sizeof(ModeCounts));
-	for (EBoneRetargettingMode Mode : Anim->BoneModes)
+	for (EBoneRetargetingMode Mode : Anim->BoneModes)
 	{
 		ModeCounts[(int)Mode]++;
 	}
 
 	bool bSaveConfig = true;
-	if (ModeCounts[(int)EBoneRetargettingMode::Animation] != Anim->BoneModes.Num() && !requireConfig)
+	if (ModeCounts[(int)EBoneRetargetingMode::Animation] != Anim->BoneModes.Num() && !requireConfig)
 	{
 		// nothing to write
 		bSaveConfig = false;
@@ -685,7 +695,7 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 	FArchive *Ar1 = NULL;
 	if (bSaveConfig)
 	{
-		Ar1 = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s.config", OriginalAnim->Name);
+		Ar1 = CreateExportArchive(OriginalAnim, EFileArchiveOptions::TextFile, "%s.config", OriginalAnim->Name);
 	}
 
 	if (Ar1)
@@ -694,8 +704,8 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 
 		// Just optimization of the config file size: use AnimRotationOnly when most of bones use translation
 		// from the mesh.
-		bool AnimRotationOnly = (ModeCounts[(int)EBoneRetargettingMode::Animation]
-			+ ModeCounts[(int)EBoneRetargettingMode::Mesh]) == numBones;
+		bool AnimRotationOnly = (ModeCounts[(int)EBoneRetargetingMode::Animation]
+			+ ModeCounts[(int)EBoneRetargetingMode::Mesh]) == numBones;
 
 		if (AnimRotationOnly)
 		{
@@ -705,7 +715,7 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 			// UseTranslationBoneNames: allow animated translation
 			Ar1->Printf("\n[UseTranslationBoneNames]\n");
 			for (i = 0; i < Anim->BoneModes.Num(); i++)
-				if (Anim->BoneModes[i] == EBoneRetargettingMode::Animation)
+				if (Anim->BoneModes[i] == EBoneRetargetingMode::Animation)
 					Ar1->Printf("%s\n", *Anim->TrackBoneNames[i]);
 			// ForceMeshTranslationBoneNames: this will revert a bone back to translation from the mesh.
 			// It is no longer used. In UE3, it was possible to set up AnimRotationOnly per mesh, or from
@@ -746,7 +756,7 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 	//todo: .props.txt is not saved when multiple animations are stored in a single .psa file
 	if (OriginalAnim->GetTypeinfo()->NumProps)
 	{
-		FArchive* PropAr = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s.props.txt", OriginalAnim->Name);
+		FArchive* PropAr = CreateExportArchive(OriginalAnim, EFileArchiveOptions::TextFile, "%s.props.txt", OriginalAnim->Name);
 		if (PropAr)
 		{
 			OriginalAnim->GetTypeinfo()->SaveProps(OriginalAnim, *PropAr);
@@ -888,7 +898,7 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 		else
 			appSprintf(ARRAY_ARG(filename), "%s_Lod%d.pskx", OriginalMesh->Name, Lod);
 
-		FArchive *Ar = CreateExportArchive(OriginalMesh, 0, "%s", filename);
+		FArchive *Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::Default, "%s", filename);
 		if (Ar)
 		{
 			ExportStaticMeshLod(Mesh->Lods[Lod], *Ar);
@@ -905,7 +915,7 @@ void ExportStaticMesh(const CStaticMesh *Mesh)
 
 	if (OriginalMesh->GetTypeinfo()->NumProps)
 	{
-		FArchive* PropAr = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.props.txt", OriginalMesh->Name);
+		FArchive* PropAr = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.props.txt", OriginalMesh->Name);
 		if (PropAr)
 		{
 			OriginalMesh->GetTypeinfo()->SaveProps(OriginalMesh, *PropAr);

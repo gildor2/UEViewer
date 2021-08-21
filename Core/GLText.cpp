@@ -79,55 +79,151 @@ void PrepareFontTexture()
 	}
 }
 
-static void DrawChar(char c, unsigned color, int textX, int textY)
+class CTextVertexBuffer
 {
-	if (textX <= -CHAR_WIDTH || textY <= -CHAR_HEIGHT ||
-		textX > Viewport::Size.X || textY > Viewport::Size.Y)
-		return;				// outside of screen
+public:
+	static const int MaxCharsInBuffer = 128;
+	static const int ShadowCount = 1; // use 0 for rendering without a shadow
 
-	glBegin(GL_QUADS);
+	static const int MaxVertexCount = MaxCharsInBuffer * 4 * (ShadowCount + 1);
+	static const int MaxAttributeCount = MaxCharsInBuffer * 6 * (ShadowCount + 1);
 
-	c -= FONT_FIRST_CHAR;
+	bool bStateIsSet;
+	int CharacterCount;
+	CVec3 VertexPositions[MaxVertexCount];
+	float VertexTextureCoordinates[MaxVertexCount * 2];
+	uint32 VertexColors[MaxVertexCount];
+	int Indices[MaxAttributeCount];
 
-	// screen coordinates
-	int x1 = textX;
-	int y1 = textY;
-	int x2 = textX + CHAR_WIDTH - FONT_SPACING;
-	int y2 = textY + CHAR_HEIGHT - FONT_SPACING;
+	CTextVertexBuffer()
+	: bStateIsSet(false)
+	, CharacterCount(0)
+	{}
 
-	// texture coordinates
-	int line = c / CHARS_PER_LINE;
-	int col  = c - line * CHARS_PER_LINE;
-
-	float s0 = col * CHAR_WIDTH;
-	float s1 = s0 + CHAR_WIDTH - FONT_SPACING;
-	float t0 = line * CHAR_HEIGHT;
-	float t1 = t0 + CHAR_HEIGHT - FONT_SPACING;
-
-	s0 /= TEX_WIDTH;
-	s1 /= TEX_WIDTH;
-	t0 /= TEX_HEIGHT;
-	t1 /= TEX_HEIGHT;
-
-	unsigned color2 = color & 0xFF000000;	// RGB=0, keep alpha
-	for (int s = 1; s >= 0; s--)
+	~CTextVertexBuffer()
 	{
-		// s=1 -> shadow, s=0 -> char
-		glColor4ubv((GLubyte*)&color2);
-		glTexCoord2f(s1, t0);
-		glVertex2f(x2+s, y1+s);
-		glTexCoord2f(s0, t0);
-		glVertex2f(x1+s, y1+s);
-		glTexCoord2f(s0, t1);
-		glVertex2f(x1+s, y2+s);
-		glTexCoord2f(s1, t1);
-		glVertex2f(x2+s, y2+s);
-		color2 = color;
+		Flush();
+
+		if (bStateIsSet)
+		{
+			glDisableClientState(GL_VERTEX_ARRAY);
+			glDisableClientState(GL_COLOR_ARRAY);
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		}
 	}
 
-	glEnd();
-}
+	void RenderChar(char Ch, unsigned Color, int TextX, int TextY)
+	{
+		if (TextX <= -CHAR_WIDTH || TextY <= -CHAR_HEIGHT ||
+			TextX > Viewport::Size.X || TextY > Viewport::Size.Y)
+		{
+			// Outside of the screen
+			return;
+		}
 
+		Ch -= FONT_FIRST_CHAR;
+
+		// Compute the screen coordinate
+		int x1 = TextX;
+		int y1 = TextY;
+		int x2 = TextX + CHAR_WIDTH - FONT_SPACING;
+		int y2 = TextY + CHAR_HEIGHT - FONT_SPACING;
+
+		// Get the texture coordinates
+		int line = Ch / CHARS_PER_LINE;
+		int col  = Ch - line * CHARS_PER_LINE;
+
+		// Texture coordinates of the character
+		float s0 = col * CHAR_WIDTH;
+		float s1 = s0 + CHAR_WIDTH - FONT_SPACING;
+		float t0 = line * CHAR_HEIGHT;
+		float t1 = t0 + CHAR_HEIGHT - FONT_SPACING;
+		s0 /= TEX_WIDTH;
+		s1 /= TEX_WIDTH;
+		t0 /= TEX_HEIGHT;
+		t1 /= TEX_HEIGHT;
+
+		// Fill the vertex buffers
+		int CurrentVertex = CharacterCount * 4 * (ShadowCount + 1);
+		int CurrentIndex = CharacterCount * 6 * (ShadowCount + 1);
+
+		CVec3* pPositionData = VertexPositions + CurrentVertex;
+		float* pTexcoordData = VertexTextureCoordinates + CurrentVertex * 2;
+		uint32* pColorData = VertexColors + CurrentVertex;
+		int* pIndexData = Indices + CurrentIndex;
+
+		for (int IsShadow = ShadowCount; IsShadow >= 0; IsShadow--)
+		{
+			unsigned ShadowColor = Color & 0xFF000000;	// RGB=0, keep alpha
+
+			float x1a = x1, x2a = x2, y1a = y1, y2a = y2;
+			if (IsShadow)
+			{
+				x1a += 1; x2a += 1; y1a += 1; y2a += 1;
+			}
+
+			pPositionData->Set(x2a, y1a, 0);
+			pPositionData++;
+			pPositionData->Set(x1a, y1a, 0);
+			pPositionData++;
+			pPositionData->Set(x1a, y2a, 0);
+			pPositionData++;
+			pPositionData->Set(x2a, y2a, 0);
+			pPositionData++;
+
+			*pTexcoordData++ = s1; *pTexcoordData++ = t0;
+			*pTexcoordData++ = s0; *pTexcoordData++ = t0;
+			*pTexcoordData++ = s0; *pTexcoordData++ = t1;
+			*pTexcoordData++ = s1; *pTexcoordData++ = t1;
+
+			uint32 ActiveColor = IsShadow ? Color & 0xFF000000 : Color;
+			*pColorData++ = ActiveColor;
+			*pColorData++ = ActiveColor;
+			*pColorData++ = ActiveColor;
+			*pColorData++ = ActiveColor;
+
+			// Set up the index buffer for 2 triangles
+			pIndexData[0] = CurrentVertex; pIndexData[1] = CurrentVertex + 1; pIndexData[2] = CurrentVertex + 2;
+			pIndexData[3] = CurrentVertex; pIndexData[4] = CurrentVertex + 2; pIndexData[5] = CurrentVertex + 3;
+			pIndexData += 6;
+
+			CurrentVertex += 4;
+		}
+
+		CharacterCount++;
+
+		if (CharacterCount == MaxCharsInBuffer)
+		{
+			// The buffer is at full capacity, flush data to the screen
+			Flush();
+		}
+	}
+
+protected:
+	void Flush()
+	{
+		if (!CharacterCount)
+		{
+			// There's nothing to render
+			return;
+		}
+
+		if (!bStateIsSet)
+		{
+			glEnableClientState(GL_VERTEX_ARRAY);
+			glEnableClientState(GL_COLOR_ARRAY);
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+			bStateIsSet = true;
+		}
+
+		glVertexPointer(3, GL_FLOAT, sizeof(CVec3), VertexPositions);
+		glTexCoordPointer(2, GL_FLOAT, 0, VertexTextureCoordinates);
+		glColorPointer(4, GL_UNSIGNED_BYTE, 0, VertexColors);
+		glDrawElements(GL_TRIANGLES, CharacterCount * 6 * (ShadowCount + 1), GL_UNSIGNED_INT, Indices);
+
+		CharacterCount = 0;
+	}
+};
 
 //-----------------------------------------------------------------------------
 // Text buffer
@@ -156,7 +252,7 @@ static int textOffset = 0;
 
 #define I 255
 #define o 51
-static const unsigned colorTable[8] =
+static const unsigned colorTable[] =
 {
 	RGB255(0, 0, 0),
 	RGB255(I, o, o),
@@ -165,10 +261,12 @@ static const unsigned colorTable[8] =
 	RGB255(o, o, I),
 	RGB255(I, o, I),
 	RGB255(o, I, I),
-	RGB255(I, I, I)
+	RGB255(I, I, I),
+	RGB255(127, 127, 127),
+	RGB255(255, 127, 0),
 };
 
-#define WHITE_COLOR		RGB(255,255,255)
+#define DEFAULT_COLOR		RGB255(255,255,255)
 
 #undef I
 #undef o
@@ -234,6 +332,8 @@ static void DrawText(const CRText *rec)
 	unsigned color = rec->color;
 	unsigned color2 = color;
 
+	CTextVertexBuffer TextBuffer;
+
 	while (true)
 	{
 		const char* s = strchr(text, '\n');
@@ -248,7 +348,7 @@ static void DrawText(const CRText *rec)
 			if (c == COLOR_ESCAPE)
 			{
 				char c2 = text[i+1];
-				if (c2 >= '0' && c2 <= '7')
+				if (c2 >= '0' && c2 < '0' + ARRAY_COUNT(colorTable))
 				{
 					color = color2 = colorTable[c2 - '0'];
 					i++;
@@ -270,10 +370,10 @@ static void DrawText(const CRText *rec)
 				}
 			}
 
-			DrawChar(c, color, x, y);
+			TextBuffer.RenderChar(c, color, x, y);
 			x += CHAR_WIDTH - FONT_SPACING;
 		}
-		if (!s) return;							// all done
+		if (!s) break;							// all done
 
 		y += CHAR_HEIGHT - FONT_SPACING;
 		text = s + 1;
@@ -325,7 +425,8 @@ void FlushTexts()
 }
 
 
-void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink, bool bHighlightLink, ETextAnchor anchor)
+// Internal function for drawing text at arbitrary 2D position
+static void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink, bool bHighlightLink, ETextAnchor anchor)
 {
 	if (!GShowDebugInfo) return;
 
@@ -339,54 +440,12 @@ void DrawTextPos(int x, int y, const char* text, unsigned color, bool bHyperlink
 	rec->color  = color;
 }
 
-
-static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink, bool* pHover, const char* fmt, va_list argptr)
+static void CheckHyperlink(int textPosX, int textPosY, int textWidth, int textHeight, const char* msg,
+	bool& bHighlightLink, bool& bClicked)
 {
-	guard(DrawTextAtAnchor);
-
-	assert(anchor < ETextAnchor::Last);
-
-	bool bClicked = false;
-
-	bool isBottom = (anchor >= ETextAnchor::BottomLeft);
-	bool isLeft   = (anchor == ETextAnchor::TopLeft || anchor == ETextAnchor::BottomLeft);
-
-	int pos_y = nextText_y[int(anchor)];
-
-#if DUMP_TEXTS
-	if (GDumpTexts) pos_y = Viewport::Size.Y / 2;		// trick to avoid text culling
-#endif
-
-	if (pHover) *pHover = false;						// initialize in a case of early return
-	if (!isBottom && pos_y >= Viewport::Size.Y && !GDumpTexts)	// out of screen
-		return bClicked;
-
-	char msg[4096];
-	vsnprintf(ARRAY_ARG(msg), fmt, argptr);
-	int w, h;
-	GetTextExtents(msg, w, h, bHyperlink);
-
-	nextText_y[int(anchor)] = pos_y + h;
-
-	if (!isBottom && pos_y + h <= 0 && !GDumpTexts)		// out of screen
-		return bClicked;
-
-	// Determine X position depending on anchor
-	int pos_x = isLeft ? LEFT_BORDER : Viewport::Size.X - RIGHT_BORDER - w;
-
-	// Check if mouse points at hyperlink
-	bool bHighlightLink = false;
-
-	if (bHyperlink)
-	{
-		int real_y = pos_y;
-		// Make hyperlinks working for bottom anchors. We'll use previous frame offset, so
-		// there will be a 1 frame delay if text will be changed.
-		real_y = OffsetYForAnchor(anchor, real_y, true);
-
 		// Do the rough estimation of having mouse in the whole text's bounds
-		if (real_y <= Viewport::MousePos.Y && Viewport::MousePos.Y < real_y + h &&
-			pos_x <= Viewport::MousePos.X && Viewport::MousePos.X <= pos_x + w)
+		if (textPosY <= Viewport::MousePos.Y && Viewport::MousePos.Y < textPosY + textHeight &&
+			textPosX <= Viewport::MousePos.X && Viewport::MousePos.X <= textPosX + textWidth)
 		{
 			// Check if we'll get into exact hyperlink bounds, verify only X coordinate now
 			int offset = 0;
@@ -396,8 +455,11 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 			{
 				if (c == '\n' || c == S_HYPER_END)
 					break;
-				if (c == COLOR_ESCAPE)
+				if (c == COLOR_ESCAPE && *s)
+				{
+					s++;
 					continue;
+				}
 				if (c == S_HYPER_START)
 				{
 					linkStart = offset;
@@ -406,9 +468,9 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 				// Count a character as printable
 				offset++;
 			}
-			if (linkStart > 0 &&
-				pos_x + (CHAR_WIDTH - FONT_SPACING) * linkStart <= Viewport::MousePos.X &&
-				Viewport::MousePos.X < pos_x + (CHAR_WIDTH - FONT_SPACING) * offset)
+			if (linkStart >= 0 &&
+				textPosX + (CHAR_WIDTH - FONT_SPACING) * linkStart <= Viewport::MousePos.X &&
+				Viewport::MousePos.X < textPosX + (CHAR_WIDTH - FONT_SPACING) * offset)
 			{
 				bHighlightLink = true;
 				// Check if hyperlink has been clicked this frame
@@ -421,17 +483,64 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 				}
 			}
 		}
+}
+
+static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink, bool* pHover, const char* fmt, va_list argptr)
+{
+	guard(DrawTextAtAnchor);
+
+	assert(anchor < ETextAnchor::Last);
+
+	bool bClicked = false;
+
+	bool isBottom = (anchor >= ETextAnchor::BottomLeft);
+	bool isLeft   = (anchor == ETextAnchor::TopLeft || anchor == ETextAnchor::BottomLeft);
+
+	int textPosY = nextText_y[int(anchor)];
+
+#if DUMP_TEXTS
+	if (GDumpTexts) textPosY = Viewport::Size.Y / 2;		// trick to avoid text culling
+#endif
+
+	if (pHover) *pHover = false;						// initialize in a case of early return
+	if (!isBottom && textPosY >= Viewport::Size.Y && !GDumpTexts)	// out of screen
+		return bClicked;
+
+	char msg[4096];
+	vsnprintf(ARRAY_ARG(msg), fmt, argptr);
+	int textWidth, textHeight;
+	GetTextExtents(msg, textWidth, textHeight, bHyperlink);
+
+	nextText_y[int(anchor)] = textPosY + textHeight;
+
+	if (!isBottom && textPosY + textHeight <= 0 && !GDumpTexts)		// out of screen
+		return bClicked;
+
+	// Determine X position depending on anchor
+	int textPosX = isLeft ? LEFT_BORDER : Viewport::Size.X - RIGHT_BORDER - textWidth;
+
+	// Check if mouse points at hyperlink
+	bool bHighlightLink = false;
+
+	if (bHyperlink)
+	{
+		// Make hyperlinks working for bottom anchors. We'll use previous frame offset, so
+		// there will be a 1 frame delay if text will be changed.
+		int realTextPosY = OffsetYForAnchor(anchor, textPosY, true);
+
+		// Compare mouse position agains the hyperlink text
+		CheckHyperlink(textPosX, realTextPosY, textWidth, textHeight, msg, bHighlightLink, bClicked);
 
 		if (pHover) *pHover = bHighlightLink;
 	}
 
 	// Put the text into queue
-	DrawTextPos(pos_x, pos_y, msg, color, bHyperlink, bHighlightLink, anchor);
+	DrawTextPos(textPosX, textPosY, msg, color, bHyperlink, bHighlightLink, anchor);
 
 #if DUMP_TEXTS
 	if (GDumpTexts)
 	{
-		// drop color escape characters
+		// Drop escape characters
 		char *d = msg;
 		char *s = msg;
 		while (char c = *s++)
@@ -441,12 +550,18 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 				s++;
 				continue;
 			}
+			if (bHyperlink)
+			{
+				if (c == S_HYPER_START || c == S_HYPER_END)
+					continue;
+			}
+			// This is a text, copy it
 			*d++ = c;
 		}
 		*d = 0;
 		appNotify("%s", msg);
 	}
-#endif
+#endif // DUMP_TEXTS
 
 	return bClicked;
 
@@ -463,27 +578,27 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 
 void DrawTextLeft(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopLeft, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::TopLeft, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawTextRight(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopRight, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::TopRight, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawTextBottomLeft(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomLeft, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::BottomLeft, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawTextBottomRight(const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomRight, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(ETextAnchor::BottomRight, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawText(ETextAnchor anchor, const char* text, ...)
 {
-	DRAW_TEXT(anchor, WHITE_COLOR, false, NULL, text);
+	DRAW_TEXT(anchor, DEFAULT_COLOR, false, NULL, text);
 }
 
 void DrawText(ETextAnchor anchor, unsigned color, const char* text, ...)
@@ -494,37 +609,85 @@ void DrawText(ETextAnchor anchor, unsigned color, const char* text, ...)
 
 bool DrawTextLeftH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopLeft, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::TopLeft, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextRightH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::TopRight, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::TopRight, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextBottomLeftH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomLeft, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::BottomLeft, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextBottomRightH(bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(ETextAnchor::BottomRight, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(ETextAnchor::BottomRight, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextH(ETextAnchor anchor, bool* isHover, const char* text, ...)
 {
-	DRAW_TEXT(anchor, WHITE_COLOR, true, isHover, text);
+	DRAW_TEXT(anchor, DEFAULT_COLOR, true, isHover, text);
 	return bClicked;
 }
 
 bool DrawTextH(ETextAnchor anchor, bool* isHover, unsigned color, const char* text, ...)
 {
 	DRAW_TEXT(anchor, color, true, isHover, text);
+	return bClicked;
+}
+
+void DrawText3D(const CVec3 &pos, unsigned color, const char *text, ...)
+{
+	int coords[2];
+	if (!Viewport::ProjectToScreen(pos, coords))
+	{
+		// The 'pos' is outside of the screen
+		return;
+	}
+
+	va_list	argptr;
+	va_start(argptr, text);
+	char msg[4096];
+	vsnprintf(ARRAY_ARG(msg), text, argptr);
+	va_end(argptr);
+
+	DrawTextPos(coords[0], coords[1], msg, color, false, false, ETextAnchor::None);
+}
+
+bool DrawText3DH(const CVec3 &pos, bool* isHover, unsigned color, const char *text, ...)
+{
+	int coords[2];
+	if (!Viewport::ProjectToScreen(pos, coords))
+	{
+		// The 'pos' is outside of the screen
+		return false;
+	}
+
+	va_list	argptr;
+	va_start(argptr, text);
+	char msg[4096];
+	vsnprintf(ARRAY_ARG(msg), text, argptr);
+	va_end(argptr);
+
+	int textWidth, textHeight;
+	GetTextExtents(msg, textWidth, textHeight, true);
+
+	// Compare mouse position agains the hyperlink text
+	bool bHighlightLink = false;
+	bool bClicked = false;
+	CheckHyperlink(coords[0], coords[1], textWidth, textHeight, msg, bHighlightLink, bClicked);
+
+	if (isHover) *isHover = bHighlightLink;
+
+	DrawTextPos(coords[0], coords[1], msg, color, true, bHighlightLink, ETextAnchor::None);
+
 	return bClicked;
 }
 

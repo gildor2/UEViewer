@@ -48,8 +48,6 @@ class UnPackage;
 #define INDEX_NONE			-1
 
 
-#define FVECTOR_ARG(v)		(v).X, (v).Y, (v).Z
-#define FQUAT_ARG(v)		(v).X, (v).Y, (v).Z, (v).W
 #define FROTATOR_ARG(r)		(r).Yaw, (r).Pitch, (r).Roll
 #define FCOLOR_ARG(v)		(v).R, (v).G, (v).B, (v).A
 
@@ -143,8 +141,9 @@ public:
 	// this file. Files are filled into 'otherFiles' array, 'this' file is not included.
 	void FindOtherFiles(TArray<const CGameFileInfo*>& files) const;
 
-	// Open the file
-	FArchive* CreateReader() const;
+	// Open the file. If bDontCrash is true and file can't be opened, the warning will be logged, and the function
+	// will return NULL.
+	FArchive* CreateReader(bool bDontCrash = false) const;
 
 	// Filename stuff
 
@@ -381,6 +380,7 @@ enum EGame
 		GAME_MassEffect,
 		GAME_MassEffect2,
 		GAME_MassEffect3,
+		GAME_MassEffectLE,
 		GAME_R6Vegas2,
 		GAME_MirrorEdge,
 		GAME_TLR,
@@ -521,6 +521,8 @@ enum EPlatform
 /*-----------------------------------------------------------------------------
 	FArchive class
 -----------------------------------------------------------------------------*/
+
+#define MAX_FILE_SIZE_32		(1LL << 31)		// 2Gb for int32
 
 class FArchive
 {
@@ -807,17 +809,25 @@ public:
 	}
 };
 
-enum EFileArchiveOptions
+enum class EFileArchiveOptions
 {
-	FAO_NoOpenError = 1,
-	FAO_TextFile = 2,
+	// Default option: binary file, throw an error if open failed
+	Default = 0,
+	// Silently return if file open is failed
+	NoOpenError = 1,
+	// Print a warning message if file open is failed, do not throw an error
+	OpenWarning = 2,
+	// Open as a text file
+	TextFile = 4,
 };
+
+BITFIELD_ENUM(EFileArchiveOptions);
 
 class FFileArchive : public FArchive
 {
 	DECLARE_ARCHIVE(FFileArchive, FArchive);
 public:
-	FFileArchive(const char *Filename, unsigned InOptions);
+	FFileArchive(const char *Filename, EFileArchiveOptions InOptions);
 	virtual ~FFileArchive();
 
 	virtual int GetFileSize() const;
@@ -833,7 +843,7 @@ public:
 
 protected:
 	FILE		*f;
-	unsigned	Options;
+	EFileArchiveOptions Options;
 	const char	*FullName;		// allocated with appStrdup
 	const char	*ShortName;		// points to FullName[N]
 
@@ -862,7 +872,7 @@ class FFileReader : public FFileArchive
 {
 	DECLARE_ARCHIVE(FFileReader, FFileArchive);
 public:
-	FFileReader(const char *Filename, unsigned InOptions = 0);
+	FFileReader(const char *Filename, EFileArchiveOptions InOptions = EFileArchiveOptions::Default);
 	virtual ~FFileReader();
 
 	virtual void Serialize(void *data, int size);
@@ -886,7 +896,7 @@ class FFileWriter : public FFileArchive
 {
 	DECLARE_ARCHIVE(FFileWriter, FFileArchive);
 public:
-	FFileWriter(const char *Filename, unsigned Options = 0);
+	FFileWriter(const char *Filename, EFileArchiveOptions Options = EFileArchiveOptions::Default);
 	virtual ~FFileWriter();
 
 	virtual void Serialize(void *data, int size);
@@ -1691,8 +1701,16 @@ public:
 	FORCEINLINE int AddZeroed(int count = 1)
 	{
 		int index = AddUninitialized(count);
-		memset((T*)DataPtr + index, 0, sizeof(T) * count);
+		T* Ptr = (T*)DataPtr + index;
+		memset(Ptr, 0, sizeof(T) * count);
 		return index;
+	}
+	FORCEINLINE T& AddZeroed_GetRef(int count = 1)
+	{
+		int index = AddUninitialized(count);
+		T* Ptr = (T*)DataPtr + index;
+		memset(Ptr, 0, sizeof(T) * count);
+		return *Ptr;
 	}
 	FORCEINLINE int AddDefaulted(int count = 1)
 	{
@@ -1713,6 +1731,12 @@ public:
 		ResizeGrow(count);
 		DataCount += count;
 		return index;
+	}
+	FORCEINLINE T* AddUninitialized_GetRef(int count = 1)
+	{
+		int index = AddUninitialized(count);
+		T* Ptr = (T*)DataPtr + index;
+		return *Ptr;
 	}
 	FORCEINLINE int AddUnique(const T& item)
 	{
@@ -2133,6 +2157,23 @@ template<typename TK, typename TV>
 class TMap : public TArray<TMapPair<TK, TV> >
 {
 public:
+	TV* Find(const TK& Key)
+	{
+		for (auto& It : *this)
+		{
+			if (It.Key == Key)
+			{
+				return &It.Value;
+			}
+		}
+		return NULL;
+	}
+
+	FORCEINLINE const TV* Find(const TK& Key) const
+	{
+		return const_cast<TMap*>(this)->Find(Key);
+	}
+
 	friend FORCEINLINE FArchive& operator<<(FArchive &Ar, TMap &Map)
 	{
 		return Ar << (TArray<TMapPair<TK, TV> >&)Map;

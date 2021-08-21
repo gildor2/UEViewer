@@ -126,12 +126,13 @@ struct FVirtualBone
 	END_PROP_TABLE
 };
 
+// TODO: this should be an "enum class", however this will break _ENUM() macro
 enum EBoneTranslationRetargetingMode
 {
 	Animation,				// use translation from animation
-	Skeleton,				// use translation from skeleton
-	AnimationScaled,
-	AnimationRelative,
+	Skeleton,				// use translation from target skeleton
+	AnimationScaled,		// translation from animation, scale it with TargetBoneTranslation.Size / SourceBoneTranslation.Size
+	AnimationRelative,		// translation from animation, plus additive part (not just "translation" mode)
 	OrientAndScale,
 };
 
@@ -200,6 +201,7 @@ public:
 	virtual void Serialize(FArchive &Ar);
 	virtual void PostLoad();
 
+	// Convert a single UAnimSequence to internal animation format
 	void ConvertAnims(UAnimSequence4* Seq);
 };
 
@@ -752,6 +754,22 @@ _ENUM(EAdditiveAnimationType)
 	_E(AAT_RotationOffsetMeshSpace),
 };
 
+enum EAdditiveBasePoseType
+{
+	ABPT_None,
+	ABPT_RefPose,
+	ABPT_AnimScaled,
+	ABPT_AnimFrame,
+};
+
+_ENUM(EAdditiveBasePoseType)
+{
+	_E(ABPT_None),
+	_E(ABPT_RefPose),
+	_E(ABPT_AnimScaled),
+	_E(ABPT_AnimFrame),
+};
+
 struct FCompressedSegment
 {
 	int32					StartFrame;
@@ -936,6 +954,7 @@ public:
 	FRawCurveTracks			CompressedCurveData;
 	EAnimInterpolationType	Interpolation;
 	EAdditiveAnimationType	AdditiveAnimType;
+	EAdditiveBasePoseType	RefPoseType;
 	UAnimSequence4*			RefPoseSeq;
 	int32					RefFrameIndex;
 	FName					RetargetSource;
@@ -958,6 +977,7 @@ public:
 		PROP_STRUC(CompressedCurveData, FRawCurveTracks)
 		PROP_ENUM2(Interpolation, EAnimInterpolationType)
 		PROP_ENUM2(AdditiveAnimType, EAdditiveAnimationType)
+		PROP_ENUM2(RefPoseType, EAdditiveBasePoseType)
 		PROP_NAME(RetargetSource)
 		PROP_OBJ(RefPoseSeq)
 		PROP_INT(RefFrameIndex)
@@ -1020,6 +1040,7 @@ public:
 	REGISTER_CLASS(FSkinWeightProfileInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS(UMorphTarget) \
+	REGISTER_CLASS(USkeletalMeshSocket) \
 	REGISTER_CLASS(UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(FMeshBuildSettings) \
@@ -1055,7 +1076,8 @@ public:
 #define REGISTER_MESH_ENUMS_U4 \
 	REGISTER_ENUM(EAnimInterpolationType) \
 	REGISTER_ENUM(EBoneTranslationRetargetingMode) \
-	REGISTER_ENUM(EAdditiveAnimationType)
+	REGISTER_ENUM(EAdditiveAnimationType) \
+	REGISTER_ENUM(EAdditiveBasePoseType)
 
 
 #endif // UNREAL4

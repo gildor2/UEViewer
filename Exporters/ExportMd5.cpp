@@ -36,8 +36,8 @@ static void BuildSkeleton(TArray<CCoords> &Coords, const TArray<CSkelMeshBone> &
 		BO = B.Orientation;
 #if MIRROR_MESH
 		BP[1] *= -1;							// y
-		BO.y  *= -1;
-		BO.w  *= -1;
+		BO.Y  *= -1;
+		BO.W  *= -1;
 #endif
 		if (!i) BO.Conjugate();					// root bone
 
@@ -92,7 +92,7 @@ void ExportMd5Mesh(const CSkeletalMesh *Mesh)
 		return;
 	}
 
-	FArchive *Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.md5mesh", OriginalMesh->Name);
+	FArchive *Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.md5mesh", OriginalMesh->Name);
 	if (!Ar) return;
 
 	const CSkelMeshLod &Lod = Mesh->Lods[0];
@@ -123,13 +123,13 @@ void ExportMd5Mesh(const CSkeletalMesh *Mesh)
 		CQuat BO;
 		BP = BC.origin;
 		BO.FromAxis(BC.axis);
-		if (BO.w < 0) BO.Negate();				// W-component of quaternion will be removed ...
+		if (BO.W < 0) BO.Negate();				// W-component of quaternion will be removed ...
 
 		Ar->Printf(
 			"\t\"%s\"\t%d ( %f %f %f ) ( %.10f %.10f %.10f )\n",
 			*B.Name, (i == 0) ? -1 : B.ParentIndex,
 			VECTOR_ARG(BP),
-			BO.x, BO.y, BO.z
+			BO.X, BO.Y, BO.Z
 		);
 #if 0
 	//!!
@@ -309,7 +309,7 @@ void ExportMd5Anim(const CAnimSet *Anim)
 		int i;
 		const CAnimSequence &S = *Anim->Sequences[AnimIndex];
 
-		FArchive *Ar = CreateExportArchive(OriginalAnim, FAO_TextFile, "%s/%s.md5anim", OriginalAnim->Name, *S.Name);
+		FArchive *Ar = CreateExportArchive(OriginalAnim, EFileArchiveOptions::TextFile, "%s/%s.md5anim", OriginalAnim->Name, *S.Name);
 		if (!Ar)
 		{
 			if (AnimIndex == 0)	// if file overwrite is disabled and file already exists, don't save animations at all
@@ -367,15 +367,15 @@ void ExportMd5Anim(const CAnimSet *Anim)
 				S.Tracks[b]->GetBonePosition(t, S.NumFrames, false, BP, BO);
 				if (!b) BO.Conjugate();			// root bone
 #if MIRROR_MESH
-				BO.y  *= -1;
-				BO.w  *= -1;
+				BO.Y  *= -1;
+				BO.W  *= -1;
 				BP[1] *= -1;					// y
 #endif
-				if (BO.w < 0) BO.Negate();		// W-component of quaternion will be removed ...
+				if (BO.W < 0) BO.Negate();		// W-component of quaternion will be removed ...
 				if (Frame < 0)
-					Ar->Printf("\t( %f %f %f ) ( %.10f %.10f %.10f )\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
+					Ar->Printf("\t( %f %f %f ) ( %.10f %.10f %.10f )\n", VECTOR_ARG(BP), BO.X, BO.Y, BO.Z);
 				else
-					Ar->Printf("\t%f %f %f %.10f %.10f %.10f\n", VECTOR_ARG(BP), BO.x, BO.y, BO.z);
+					Ar->Printf("\t%f %f %f %.10f %.10f %.10f\n", VECTOR_ARG(BP), BO.X, BO.Y, BO.Z);
 			}
 			Ar->Printf("}\n\n");
 		}

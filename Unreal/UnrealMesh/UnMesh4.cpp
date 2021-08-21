@@ -7,8 +7,9 @@
 
 #include "UnObject.h"
 #include "UnMesh4.h"
-#include "UnMesh3.h"		// for FSkeletalMeshLODInfo
+#include "UnMesh3.h"				// for FSkeletalMeshLODInfo
 #include "UnMeshTypes.h"
+#include "UnMathTools.h"			// for FRotator to FCoords
 
 #include "UnrealMaterial/UnMaterial.h"
 #include "UnrealMaterial/UnMaterial3.h"
@@ -293,6 +294,13 @@ struct FStaticMeshVertexBuffer4
 /*-----------------------------------------------------------------------------
 	USkeletalMesh
 -----------------------------------------------------------------------------*/
+
+// FSkeletalMeshLODInfo is in cpp file to let use forward declaration of some types
+FSkeletalMeshLODInfo::FSkeletalMeshLODInfo()
+{}
+
+FSkeletalMeshLODInfo::~FSkeletalMeshLODInfo()
+{}
 
 struct FRecomputeTangentCustomVersion
 {
@@ -822,7 +830,7 @@ struct FSkelMeshSection4
 
 		bool bRecomputeTangent;
 		Ar << bRecomputeTangent;
-		if (Ar.Game >= GAME_UE4(26))
+		if (FRecomputeTangentCustomVersion::Get(Ar) >= FRecomputeTangentCustomVersion::RecomputeTangentVertexColorMask)
 		{
 			uint8 RecomputeTangentsVertexMaskChannel;
 			Ar << RecomputeTangentsVertexMaskChannel;
@@ -849,8 +857,11 @@ struct FSkelMeshSection4
 		if (Ar.Game == GAME_Paragon) return;
 #endif
 
-		FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
-		Ar << DuplicatedVerticesBuffer;
+		if (Ar.Game < GAME_UE4(23) || !StripFlags.IsClassDataStripped(1)) // DuplicatedVertices, introduced in UE4.23
+		{
+			FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
+			Ar << DuplicatedVerticesBuffer;
+		}
 		Ar << S.bDisabled;
 
 		unguard;
@@ -986,7 +997,7 @@ struct FSkeletalMeshVertexBuffer4
 		}
 
 		Ar << B.MeshExtension << B.MeshOrigin;
-		DBG_SKEL("  Ext=(%g %g %g) Org=(%g %g %g)\n", FVECTOR_ARG(B.MeshExtension), FVECTOR_ARG(B.MeshOrigin));
+		DBG_SKEL("  Ext=(%g %g %g) Org=(%g %g %g)\n", VECTOR_ARG(B.MeshExtension), VECTOR_ARG(B.MeshOrigin));
 
 		// Serialize vertex data. Use global variables to avoid passing variables to serializers.
 		GNumSkelUVSets = B.NumTexCoords;
@@ -1819,6 +1830,15 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 		}
 		bool bCooked;
 		Ar << bCooked;
+
+		if (Ar.Game >= GAME_UE4(27))
+		{
+			// The serialization of this variable is cvar-dependent in UE4, so there's no clear way to understand
+			// if it should be serialize in our code or not.
+			int32 MinMobileLODIdx;
+			Ar << MinMobileLODIdx;
+		}
+
 		if (bCooked && LODModels.Num() == 0)
 		{
 			// serialize cooked data only if editor data not exists - use custom array serializer function
@@ -1847,6 +1867,50 @@ void USkeletalMesh4::PostLoad()
 		if (MorphTargets[i])
 			ConvertedMesh->Morphs.Add(MorphTargets[i]->ConvertMorph());
 		unguardf("%d/%d", i, MorphTargets.Num());
+	}
+
+	// Collect sockets from USkeletalMesh and USkeleton
+	TArray<USkeletalMeshSocket*> SrcSockets;
+	int NumSockets = Sockets.Num(); // potential number of sockets
+	if (Skeleton) NumSockets += Skeleton->Sockets.Num();
+	SrcSockets.Empty(NumSockets);
+	for (USkeletalMeshSocket* SrcSocket : Sockets)
+	{
+		if (!SrcSocket) continue;
+		SrcSockets.Add(SrcSocket);
+	}
+	if (Skeleton)
+	{
+		for (USkeletalMeshSocket* SrcSocket : Skeleton->Sockets)
+		{
+			if (!SrcSocket) continue;
+			// Check if mesh already has a socket with the same name
+			bool bAlreadyExists = false;
+			for (USkeletalMeshSocket* CheckSocket : SrcSockets)
+			{
+				if (CheckSocket->SocketName == SrcSocket->SocketName)
+				{
+					bAlreadyExists = true;
+					break;
+				}
+			}
+			if (!bAlreadyExists)
+			{
+				SrcSockets.Add(SrcSocket);
+			}
+		}
+	}
+
+	// Convert all found sockets
+	for (USkeletalMeshSocket* SrcSocket : SrcSockets)
+	{
+		if (!SrcSocket) continue;
+		CSkelMeshSocket& Socket = ConvertedMesh->Sockets.AddZeroed_GetRef();
+		Socket.Name = SrcSocket->SocketName;
+		Socket.Bone = SrcSocket->BoneName;
+		CCoords& C = Socket.Transform;
+		C.origin = CVT(SrcSocket->RelativeLocation);
+		RotatorToAxis(SrcSocket->RelativeRotation, C.axis);
 	}
 
 	unguard;
@@ -2056,6 +2120,9 @@ void USkeletalMesh4::ConvertMesh()
 		Dst->ParentIndex = B.ParentIndex;
 		Dst->Position    = CVT(T.Translation);
 		Dst->Orientation = CVT(T.Rotation);
+#if !BAKE_BONE_SCALES
+		Dst->Scale       = CVT(T.Scale3D);
+#endif
 		// fix skeleton; all bones but 0
 		if (i >= 1)
 			Dst->Orientation.Conjugate();
@@ -2081,13 +2148,6 @@ UStaticMesh4::~UStaticMesh4()
 {
 	delete ConvertedMesh;
 }
-
-FSkeletalMeshLODInfo::FSkeletalMeshLODInfo()
-{}
-
-FSkeletalMeshLODInfo::~FSkeletalMeshLODInfo()
-{}
-
 
 // Ambient occlusion data
 // When changed, constant DISTANCEFIELD_DERIVEDDATA_VER TEXT is updated
@@ -2668,6 +2728,13 @@ no_nav_collision:
 		// Note: code below still contains 'if (bCooked)' switches, this is because the same
 		// code could be used to read data from DDC, for non-cooked assets.
 		DBG_STAT("Serializing RenderData\n");
+		if (Ar.Game >= GAME_UE4(27))
+		{
+			// The serialization of this variable is cvar-dependent in UE4, so there's no clear way to understand
+			// if it should be serialize in our code or not.
+			int32 MinMobileLODIdx;
+			Ar << MinMobileLODIdx;
+		}
 		if (!bCooked)
 		{
 			TArray<int> WedgeMap;
@@ -3062,6 +3129,8 @@ void UStaticMesh4::ConvertSourceModels()
 				CMeshSection* Sec = new (Lod->Sections) CMeshSection;
 				if (Materials.IsValidIndex(MaterialIndex))
 					Sec->Material = (UUnrealMaterial*)Materials[MaterialIndex];
+				else
+					Sec->Material = NULL;
 				Sec->FirstIndex = i * 3;
 			}
 		}

@@ -1,0 +1,21 @@
+# perl highlighting
+
+!if "$PLATFORM" ne "osx"
+STDLIBS += SDL2		# disabled in macOS build
+!endif
+
+!if "$PLATFORM" eq "win32"
+	INCLUDES += $R/libs/includewin32
+	LIBRARIES += $R/libs/SDL2/x86
+!elif "$PLATFORM" eq "win64"
+	INCLUDES += $R/libs/includewin32
+	LIBRARIES += $R/libs/SDL2/x64
+!endif
+
+!if "$COMPILER" eq "VisualC"
+	# Delay loading of SDL2.dll
+	LINKFLAGS += -DELAYLOAD:SDL2.dll
+	STDLIBS += delayimp
+	# Delay loader helper function
+	sources(MAIN) = $R/libs/SDL2/SDL2Loader.cpp
+!endif

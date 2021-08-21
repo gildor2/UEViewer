@@ -13,15 +13,14 @@
 #include "UnrealMesh/UnMathTools.h"
 
 
-// debugging
-//#define SHOW_INFLUENCES		1
-#define SHOW_TANGENTS			1
-//#define SHOW_ANIM				1
-#define SHOW_BONE_UPDATES		1
-//#define PROFILE_MESH			1
-//#define TICK_SECTIONS			1
+// Debug stuff
+//#define SHOW_INFLUENCES		1	// show lines between bones and affected vertices
+//#define SHOW_ANIM				1	// show decompressed animation info
+#define SHOW_BONE_UPDATES		1	// colorize bones depending on number of playing animations
+//#define PROFILE_MESH			1	// profile mesh drawing, probably an outdated thing
+//#define TICK_SECTIONS			1	// isolate rendering mesh section, change its number every 2 seconds (outdated?)
 
-#define SORT_BY_OPACITY			1
+#define SORT_BY_OPACITY			1	// sort rendering order of mesh sections by opacity
 
 #if TICK_SECTIONS
 #undef SORT_BY_OPACITY				// to not obfuscate section indices
@@ -31,16 +30,20 @@
 struct CMeshBoneData
 {
 	// static data (computed after mesh loading)
-	int			BoneMap;			// index of bone in animation tracks
-	CCoords		RefCoords;			// coordinates of bone in reference pose (used only when computing RefCoordsInv)
+	int			AnimBoneIndex;		// index of this bone in animation tracks
+	CCoords		RefCoords;			// coordinates of reference pose bone in model space (used only when computing RefCoordsInv)
 	CCoords		RefCoordsInv;		// inverse of RefCoords
 	int			SubtreeSize;		// count of all children bones (0 for leaf bone)
 	// dynamic data
 	// skeleton configuration
-	float		Scale;				// bone scale; 1=unscaled
+	float		Scale;				// uniform bone scale, changes the geometry; 1 = unscaled
+#if !BAKE_BONE_SCALES
+	CVec3		Scale3D;			// scale of this bone, not affecting geometry
+	CVec3		AccumulatedChildScale; // scale for all children, including all parent bone scales
+#endif // BAKE_BONE_SCALES
 	int			FirstChannel;		// first animation channel, affecting this bone
 	// current pose
-	CCoords		Coords;				// current coordinates of bone, model-space
+	CCoords		Coords;				// current coordinates of bone, in model space
 	CCoords		Transform;			// used to transform vertex from reference pose to current pose
 #if USE_SSE
 	CCoords4	Transform4;			// SSE version
@@ -93,7 +96,7 @@ CSkelMeshInstance::CSkelMeshInstance()
 :	LodIndex(0)
 ,	MorphIndex(-1)
 ,	UVIndex(0)
-,	RotationMode((int)EAnimRotationOnly::AnimSet)
+,	RetargetingModeOverride(EAnimRetargetingMode::AnimSet)
 ,	LastLodIndex(-2)				// initialize with value which differs from LodNum and from all other values
 ,	LastMorphIndex(-1)
 ,	MaxAnimChannel(-1)
@@ -102,6 +105,8 @@ CSkelMeshInstance::CSkelMeshInstance()
 ,	BoneData(NULL)
 ,	Skinned(NULL)
 ,	InfColors(NULL)
+,	HighlightBoneIndex(-1)
+,	bLockBoneHighlight(false)
 {
 	ClearSkelAnims();
 }
@@ -217,53 +222,51 @@ void CSkelMeshInstance::SetMesh(CSkeletalMesh *Mesh)
 	LastLodIndex = -2;
 	LastMorphIndex = -1;
 
-	CMeshBoneData *data;
+	CMeshBoneData* data;
 	for (i = 0, data = BoneData; i < NumBones; i++, data++)
 	{
 		const CSkelMeshBone &B = Mesh->RefSkeleton[i];
 		// NOTE: assumed, that parent bones goes first
 		assert(B.ParentIndex <= i);
 
+		const CMeshBoneData* ParentBone = (i != 0) ? &BoneData[B.ParentIndex] : NULL;
+
 		// reset animation bone map (will be set by SetAnim())
-		data->BoneMap = INDEX_NONE;
+		data->AnimBoneIndex = INDEX_NONE;
 
 		// compute reference bone coords
-		CVec3 BP;
-		CQuat BO;
 		// get default pose
-		BP = B.Position;
-		BO = B.Orientation;
-		if (!i) BO.Conjugate();
+		CVec3 BP = B.Position;
+		CQuat BO = B.Orientation;
+		if (!ParentBone) BO.Conjugate();
 
-		CCoords &BC = data->RefCoords;
-		BC.origin = BP;
-		BO.ToAxis(BC.axis);
-		// move bone position to global coordinate space
-		if (i)	// do not rotate root bone
-			BoneData[B.ParentIndex].RefCoords.UnTransformCoords(BC, BC);
-		// store inverted transformation too
-		InvertCoords(data->RefCoords, data->RefCoordsInv);
-#if 0
-	//!!
-if (i == 32 || i == 34)
-{
-	appNotify("Bone %d (%8.3f %8.3f %8.3f) - (%8.3f %8.3f %8.3f %8.3f)", i, VECTOR_ARG(BP), QUAT_ARG(BO));
-#define C data->RefCoords
-	appNotify("REF   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
-	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
-	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
-	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
-#undef C
-#define C data->RefCoordsInv
-	appNotify("REFIN : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
-	appNotify("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
-	appNotify("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
-	appNotify("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
-#undef C
-}
-#endif
 		// initialize skeleton configuration
 		data->Scale = 1.0f;			// default bone scale
+#if !BAKE_BONE_SCALES
+		data->Scale3D = B.Scale;
+		data->AccumulatedChildScale = B.Scale;
+		if (ParentBone)
+		{
+			data->AccumulatedChildScale.Scale(ParentBone->AccumulatedChildScale);
+		}
+#endif // BAKE_BONE_SCALES
+
+		CCoords& RefCoords = data->RefCoords;
+		RefCoords.origin = BP;
+#if !BAKE_BONE_SCALES
+		if (ParentBone)
+		{
+			RefCoords.origin.Scale(ParentBone->AccumulatedChildScale);
+		}
+#endif
+		BO.ToAxis(RefCoords.axis);
+		// transform bone position to global coordinate space
+		if (ParentBone)
+		{
+			ParentBone->RefCoords.UnTransformCoords(RefCoords, RefCoords);
+		}
+		// store inverted transformation too
+		InvertCoords(data->RefCoords, data->RefCoordsInv);
 	}
 
 	// check bones tree
@@ -303,13 +306,13 @@ void CSkelMeshInstance::SetAnim(const CAnimSet *Anim)
 		const CSkelMeshBone &B = pMesh->RefSkeleton[i];
 
 		// find reference bone in animation track
-		data->BoneMap = INDEX_NONE;		// in a case when bone has no corresponding animation track
+		data->AnimBoneIndex = INDEX_NONE;		// in a case when bone has no corresponding animation track
 		if (Animation)
 		{
 			for (int j = 0; j < Animation->TrackBoneNames.Num(); j++)
 				if (!stricmp(B.Name, Animation->TrackBoneNames[j]))
 				{
-					data->BoneMap = j;
+					data->AnimBoneIndex = j;
 					break;
 				}
 		}
@@ -426,6 +429,23 @@ void CSkelMeshInstance::UpdateSkeleton()
 {
 	guard(CSkelMeshInstance::UpdateSkeleton);
 
+#if SHOW_ANIM
+	//todo: merge with SHOW_BONE_UPDATES (will need to store debug info in a CSkelMeshInstance)
+	struct CBoneDebugInfo
+	{
+		int MeshBoneIndex;
+		EBoneRetargetingMode RetargetMode;
+		bool bIsAnimated;
+		bool bSkippedOnRetargetting;
+		const char* BoneName;
+		CVec3 AnimPosition;
+		CQuat AnimRotation;
+	};
+	int NumBones = pMesh->RefSkeleton.Num();
+	CBoneDebugInfo* BoneDebugInfos = new CBoneDebugInfo[NumBones];
+	memset(BoneDebugInfos, 0, NumBones * sizeof(CBoneDebugInfo));
+#endif // SHOW_ANIM
+
 	// process all animation channels
 	assert(MaxAnimChannel < MAX_SKELANIMCHANNELS);
 	int Stage;
@@ -440,14 +460,14 @@ void CSkelMeshInstance::UpdateSkeleton()
 
 		const CAnimSequence *AnimSeq1 = Chn->Anim1;
 		const CAnimSequence *AnimSeq2 = NULL;
-		float Time2;
+		float Frame2;
 		if (AnimSeq1)
 		{
 			if (Chn->Anim2 && Chn->SecondaryBlend)
 			{
 				AnimSeq2 = Chn->Anim2;
 				// compute time for secondary channel; always in sync with primary channel
-				Time2 = Chn->Time / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
+				Frame2 = Chn->CurrentFrame / AnimSeq1->NumFrames * AnimSeq2->NumFrames;
 			}
 		}
 
@@ -472,118 +492,258 @@ void CSkelMeshInstance::UpdateSkeleton()
 				continue;
 			}
 
-			CVec3 BP;
-			CQuat BO;
 			const CSkelMeshBone &Bone = pMesh->RefSkeleton[i];
-			BP = Bone.Position;					// default position - from bind pose
-			BO = Bone.Orientation;				// ...
+			CVec3 NewBonePosition = Bone.Position;				// default position - from mesh bind pose
+			CQuat NewBoneRotation = Bone.Orientation;			// ...
 
-			int BoneIndex = data->BoneMap;
+			int AnimBoneIndex = data->AnimBoneIndex;
 
-			// compute bone orientation
-			if (AnimSeq1 && BoneIndex != INDEX_NONE)
+#if SHOW_ANIM
+			CBoneDebugInfo& BoneDebug = BoneDebugInfos[i];
+			BoneDebug.BoneName = *Bone.Name;
+			BoneDebug.MeshBoneIndex = i;
+			// Store skelton position in a case bone won't be animated
+			BoneDebug.AnimPosition = Bone.Position;
+			BoneDebug.AnimRotation = Bone.Orientation;
+#endif // SHOW_ANIM
+
+			// compute bone orientation, take care of empty Tracks array
+			if (AnimSeq1 && AnimBoneIndex != INDEX_NONE && AnimSeq1->Tracks.IsValidIndex(AnimBoneIndex) && AnimSeq1->Tracks[AnimBoneIndex]->HasKeys())
 			{
 				// get bone position from track
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
 				{
-					AnimSeq1->Tracks[BoneIndex]->GetBonePosition(Chn->Time, AnimSeq1->NumFrames, Chn->Looped, BP, BO);
-//const char *bname = *Bone.Name;
-//CQuat BOO = BO;
-//if (!strcmp(bname, "b_MF_UpperArm_L")) { BO.Set(-0.225, -0.387, -0.310,  0.839); }
+					AnimSeq1->Tracks[AnimBoneIndex]->GetBonePosition(
+						Chn->CurrentFrame, AnimSeq1->NumFrames, Chn->bLooped, NewBonePosition, NewBoneRotation);
 #if SHOW_ANIM
-//if (i == 6 || i == 8 || i == 10 || i == 11 || i == 29)	//??
-					DrawTextLeft("%s%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-						AnimSeq1->Tracks[BoneIndex]->HasKeys() ? S_GREEN : S_BLUE,
-						i, *Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
-//if (!strcmp(bname, "b_MF_UpperArm_L")) DrawTextLeft("%g %g %g %g [%g %g]", BO.x-BOO.x,BO.y-BOO.y,BO.z-BOO.z,BO.w-BOO.w, BO.w, BOO.w);
+					BoneDebug.bIsAnimated = true;
+					BoneDebug.AnimPosition = NewBonePosition;
+					BoneDebug.AnimRotation = NewBoneRotation;
 #endif
-//BO.Normalize();
 #if SHOW_BONE_UPDATES
-					if (AnimSeq1->Tracks[BoneIndex]->HasKeys())
+					if (AnimSeq1->Tracks[AnimBoneIndex]->HasKeys())
 						BoneUpdateCounts[i]++;
 #endif
 				}
-				// blend secondary animation
+				// Blend with the second animation at the same animation channel
 				if (AnimSeq2)
 				{
-					CVec3 BP2;
-					CQuat BO2;
-					BP2 = Bone.Position;		// default position - from bind pose
-					BO2 = Bone.Orientation;		// ...
-					AnimSeq2->Tracks[BoneIndex]->GetBonePosition(Time2, AnimSeq2->NumFrames, Chn->Looped, BP2, BO2);
+					CVec3 AnimBonePositionBlend = Bone.Position;	// default position - from bind pose
+					CQuat AnimBoneRotationBlend = Bone.Orientation; // ...
+					AnimSeq2->Tracks[AnimBoneIndex]->GetBonePosition(
+						Frame2, AnimSeq2->NumFrames, Chn->bLooped, AnimBonePositionBlend, AnimBoneRotationBlend);
 					if (Chn->SecondaryBlend == 1.0f)
 					{
-						BO = BO2;
-						BP = BP2;
+						// Fully override the animation
+						NewBoneRotation = AnimBoneRotationBlend;
+						NewBonePosition = AnimBonePositionBlend;
 					}
 					else
 					{
-						Lerp (BP, BP2, Chn->SecondaryBlend, BP);
-						Slerp(BO, BO2, Chn->SecondaryBlend, BO);
+						// Interpolate between 2 animations
+						Lerp (NewBonePosition, AnimBonePositionBlend, Chn->SecondaryBlend, NewBonePosition);
+						Slerp(NewBoneRotation, AnimBoneRotationBlend, Chn->SecondaryBlend, NewBoneRotation);
 					}
 #if SHOW_BONE_UPDATES
 					BoneUpdateCounts[i]++;
 #endif
 				}
-				// process AnimRotationOnly
-				if (!Animation->ShouldAnimateTranslation(BoneIndex, (EAnimRotationOnly)RotationMode))
+				// Process bone translation mode (animation retargeting).
+				// Current state:
+				EBoneRetargetingMode RetargetingMode = Animation->GetBoneTranslationMode(AnimBoneIndex, (EAnimRetargetingMode)RetargetingModeOverride);
+#if SHOW_ANIM
+				BoneDebug.RetargetMode = RetargetingMode;
+#endif
+				switch (RetargetingMode)
 				{
-					BP = Bone.Position;
-					// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
-					BoneUpdateCounts[i] += 3;
+				case EBoneRetargetingMode::Animation:
+					// Use translation from the animation. Already set, do nothing.
+					break;
+				case EBoneRetargetingMode::Mesh:
+					{
+						CVec3 SourceTrans = AnimSeq1->RetargetBasePose.Num()
+							? AnimSeq1->RetargetBasePose[AnimBoneIndex].Position
+							: Bone.Position;
+						// Use translation from the mesh.
+						NewBonePosition = SourceTrans;
+						// Decrement update count and add 4, so bone with no translation animaton will be painted with a different color (blue)
+						BoneUpdateCounts[i] += 3;
+					}
+					break;
+				case EBoneRetargetingMode::AnimationScaled:
+					{
+						// Like ::OrientAndScale, but without rotation
+						CVec3 SourceTrans = AnimSeq1->RetargetBasePose.Num()
+							? AnimSeq1->RetargetBasePose[AnimBoneIndex].Position
+							: Animation->BonePositions[AnimBoneIndex].Position;
+						CVec3 TargetTrans = Bone.Position;
+						float SourceTransLength = SourceTrans.GetLength();
+						if (SourceTransLength > 0.001f)
+						{
+							NewBonePosition.Scale(TargetTrans.GetLength() / SourceTransLength);
+						}
+						else
+						{
+							// Skip this bone, it has missing bone in a source skeleton.
+							// This happens if source skeleton bone has identity transform (zero translation),
+							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
+							// Note: bone translation and rotation should be skipped.
+							NewBonePosition = Bone.Position;
+							NewBoneRotation = Bone.Orientation;
+#if SHOW_ANIM
+							BoneDebug.bSkippedOnRetargetting = true;
+#endif
+							break;
+						}
+					}
+					break;
+				case EBoneRetargetingMode::AnimationRelative:
+					{
+						//todo
+					}
+					break;
+				case EBoneRetargetingMode::OrientAndScale:
+					{
+						// Reference skeleton bone data is required here
+						assert(Animation->BonePositions.Num() != 0);
+						// Reference: FBoneContainer::GetRetargetSourceCachedData()
+						CVec3 SourceTransDir = AnimSeq1->RetargetBasePose.Num()
+							? AnimSeq1->RetargetBasePose[AnimBoneIndex].Position
+							: Animation->BonePositions[AnimBoneIndex].Position;
+						CVec3 TargetTransDir = Bone.Position;
+
+						//todo: optimization: can compare SourceTransDir and TargetTransDir, just copy animated position if same
+						float SourceTransLength = SourceTransDir.Normalize();
+						float TargetTransLength = TargetTransDir.Normalize();
+						if (SourceTransLength * TargetTransLength > 0.001f)
+						{
+							float Scale = TargetTransLength / SourceTransLength;
+							CQuat TransRotation;
+							TransRotation.FromTwoVectors(SourceTransDir, TargetTransDir);
+							// Reference: FAnimationRuntime::RetargetBoneTransform()
+							TransRotation.RotateVector(NewBonePosition, NewBonePosition);
+							NewBonePosition.Scale(Scale);
+						}
+						else
+						{
+							// Skip this bone, it has missing bone in a source skeleton.
+							// This happens if source skeleton bone has identity transform (zero translation),
+							// it is filled in UE4's FAnimationRuntime::MakeSkeletonRefPoseFromMesh().
+							// Note: bone translation and rotation should be skipped.
+							NewBonePosition = Bone.Position;
+							NewBoneRotation = Bone.Orientation;
+#if SHOW_ANIM
+							BoneDebug.bSkippedOnRetargetting = true;
+#endif
+							break;
+						}
+					}
+					break;
 				}
+#if SHOW_ANIM
+				// Store the updated positions
+				BoneDebug.AnimPosition = NewBonePosition;
+				BoneDebug.AnimRotation = NewBoneRotation;
+#endif // SHOW_ANIM
 			}
 			else
 			{
 				// get default bone position
-//				BP = Bone.Position; -- already set above
-//				BO = Bone.Orientation;
-#if SHOW_ANIM
-				DrawTextLeft(S_YELLOW"%d Bone (%s) : P{ %8.3f %8.3f %8.3f }  Q{ %6.3f %6.3f %6.3f %6.3f }",
-					i, *Bone.Name, VECTOR_ARG(BP), QUAT_ARG(BO));
-#endif
+//				NewBonePosition = Bone.Position; -- already set above
+//				NewBoneRotation = Bone.Orientation;
 			}
-			if (!i) BO.Conjugate();
+			if (!i) NewBoneRotation.Conjugate();
 
-			// tweening
+			// Tweening: "ease-in" playback of the animation.
 			if (Chn->TweenTime > 0)
 			{
-				// interpolate orientation using AnimTweenStep
-				// current orientation -> {BP,BO}
-				Lerp (data->Pos,  BP, Chn->TweenStep, BP);
-				Slerp(data->Quat, BO, Chn->TweenStep, BO);
+				// Interpolate bone transform from current bone state to NewBone[Position|Rotation].
+				Lerp (data->Pos,  NewBonePosition, Chn->TweenStep, NewBonePosition);
+				Slerp(data->Quat, NewBoneRotation, Chn->TweenStep, NewBoneRotation);
 			}
 			// blending with previous channels
 			if (Chn->BlendAlpha < 1.0f)
 			{
-				Lerp (data->Pos,  BP, Chn->BlendAlpha, BP);
-				Slerp(data->Quat, BO, Chn->BlendAlpha, BO);
+				Lerp (data->Pos,  NewBonePosition, Chn->BlendAlpha, NewBonePosition);
+				Slerp(data->Quat, NewBoneRotation, Chn->BlendAlpha, NewBoneRotation);
 			}
 
-			data->Quat = BO;
-			data->Pos  = BP;
+			// Store computed bone transform
+			data->Quat = NewBoneRotation;
+			data->Pos  = NewBonePosition;
 		}
 	}
 
-	// transform bones using skeleton hierarchy
-	int i;
-	CMeshBoneData *data;
-	for (i = 0, data = BoneData; i < pMesh->RefSkeleton.Num(); i++, data++)
+#if SHOW_ANIM
+	DrawTextLeft("Bone Information (%s): "
+		S_GREY "[refpose] " S_GREEN "[animated] " S_ORANGE "[retarget] " S_RED "[bad retarget]",
+		pMesh->OriginalMesh->Name);
+	for (int i = 0; i < NumBones; i++)
 	{
-		CCoords &BC = data->Coords;
+		const CBoneDebugInfo& BoneDebug = BoneDebugInfos[i];
+		if (!BoneDebug.BoneName) continue; // the bone is entirely skipped due to animation settings
+		const char* TextColor = S_GREY;
+		if (BoneDebug.bIsAnimated)
+		{
+			TextColor = S_GREEN;
+			if (BoneDebug.RetargetMode != EBoneRetargetingMode::Animation)
+			{
+				TextColor = BoneDebug.bSkippedOnRetargetting ? S_RED : S_ORANGE;
+			}
+		}
+		bool bClicked = DrawTextLeftH(NULL,
+			"%s%s" S_HYPERLINK("%d (%s)") " : T (%6.3f %6.3f %6.3f) TL(%.3f) R (%5.2f %5.2f %5.2f %5.2f)",
+			HighlightBoneIndex == BoneDebug.MeshBoneIndex ? "> " : "  ", // indicator of the selected bone
+			TextColor, BoneDebug.MeshBoneIndex, BoneDebug.BoneName,
+			VECTOR_ARG(BoneDebug.AnimPosition), BoneDebug.AnimPosition.GetLength(), QUAT_ARG(BoneDebug.AnimRotation)
+		);
+		if (bClicked)
+		{
+			// Click will change the selected bone
+			HighlightBoneIndex = BoneDebug.MeshBoneIndex;
+			bLockBoneHighlight = true;
+		}
+	}
+	DrawTextLeft("");
+	delete[] BoneDebugInfos;
+#endif // SHOW_ANIM
+
+	// Convert bone's Coords from bone to model space and update skinning matrices
+	ComputeMeshSpaceCoords();
+
+	unguard;
+}
+
+void CSkelMeshInstance::ComputeMeshSpaceCoords()
+{
+	// Transform bone Coords using skeleton hierarchy
+	int i;
+	CMeshBoneData* data;
+	int NumBones = pMesh->RefSkeleton.Num();
+	for (i = 0, data = BoneData; i < NumBones; i++, data++)
+	{
+		CCoords& BC = data->Coords;
+		const CMeshBoneData* ParentBone = (i != 0) ? &BoneData[pMesh->RefSkeleton[i].ParentIndex] : NULL;
+
 		BC.origin = data->Pos;
 		data->Quat.ToAxis(BC.axis);
-
-		// move bone position to global coordinate space
-		if (!i)
+#if !BAKE_BONE_SCALES
+		if (ParentBone)
 		{
-			// root bone - use BaseTransformScaled
+			BC.origin.Scale(ParentBone->AccumulatedChildScale);
+		}
+#endif
+
+		// Move bone position to global coordinate space
+		if (!ParentBone)
+		{
+			// this is the root bone - use BaseTransformScaled
 			BaseTransformScaled.UnTransformCoords(BC, BC);
 		}
 		else
 		{
-			// other bones - rotate around parent bone
-			BoneData[pMesh->RefSkeleton[i].ParentIndex].Coords.UnTransformCoords(BC, BC);
+			// other bones - position relative to the parent bone
+			ParentBone->Coords.UnTransformCoords(BC, BC);
 		}
 		// deform skeleton according to external settings
 		if (data->Scale != 1.0f)
@@ -592,40 +752,15 @@ void CSkelMeshInstance::UpdateSkeleton()
 			BC.axis[1].Scale(data->Scale);
 			BC.axis[2].Scale(data->Scale);
 		}
-		// compute transformation of world-space model vertices from reference
-		// pose to desired pose
+		// compute transformation of model-space vertices from reference pose to desired pose
 		BC.UnTransformCoords(data->RefCoordsInv, data->Transform);
+
 #if USE_SSE
+		// Copy transform to its SSE version
 		data->Transform4.Set(data->Transform);
 #endif
-#if 0
-//!!
-if (i == 32 || i == 34)
-{
-#define C BC
-	DrawTextLeft("[%2d] : o=%8.3f %8.3f %8.3f", i, VECTOR_ARG(C.origin ));
-	DrawTextLeft("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
-	DrawTextLeft("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
-	DrawTextLeft("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
-#undef C
-#define C data->Transform
-	DrawTextLeft("TRN   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
-	DrawTextLeft("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
-	DrawTextLeft("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
-	DrawTextLeft("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
-#undef C
-#define C data->RefCoordsInv
-	DrawTextLeft("REF   : o=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.origin ));
-	DrawTextLeft("        0=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[0]));
-	DrawTextLeft("        1=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[1]));
-	DrawTextLeft("        2=%8.3f %8.3f %8.3f",    VECTOR_ARG(C.axis[2]));
-#undef C
-}
-#endif
 	}
-	unguard;
 }
-
 
 void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 {
@@ -654,7 +789,6 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 				TimeDelta = -Chn->TweenTime;
 				Chn->TweenTime = 0;
 			}
-			assert(Chn->Time == 0);
 		}
 		// note: TweenTime may be changed now, check again
 		if (!Chn->TweenTime && Chn->Anim1)
@@ -664,32 +798,57 @@ void CSkelMeshInstance::UpdateAnimation(float TimeDelta)
 			const CAnimSequence *Seq2 = Chn->Anim2;
 			if (!Chn->SecondaryBlend) Seq2 = NULL;
 
-			float Rate1 = Chn->Rate * Seq1->Rate;
+			float EffectiveRate = fabs(Chn->Rate * Seq1->Rate);
 			if (Seq2)
 			{
 				// if blending 2 channels, should adjust animation rate
-				Rate1 = Lerp(Seq1->Rate / Seq1->NumFrames, Seq2->Rate / Seq2->NumFrames, Chn->SecondaryBlend)
+				EffectiveRate = Lerp(fabs(Seq1->Rate) / Seq1->NumFrames, fabs(Seq2->Rate) / Seq2->NumFrames, Chn->SecondaryBlend)
 					* Seq1->NumFrames;
 			}
-			Chn->Time += TimeDelta * Rate1;
 
-			if (Chn->Looped)
+			// Increment the time
+			if (!Chn->bReverse)
+				Chn->CurrentFrame += TimeDelta * EffectiveRate;
+			else
+				Chn->CurrentFrame -= TimeDelta * EffectiveRate;
+
+			if (Chn->bLooped)
 			{
-				if (Chn->Time >= Seq1->NumFrames)
+				// Wrap time for looped channels
+				if (!Chn->bReverse)
 				{
-					// wrap time
-					int numSkip = appFloor(Chn->Time / Seq1->NumFrames);
-					Chn->Time -= numSkip * Seq1->NumFrames;
+					if (Chn->CurrentFrame >= Seq1->NumFrames)
+					{
+						int numSkip = appFloor(Chn->CurrentFrame / Seq1->NumFrames);
+						Chn->CurrentFrame -= numSkip * Seq1->NumFrames;
+					}
+				}
+				else
+				{
+					if (Chn->CurrentFrame < 0)
+					{
+						int numSkip = appFloor(-Chn->CurrentFrame / Seq1->NumFrames) + 1;
+						Chn->CurrentFrame += numSkip * Seq1->NumFrames;
+					}
 				}
 			}
 			else
 			{
-				if (Chn->Time >= Seq1->NumFrames-1)
+				// Clamp time for non-looped playback
+				if (!Chn->bReverse)
 				{
-					// clamp time
-					Chn->Time = Seq1->NumFrames-1;
-					if (Chn->Time < 0)
-						Chn->Time = 0;
+					if (Chn->CurrentFrame >= Seq1->NumFrames-1)
+					{
+						// clamp time in a case NumFrames == 0
+						Chn->CurrentFrame = max(Seq1->NumFrames-1, 0);
+					}
+				}
+				else
+				{
+					if (Chn->CurrentFrame < 0.0f)
+					{
+						Chn->CurrentFrame = 0.0f;
+					}
 				}
 			}
 		}
@@ -723,16 +882,22 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 		// show default pose
 		Chn.Anim1          = NULL;
 		Chn.Anim2          = NULL;
-		Chn.Time           = 0;
+		Chn.CurrentFrame   = 0;
 		Chn.Rate           = 0;
-		Chn.Looped         = false;
+		Chn.bLooped        = false;
+		Chn.bReverse       = false;
 		Chn.TweenTime      = TweenTime;
 		Chn.SecondaryBlend = 0;
 		return;
 	}
 
-	Chn.Rate   = Rate;
-	Chn.Looped = Looped;
+	Chn.Rate = Rate;
+	Chn.bLooped = Looped;
+
+	if (Rate != 0.0f)
+		Chn.bReverse = NewAnim->Rate * Rate < 0.0f;
+	else
+		Chn.bReverse = NewAnim->Rate < 0.0f;
 
 	if (NewAnim == Chn.Anim1 && Looped)
 	{
@@ -742,7 +907,7 @@ void CSkelMeshInstance::PlayAnimInternal(const char *AnimName, float Rate, float
 
 	Chn.Anim1          = NewAnim;
 	Chn.Anim2          = NULL;
-	Chn.Time           = 0;
+	Chn.CurrentFrame   = Chn.bReverse && !Chn.bLooped ? max(NewAnim->NumFrames - 1, 0) : 0;
 	Chn.SecondaryBlend = 0;
 	Chn.TweenTime      = TweenTime;
 
@@ -778,11 +943,11 @@ void CSkelMeshInstance::SetSecondaryAnim(int Channel, const char *AnimName)
 }
 
 
-void CSkelMeshInstance::FreezeAnimAt(float Time, int Channel)
+void CSkelMeshInstance::FreezeAnimAt(float Frame, int Channel)
 {
 	guard(CSkelMeshInstance::FreezeAnimAt);
 	CAnimChan &Chn = GetStage(Channel);
-	Chn.Time = Time;
+	Chn.CurrentFrame = Frame;
 	Chn.Rate = 0;
 	unguard;
 }
@@ -803,7 +968,7 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName, float 
 	}
 	const CAnimSequence *Seq = Chn.Anim1;
 	AnimName  = Seq->Name;
-	Frame     = Chn.Time;
+	Frame     = Chn.CurrentFrame;
 	NumFrames = Seq->NumFrames;
 	Rate      = Seq->Rate * Chn.Rate;
 
@@ -852,6 +1017,12 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 	glDisable(GL_ALPHA_TEST);
 
 	glBegin(GL_LINES);
+
+	int ClickedOnBoneIndex = -1;
+	int LastHighlightBone = bLockBoneHighlight ? HighlightBoneIndex : -1;
+	// Reset the highlight bone index. We'll do the remaining logic in the end of this function.
+	HighlightBoneIndex = -1;
+
 	for (int i = 0; i < pMesh->RefSkeleton.Num(); i++)
 	{
 		const CSkelMeshBone &B  = pMesh->RefSkeleton[i];
@@ -864,7 +1035,6 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 		Color[3] = 0.5f;
 		if (i > 0)
 		{
-//			Color.Set(1,1,0.3);
 #if SHOW_BONE_UPDATES
 			int t = BoneUpdateCounts[i];
 			if (t)
@@ -891,18 +1061,52 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 			GetBoneInfColor(i, Color);
 			TextColor = RGBAS(Color[0], Color[1], Color[2], 0.7);
 		}
-		glColor4fv(Color);
-		glVertex3fv(v1.v);
-		glVertex3fv(BC.origin.v);
 
 		if (ShowLabels)
 		{
-			// show bone label
-			v1.Add(BC.origin);
-			v1.Scale(0.5f);
-			DrawText3D(v1, TextColor, "(%d)%s", i, *B.Name);
+			// Draw the bone's label
+			CVec3 TextPos = v1;
+			TextPos.Add(BC.origin);
+			TextPos.Scale(0.5f);
+			if (HighlightBoneIndex < 0)
+			{
+				bool bHighlight = false;
+				if (i == LastHighlightBone)
+				{
+					TextColor = RGBA(1,1,1,1);
+				}
+				bool bClicked = DrawText3DH(TextPos, &bHighlight, TextColor, S_HYPERLINK("(%d)%s"), i, *B.Name);
+				if (bClicked && ClickedOnBoneIndex < 0)
+				{
+					ClickedOnBoneIndex = i;
+				}
+				if (bHighlight || LastHighlightBone == i)
+				{
+					// Show current and locked highlight, both
+					Color[0] = Color[1] = Color[2] = 10.0f;
+				}
+				if (bHighlight)
+				{
+					HighlightBoneIndex = i;
+				}
+			}
+			else
+			{
+				// Do not highlight multiple bone names
+				DrawText3D(TextPos, TextColor, "(%d)%s", i, *B.Name);
+			}
 		}
+		else if (i == LastHighlightBone)
+		{
+			// No labels, but still highlight the bone
+			Color[0] = Color[1] = Color[2] = 10.0f;
+		}
+
+		glColor4fv(Color);
+		glVertex3fv(v1.v);
+		glVertex3fv(BC.origin.v);
 	}
+
 	glColor3f(1,1,1);
 	glEnd();
 
@@ -910,6 +1114,33 @@ void CSkelMeshInstance::DrawSkeleton(bool ShowLabels, bool ColorizeBones)
 	glDisable(GL_BLEND);
 	glDisable(GL_LINE_SMOOTH);
 	glEnable(GL_DEPTH_TEST);
+
+	// Logick of bone highlight locks
+	if (ClickedOnBoneIndex >= 0)
+	{
+		if (LastHighlightBone == HighlightBoneIndex)
+		{
+			// Toggle highlight when clicked on the same bone twice
+			bLockBoneHighlight = !bLockBoneHighlight;
+		}
+		else
+		{
+			// Clicked on a different bone
+			bLockBoneHighlight = true;
+		}
+		if (bLockBoneHighlight)
+		{
+			HighlightBoneIndex = ClickedOnBoneIndex;
+		}
+	}
+	else
+	{
+		// Not clicked, preserve highlight when needed
+		if (bLockBoneHighlight)
+		{
+			HighlightBoneIndex = LastHighlightBone;
+		}
+	}
 
 	unguard;
 }
@@ -1155,6 +1386,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 	// sort sections by material opacity
 	int SectionMap[MAX_MESHMATERIALS];
 	int secPlace = 0;
+	assert(NumSections <= MAX_MESHMATERIALS);
 	for (int opacity = 0; opacity < 2; opacity++)
 	{
 		for (i = 0; i < NumSections; i++)
@@ -1195,7 +1427,7 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 	if (flags & DF_SHOW_INFLUENCES)
 	{
 		// in this mode mesh is displayed colorized instead of textured
-		if (!InfColors) BuildInfColors();
+		BuildInfColors();
 		assert(InfColors);
 #if !SHOW_INFLUENCES
 		glEnableClientState(GL_COLOR_ARRAY);
@@ -1328,7 +1560,6 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 			VectorMA(vert.Position, VisualLength, vert.Normal, tmp);
 			glVertex3fv(tmp.v);
 		}
-#if SHOW_TANGENTS
 		glColor3f(1, 0, 0.5f);
 		for (i = 0; i < NumVerts; i++)
 		{
@@ -1353,7 +1584,6 @@ void CSkelMeshInstance::DrawMesh(unsigned flags)
 			VectorMA(v, VisualLength, binormal, tmp);
 			glVertex3fv(tmp.v);
 		}
-#endif // SHOW_TANGENTS
 		glEnd();
 	}
 
@@ -1401,6 +1631,14 @@ void CSkelMeshInstance::BuildInfColors()
 {
 	guard(CSkelMeshInstance::BuildInfColors);
 
+	if (InfColors && HighlightBoneIndex == LastHighlightBoneIndex)
+	{
+		// Already built
+		return;
+	}
+
+	LastHighlightBoneIndex = HighlightBoneIndex;
+
 	int i;
 
 	const CSkelMeshLod &Lod = pMesh->Lods[LodIndex];
@@ -1408,22 +1646,44 @@ void CSkelMeshInstance::BuildInfColors()
 	if (InfColors) delete[] InfColors;
 	InfColors = new CVec3[Lod.NumVerts];
 
-	// get colors for bones
-	int NumBones = pMesh->RefSkeleton.Num();
-	CVec3 BoneColors[MAX_MESHBONES];
-	for (i = 0; i < NumBones; i++)
-		GetBoneInfColor(i, BoneColors[i].v);
-
-	// process influences
-	for (i = 0; i < Lod.NumVerts; i++)
+	if (HighlightBoneIndex < 0)
 	{
-		const CSkelMeshVertex &V = Lod.Verts[i];
-		CVec4 UnpackedWeights;
-		V.UnpackWeights(UnpackedWeights);
-		for (int j = 0; j < NUM_INFLUENCES; j++)
+		// Get colors for bones
+		int NumBones = pMesh->RefSkeleton.Num();
+		CVec3 BoneColors[MAX_MESHBONES];
+		for (i = 0; i < NumBones; i++)
+			GetBoneInfColor(i, BoneColors[i].v);
+
+		// Process influences
+		for (i = 0; i < Lod.NumVerts; i++)
 		{
-			if (V.Bone[j] < 0) break;
-			VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j]]);
+			const CSkelMeshVertex &V = Lod.Verts[i];
+			CVec4 UnpackedWeights;
+			V.UnpackWeights(UnpackedWeights);
+			for (int j = 0; j < NUM_INFLUENCES; j++)
+			{
+				if (V.Bone[j] < 0) break;
+				VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j]]);
+			}
+		}
+	}
+	else
+	{
+		// Highlight a single bone influences
+		static const CVec3 BoneColors[2] = {
+			{ 0.1f, 0.1f, 0.1f },	// not highlighted
+			{ 0.7f, 2.0f, 0.7f }	// highlighted
+		};
+		for (i = 0; i < Lod.NumVerts; i++)
+		{
+			const CSkelMeshVertex &V = Lod.Verts[i];
+			CVec4 UnpackedWeights;
+			V.UnpackWeights(UnpackedWeights);
+			for (int j = 0; j < NUM_INFLUENCES; j++)
+			{
+				if (V.Bone[j] < 0) break;
+				VectorMA(InfColors[i], UnpackedWeights.v[j], BoneColors[V.Bone[j] == HighlightBoneIndex]);
+			}
 		}
 	}
 

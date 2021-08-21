@@ -174,6 +174,7 @@ struct FSkeletalMeshLODInfo
 class USkeletalMeshSocket : public UObject
 {
 	DECLARE_CLASS(USkeletalMeshSocket, UObject);
+	TYPE_FLAGS(TYPE_SilentLoad | TYPE_InlinePropDump);
 public:
 	FName					SocketName;
 	FName					BoneName;
@@ -512,6 +513,7 @@ class UAnimSet;
 class UAnimSequence : public UObject
 {
 	DECLARE_CLASS(UAnimSequence, UObject);
+	TYPE_FLAGS(TYPE_SilentLoad);
 public:
 	FName					SequenceName;
 //	TArray<FAnimNotifyEvent> Notifies;	// analogue of FMeshAnimNotify
@@ -655,7 +657,7 @@ public:
 	void DecodeBatman2Anims(CAnimSequence *Dst, UAnimSet *Owner) const;
 #endif
 #if TRANSFORMERS
-	void DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const;
+	bool DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const;
 #endif
 };
 

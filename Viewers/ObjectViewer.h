@@ -22,6 +22,7 @@ class USkeleton;
 
 class UIMenuItem;
 
+enum class EAnimRetargetingMode;
 
 #define TEST_FILES		1		// comment line to disable some notifications
 
@@ -211,6 +212,8 @@ private:
 	bool			bIsUE4Mesh;
 	USkeleton*		Skeleton;
 	int				HighlightMeshIndex;
+
+	void SetRetargetingMode(EAnimRetargetingMode NewMode);
 };
 
 

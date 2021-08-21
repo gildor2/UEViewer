@@ -194,7 +194,26 @@ static void appDecompressLZX(byte *CompressedBuffer, int CompressedSize, byte *U
 	Oodle support
 -----------------------------------------------------------------------------*/
 
-#if USE_OODLE && _WIN32
+#if USE_OODLE && HAS_OODLE
+
+#include <oodle2.h>
+
+static void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize)
+{
+	guard(appDecompressOodle);
+
+	size_t ret = OodleLZ_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize,
+		OodleLZ_FuzzSafe_Yes, OodleLZ_CheckCRC_No, OodleLZ_Verbosity_Minimal);
+		// verbosity is set to OodleLZ_Verbosity_Minimal, so any errors will be displayed in debug output (via OutputDebugString)
+	if (ret != UncompressedSize)
+		appError("OodleLZ_Decompress returned %d", ret);
+
+	unguard;
+}
+
+#endif
+
+#if USE_OODLE && _WIN32 && !HAS_OODLE
 
 #ifdef _WIN64
 static const char* OodleDllName = "oo2core_5_win64.dll";
@@ -218,9 +237,9 @@ static bool bOodleLoaded = false;
 static HMODULE hOodleDll = NULL;
 static OodleDecompress_t OodleLZ_Decompress = NULL;
 
-static void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize)
+static void appDecompressOodle_DLL(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize)
 {
-	guard(appDecompressOodle);
+	guard(appDecompressOodle_DLL);
 
 	if (!bOodleLoaded)
 	{
@@ -261,7 +280,7 @@ static void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte 
 
 #else
 
-inline void appDecompressOodle(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize)
+inline void appDecompressOodle_DLL(byte *CompressedBuffer, int CompressedSize, byte *UncompressedBuffer, int UncompressedSize)
 {
 	appError("Internal Oodle decompressor failed");
 }
@@ -359,6 +378,13 @@ int appDecompress(byte *CompressedBuffer, int CompressedSize, byte *Uncompressed
 	#endif
 	}
 #endif // SMITE
+
+#if MASSEFF
+	if (GForceGame == GAME_MassEffectLE)
+	{
+		if (Flags == 0x400) Flags = COMPRESS_OODLE;
+	}
+#endif // MASSEFF
 
 #if TAO_YUAN
 	if (GForceGame == GAME_TaoYuan)	// note: GForceGame is required (to not pass 'Game' here);
@@ -464,35 +490,17 @@ restart_decompress:
 	}
 #endif // USE_LZ4
 
-#if USE_OODLE // defined for supported engine versions
+#if USE_OODLE // defined for supported engine versions, it means - some games may need Oodle decompression
 	if (Flags == COMPRESS_OODLE)
 	{
-		//todo: review HAS_OODLE/USE_OODLE, move all stuff to appDecompressOodle
-	#if HAS_OODLE // defined in project file
-		static bool bUseDll = false;
-
-		if (!bUseDll)
-		{
-			extern int Kraken_Decompress(const byte *src, size_t src_len, byte *dst, size_t dst_len);
-			int newLen = Kraken_Decompress(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
-		#if _WIN32
-			if (newLen != UncompressedSize)
-			{
-				bUseDll = true;
-				appPrintf("Info: Kraken_Decompress failed, switching to %s\n", OodleDllName);
-			}
-		#endif
-		}
-		if (bUseDll)
-		{
-			appDecompressOodle(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
-		}
-		return UncompressedSize;
-	#elif defined(_WIN32)
+	#if HAS_OODLE // defined in oodle.project file, it means: oodle SDK is available at build time
 		appDecompressOodle(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
 		return UncompressedSize;
+	#elif defined(_WIN32) // fallback to oodle.dll when SDK is not compiled in
+		appDecompressOodle_DLL(CompressedBuffer, CompressedSize, UncompressedBuffer, UncompressedSize);
+		return UncompressedSize;
 	#else
-		appError("appDecompress: Oodle compression is not supported");
+		appError("appDecompress: Oodle decompression is not supported");
 	#endif // HAS_OODLE
 	}
 #endif // USE_OODLE

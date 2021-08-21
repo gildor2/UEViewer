@@ -209,13 +209,28 @@ detex
   (c) Harm Hanemaaijer
   https://github.com/hglm/detex
 
-ooz
-  (c) Powzix
-  https://github.com/powzix/ooz
+Oodle
+  (c) Epic Games
+  http://www.radgametools.com/oodle.htm
 
 
 Changes
 ~~~~~~~
+05.07.2021
+- providing Win32 and Win64 builds of UE Viewer
+
+30.05.2021
+- Mass Effect Legendary Edition support
+
+29.05.2021
+- replaced ooz library with oodle SDK shipped with UE4.27 source code
+
+06.04.2021
+- added UE4 SkeletalMesh socket support
+
+18.02.2021
+- added support for playing back animations with negative rates (playing in opposite direction)
+
 30.12.2020
 - hyperlinks for SkeletalMesh sub-objects: Skeleton, AnimSet, AnimSequence, tagged meshes
 - highlighting tagges skeletal mesh when mouse points at its name

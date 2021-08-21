@@ -129,6 +129,7 @@ BEGIN_CLASS_TABLE
 END_CLASS_TABLE
 #endif // UNREAL3
 	SuppressUnknownClass("UBodySetup");
+	SuppressUnknownClass("UMaterialExpression*"); // wildcard
 }
 
 

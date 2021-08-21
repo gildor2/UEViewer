@@ -18,7 +18,7 @@ public:
 	// DECLARE_BASE constructs CTypeInfo with reference to CNullType, what makes compiler impossible to optimize it.
 	static const CTypeInfo* StaticGetTypeinfo()
 	{
-		static const CTypeInfo type("UObject", NULL, sizeof(UObject), NULL, 0, NULL, NULL);
+		static const CTypeInfo type("UObject", NULL, sizeof(UObject), NULL, 0, TYPE_None, NULL, NULL);
 		return &type;
 	}
 #endif
@@ -64,6 +64,8 @@ public:
 	virtual void GetMetadata(FArchive& Ar) const
 	{
 	}
+
+	static const uint32 LocalTypeFlags = TYPE_None;
 
 	// Empty property table
 	enum { PropLevel = -1 };

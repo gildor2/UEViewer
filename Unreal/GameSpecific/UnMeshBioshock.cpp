@@ -222,7 +222,7 @@ struct FBioshockUnk3
 			if (t3_hdrSV >= 1)
 				Ar << S.f1C;
 		}
-//		appPrintf("... UNK3 name: %s pos: %g %g %g f14: %d f18: %d\n", *S.Name, FVECTOR_ARG(S.Pos), S.f14, S.f18);
+//		appPrintf("... UNK3 name: %s pos: %g %g %g f14: %d f18: %d\n", *S.Name, VECTOR_ARG(S.Pos), S.f14, S.f18);
 		return Ar;
 		unguard;
 	}
@@ -247,7 +247,7 @@ struct FBioshockUnk4
 			if (t3_hdrSV >= 1)
 				Ar << S.Material;
 		}
-//		appPrintf("... UNK4 name: %s pos: %g %g %g f14: %g %g %g f20: %d Mat: %s\n", *S.Name, FVECTOR_ARG(S.Pos), FVECTOR_ARG(S.f14),
+//		appPrintf("... UNK4 name: %s pos: %g %g %g f14: %g %g %g f20: %d Mat: %s\n", *S.Name, VECTOR_ARG(S.Pos), VECTOR_ARG(S.f14),
 //			S.f20, S.Material ? S.Material->Name : "null");
 		return Ar;
 		unguard;
@@ -273,7 +273,7 @@ struct FBioshockUnk5
 			if (t3_hdrSV >= 1)
 				Ar << S.f1C;
 		}
-//		appPrintf("... UNK5 name: %s pos: %g %g %g f18: %d\n", *S.Name, FVECTOR_ARG(S.Pos), S.f18);
+//		appPrintf("... UNK5 name: %s pos: %g %g %g f18: %d\n", *S.Name, VECTOR_ARG(S.Pos), S.f18);
 		return Ar;
 		unguard;
 	}
@@ -734,7 +734,7 @@ void UAnimationPackageWrapper::Process()
 	{
 		appPrintf("[%d] %s (parent=%d)\n", i, Skel->m_bones[i]->m_name, Skel->m_parentIndices[i]);
 		hkQsTransform &t = Skel->m_referencePose[i];
-		appPrintf("   {%g %g %g} - {%g %g %g %g} / {%g %g %g}\n", FVECTOR_ARG(t.m_translation), FQUAT_ARG(t.m_rotation), FVECTOR_ARG(t.m_scale));
+		appPrintf("   {%g %g %g} - {%g %g %g %g} / {%g %g %g}\n", VECTOR_ARG(t.m_translation), QUAT_ARG(t.m_rotation), VECTOR_ARG(t.m_scale));
 	}
 #endif
 	unguard;

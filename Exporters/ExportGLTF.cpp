@@ -69,8 +69,8 @@ inline void TransformDirection(CVec3& vec)
 
 inline void TransformRotation(CQuat& q)
 {
-	Exchange(q.y, q.z);		// same logic as for vector
-//??	q.w *= -1;				// changing left-handed to right-handed, so inverse rotation - works correctly without this line
+	Exchange(q.Y, q.Z);		// same logic as for vector
+//??	q.W *= -1;				// changing left-handed to right-handed, so inverse rotation - works correctly without this line
 }
 
 struct BufferData
@@ -338,7 +338,7 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 			appError("%X -> %g\n", V.Normal.Data, Normal.w);
 		}
 	#endif
-		Tangent.w = (Normal.w < 0) ? -1 : 1;
+		Tangent.W = (Normal.W < 0) ? -1 : 1;
 
 		TransformPosition(Position);
 		TransformDirection(Normal);
@@ -349,7 +349,7 @@ static void ExportSection(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 
 		// Fill buffers
 		PositionBuf.Put(Position);
-		NormalBuf.Put(Normal.xyz);
+		NormalBuf.Put(Normal.XYZ);
 		TangentBuf.Put(Tangent);
 		UVBuf[0]->Put(V.UV);
 	}
@@ -550,10 +550,10 @@ static void ExportSkinData(GLTFExportContext& Context, const CSkelMeshLod& Lod, 
 			"      \"translation\" : [ %g, %g, %g ],\n"
 			"      \"rotation\" : [ %g, %g, %g, %g ]\n",
 			bonePos[0], bonePos[1], bonePos[2],
-			boneRot.x, boneRot.y, boneRot.z, boneRot.w
+			boneRot.X, boneRot.Y, boneRot.Z, boneRot.W
 		);
 
-		boneRot.w *= -1;
+		boneRot.W *= -1;
 
 		CCoords& BC = BoneCoords[boneIndex];
 		BC.origin = bonePos;
@@ -671,12 +671,18 @@ static void ExportAnimations(GLTFExportContext& Context, FArchive& Ar)
 
 		// Prepare channels array
 		Ar.Printf("      \"channels\" : [\n");
+		bool bHasOutput = false;
 		for (int BoneIndex = 0; BoneIndex < AnimBones.Num(); BoneIndex++)
 		{
 			int MeshBoneIndex = AnimBones[BoneIndex];
 			int AnimBoneIndex = BoneMap[MeshBoneIndex];
 
 			const CAnimTrack* Track = Seq.Tracks[AnimBoneIndex];
+			if (!Track->HasKeys())
+			{
+				//todo: may be store a reference pose position then?
+				continue;
+			}
 
 			int TranslationSamplerIndex = Samplers.Num();
 			AnimSampler* Sampler = new (Samplers) AnimSampler;
@@ -690,15 +696,26 @@ static void ExportAnimations(GLTFExportContext& Context, FArchive& Ar)
 			Sampler->BoneNodeIndex = MeshBoneIndex + FIRST_BONE_NODE;
 			Sampler->Track = Track;
 
+			if (bHasOutput)
+			{
+				Ar.Printf(",\n");
+			}
+
 			// Print glTF information. Not using usual formatting here to make output a little bit more compact.
 			Ar.Printf(
 				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } },\n",
 				TranslationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "translation"
 			);
 			Ar.Printf(
-				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } }%s\n",
-				RotationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "rotation", BoneIndex == AnimBones.Num()-1 ? "" : ","
+				"        { \"sampler\" : %d, \"target\" : { \"node\" : %d, \"path\" : \"%s\" } }",
+				RotationSamplerIndex, MeshBoneIndex + FIRST_BONE_NODE, "rotation"
 			);
+			bHasOutput = true;
+		}
+
+		if (bHasOutput)
+		{
+			Ar.Printf("\n");
 		}
 		Ar.Printf("      ],\n");
 
@@ -994,14 +1011,14 @@ void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh)
 		char meshName[256];
 		appSprintf(ARRAY_ARG(meshName), "%s%s", OriginalMesh->Name, suffix);
 
-		FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", meshName);
+		FArchive* Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.gltf", meshName);
 		if (Ar)
 		{
 			GLTFExportContext Context;
 			Context.MeshName = meshName;
 			Context.SkelMesh = Mesh;
 
-			FArchive* Ar2 = CreateExportArchive(OriginalMesh, 0, "%s.bin", meshName);
+			FArchive* Ar2 = CreateExportArchive(OriginalMesh, EFileArchiveOptions::Default, "%s.bin", meshName);
 			assert(Ar2);
 			ExportMeshLod(Context, Mesh->Lods[Lod], Mesh->Lods[Lod].Verts, *Ar, *Ar2);
 			delete Ar;
@@ -1036,14 +1053,14 @@ void ExportStaticMeshGLTF(const CStaticMesh* Mesh)
 		char meshName[256];
 		appSprintf(ARRAY_ARG(meshName), "%s%s", OriginalMesh->Name, suffix);
 
-		FArchive* Ar = CreateExportArchive(OriginalMesh, FAO_TextFile, "%s.gltf", meshName);
+		FArchive* Ar = CreateExportArchive(OriginalMesh, EFileArchiveOptions::TextFile, "%s.gltf", meshName);
 		if (Ar)
 		{
 			GLTFExportContext Context;
 			Context.MeshName = meshName;
 			Context.StatMesh = Mesh;
 
-			FArchive* Ar2 = CreateExportArchive(OriginalMesh, 0, "%s.bin", meshName);
+			FArchive* Ar2 = CreateExportArchive(OriginalMesh, EFileArchiveOptions::Default, "%s.bin", meshName);
 			assert(Ar2);
 			ExportMeshLod(Context, Mesh->Lods[Lod], Mesh->Lods[Lod].Verts, *Ar, *Ar2);
 			delete Ar;

@@ -11,8 +11,8 @@ struct CVec4
 		float		v[4];
 		struct
 		{
-			CVec3		xyz;
-			float		w;
+			CVec3		XYZ;
+			float		W;
 		};
 	};
 

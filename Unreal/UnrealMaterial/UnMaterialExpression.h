@@ -4,6 +4,7 @@
 class UMaterialExpression : public UObject
 {
 	DECLARE_CLASS(UMaterialExpression, UObject)
+	TYPE_FLAGS(TYPE_SilentLoad);
 public:
 	BEGIN_PROP_TABLE
 		PROP_DROP(Material)

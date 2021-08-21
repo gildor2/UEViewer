@@ -1,37 +1,32 @@
 {
     "configurations": [
         {
-            "name": "Win32",
-            "includePath": [
-                "${workspaceFolder}",
-                "${workspaceFolder}/Core",
-                "${workspaceFolder}/Unreal",
-                "${workspaceFolder}/UmodelTool",
-                "${workspaceFolder}/libs",
-                "${workspaceFolder}/libs/include",
-                "${workspaceFolder}/libs/includewin32",
-                "${workspaceFolder}/UI"
-            ],
-            "defines": [
-                "MAX_DEBUG",
-                "RENDERING",
-                "HAS_UI"
-            ],
-            "forcedInclude": [
-                "${workspaceFolder}/Unreal/GameDefines.h"
-            ],
-            "windowsSdkVersion": "10.0.18362.0",
-            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.24.28314/bin/Hostx64/x64/cl.exe",
-            "cStandard": "c11",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "msvc-x64",
-            "browse": {
-                "path": [
-                    "${workspaceFolder}"
-                ],
-                "limitSymbolsToIncludedHeaders": true,
-                "databaseFilename": ""
-            }
+            "name": "Win32-Release",
+            "customConfigurationVariables": {
+                "BuildOptions": "",
+				"ExeName": "umodel.exe"
+			}
+        },
+        {
+            "name": "Win32-Debug",
+            "customConfigurationVariables": {
+                "BuildOptions": "--debug",
+				"ExeName": "umodel-debug.exe"
+			}
+        },
+        {
+            "name": "Win64-Release",
+            "customConfigurationVariables": {
+                "BuildOptions": "--64",
+				"ExeName": "umodel_64.exe"
+			}
+        },
+        {
+            "name": "Win64-Debug",
+            "customConfigurationVariables": {
+                "BuildOptions": "--64 --debug",
+				"ExeName": "umodel-debug_64.exe"
+			}
         }
     ],
     "version": 4

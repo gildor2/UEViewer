@@ -87,6 +87,7 @@ struct FTexturePlatformData
 		// see TextureDerivedData.cpp, SerializePlatformData()
 		guard(FTexturePlatformData<<);
 		Ar << D.SizeX << D.SizeY << D.NumSlices;
+		D.NumSlices &= 0x3fffffff; // 2 higher bits are BitMask_CubeMap and BitMask_HasOptData since UE4.24
 
 #if GEARS4
 		if (Ar.Game == GAME_Gears4)
@@ -283,6 +284,23 @@ void UTexture2D::Serialize4(FArchive& Ar)
 
 		unguard;
 	}
+
+	unguard;
+}
+
+void UMaterial3::Serialize4(FArchive& Ar)
+{
+	guard(UMaterial3::Serialize4);
+
+	if ((Ar.Game >= GAME_UE4(26)) && (Package->Summary.PackageFlags & PKG_UnversionedProperties))
+	{
+		// TODO: implement unversioned properties for UMaterial
+		DROP_REMAINING_DATA(Ar);
+		return;
+	}
+
+	Super::Serialize(Ar);
+	DROP_REMAINING_DATA(Ar);
 
 	unguard;
 }

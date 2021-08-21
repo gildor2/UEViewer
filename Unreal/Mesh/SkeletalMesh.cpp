@@ -477,4 +477,8 @@ void CAnimTrack::CopyFrom(const CAnimTrack &Src)
 	CopyArray(KeyTime, Src.KeyTime);
 	CopyArray(KeyQuatTime, Src.KeyQuatTime);
 	CopyArray(KeyPosTime,  Src.KeyPosTime );
+#if SUPPORT_SCALE_KEYS
+	CopyArray(KeyScale, Src.KeyScale);
+	CopyArray(KeyScaleTime, Src.KeyScaleTime);
+#endif
 }

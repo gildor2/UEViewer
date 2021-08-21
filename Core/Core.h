@@ -36,8 +36,8 @@
 #	include <SDL2/SDL.h>			//?? move outside (here for SDL_GetTicks() only?)
 #endif
 
-#define VECTOR_ARG(name)		name[0],name[1],name[2]
-#define QUAT_ARG(name)			name.x,name.y,name.z,name.w
+#define VECTOR_ARG(v)			(v).X, (v).Y, (v).Z
+#define QUAT_ARG(v)				(v).X, (v).Y, (v).Z, (v).W
 #define ARRAY_ARG(array)		array, sizeof(array)/sizeof(array[0])
 #define ARRAY_COUNT(array)		(sizeof(array)/sizeof(array[0]))
 
@@ -523,6 +523,7 @@ struct CErrorContext
 	bool IsSwError;
 	// Suppress logging error message to a file (in a case of user mistake)
 	bool SuppressLog;
+	bool IsErrorLogged;
 
 protected:
 	// Used for error history formatting
@@ -531,6 +532,11 @@ protected:
 	ErrorHandlerType ErrorHandler;
 
 public:
+#if THREADING
+	int ErrorThreadId;
+	bool ShouldLogThisThread();
+#endif
+
 	// Call stack
 	char History[2048];
 
@@ -567,7 +573,6 @@ public:
 	// Log error message to console and notify.log, do NOT exit
 	void StandardHandler();
 
-protected:
 	void LogHistory(const char *part);
 };
 
@@ -632,22 +637,34 @@ extern bool GUseDebugger;
 #endif
 
 
-#if RENDERING
-#	define appMilliseconds()		SDL_GetTicks()
-#else
-#	ifdef _WIN32
-#		if !defined(WINAPI) 	// detect <windows.h>
-		extern "C" {
-			__declspec(dllimport) unsigned long __stdcall GetTickCount();
-		}
-#		endif
-#	else
-		// Local implementation of GetTickCount() for non-Windows platforms
-		unsigned long GetTickCount();
+#ifdef _WIN32
+#	if !defined(WINAPI) 	// detect <windows.h>
+	extern "C" {
+		__declspec(dllimport) unsigned long __stdcall GetTickCount();
+	}
 #	endif
-#	define appMilliseconds()		GetTickCount()
-#endif // RENDERING
+#else
+	// Local implementation of GetTickCount() for non-Windows platforms
+	unsigned long GetTickCount();
+#endif
+#define appMilliseconds()		GetTickCount()
 
+// Allow operation of enum class as with regular integer
+#define BITFIELD_ENUM(Enum) \
+	inline Enum& operator|=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs | (__underlying_type(Enum))Rhs); } \
+	inline Enum& operator&=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs & (__underlying_type(Enum))Rhs); } \
+	inline Enum& operator^=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs ^ (__underlying_type(Enum))Rhs); } \
+	inline Enum  operator| (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs | (__underlying_type(Enum))Rhs); } \
+	inline Enum  operator& (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs & (__underlying_type(Enum))Rhs); } \
+	inline Enum  operator^ (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs ^ (__underlying_type(Enum))Rhs); } \
+	inline bool  operator! (Enum  E)             { return !(__underlying_type(Enum))E; } \
+	inline Enum  operator~ (Enum  E)             { return (Enum)~(__underlying_type(Enum))E; }
+
+template<typename Enum>
+constexpr bool EnumHasAnyFlags(Enum Flags, Enum Contains)
+{
+	return ( ((__underlying_type(Enum))Flags) & (__underlying_type(Enum))Contains ) != 0;
+}
 
 #if _WIN32
 

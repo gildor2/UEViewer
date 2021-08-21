@@ -197,10 +197,19 @@ void FPackageFileSummary::Serialize4(FArchive &Ar)
 	// guid
 	Ar << Guid;
 
-	if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER && Ar.ArVer < VER_UE4_NON_OUTER_PACKAGE_IMPORT && Ar.ContainsEditorData())
+	if (Ar.ContainsEditorData())
 	{
-		FGuid PersistentGuid, OwnerPersistentGuid;
-		Ar << PersistentGuid << OwnerPersistentGuid;
+		if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER)
+		{
+			FGuid PersistentGuid;
+			Ar << PersistentGuid;
+		}
+
+		if (Ar.ArVer >= VER_UE4_ADDED_PACKAGE_OWNER && Ar.ArVer < VER_UE4_NON_OUTER_PACKAGE_IMPORT)
+		{
+			FGuid OwnerPersistentGuid;
+			Ar << OwnerPersistentGuid;
+		}
 	}
 
 	// generations
@@ -578,13 +587,6 @@ void UnPackage::LoadPackageIoStore()
 	FPackageSummary Sum;
 	Loader->Serialize(&Sum, sizeof(Sum));
 
-	if (Sum.PackageFlags & PKG_UnversionedProperties)
-	{
-		//todo: support unversioned properties
-		appPrintf("AsyncPackage %s has unversioned properties, dropping\n", *GetFilename());
-		return;
-	}
-
 	Summary.PackageFlags = Sum.PackageFlags;
 
 	// Rewind Loader to zero and load whole header (including summary)
@@ -880,18 +882,18 @@ void UnPackage::LoadImportTableIoStore(const byte* Data, int ImportCount, const 
 			int PackageIndex = 0;
 			if (Helper.FindObjectInPackages(ObjectIndex, PackageIndex, Exp))
 			{
-			#if DEBUG_PACKAGE
+#if DEBUG_PACKAGE
 				appPrintf("Imp[%d]: %s %s\n", ImportIndex, *Exp->ObjectName, Exp->ClassName_IO);
-			#endif
+#endif
 				Imp.ObjectName.Str = *Exp->ObjectName;
 				Imp.ClassName.Str = Exp->ClassName_IO;
 				Imp.PackageIndex = - Helper.GetPackageImportIndex(PackageIndex) - 1;
 			}
 			else
 			{
-			#if DEBUG_PACKAGE
+#if DEBUG_PACKAGE
 				appPrintf("Unable to resolve import %llX\n", ObjectIndex);
-			#endif
+#endif
 				ErrorStats.MissedImports++;
 			}
 		}
