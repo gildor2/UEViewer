@@ -1444,24 +1444,15 @@ void FStaticLODModel::RestoreLineageMesh()
 	UStaticMesh class
 -----------------------------------------------------------------------------*/
 
-struct FStaticMeshTriangleUnk
-{
-	float					unk1[2];
-	float					unk2[2];
-	float					unk3[2];
-};
-
 // complex FStaticMeshTriangle structure
 struct FStaticMeshTriangle
 {
-	FVector					f0;
-	FVector					fC;
-	FVector					f18;
-	FStaticMeshTriangleUnk	f24[8];
-	byte					fE4[12];
-	int						fF0;
-	int						fF4;
-	int						fF8;
+	FVector					Verts[3];
+	FMeshUVFloat			UVs[8][3];
+	FColor                  Colors[3];
+	int						MaterialIndex;
+	uint32					UnkMask;
+	int						UVCount;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshTriangle &T)
 	{
@@ -1469,17 +1460,18 @@ struct FStaticMeshTriangle
 		int i;
 
 		assert(Ar.ArVer >= 112);
-		Ar << T.f0 << T.fC << T.f18;
-		Ar << T.fF8;
-		assert(T.fF8 <= ARRAY_COUNT(T.f24));
-		for (i = 0; i < T.fF8; i++)
+		for (int i = 0; i < 3; i++)
+			Ar << T.Verts[i];
+		Ar << T.UVCount;
+		assert(T.UVCount <= 8);
+		for (i = 0; i < T.UVCount; i++)
 		{
-			FStaticMeshTriangleUnk &V = T.f24[i];
-			Ar << V.unk1[0] << V.unk1[1] << V.unk2[0] << V.unk2[1] << V.unk3[0] << V.unk3[1];
+			for (int j = 0; j < 3; j++)
+				Ar << T.UVs[i][j];
 		}
-		for (i = 0; i < 12; i++)
-			Ar << T.fE4[i];			// UT2 has strange order of field serialization: [2,1,0,3] x 3 times
-		Ar << T.fF0 << T.fF4;
+		for (i = 0; i < 3; i++)
+			Ar << T.Colors[i];			// UT2 has strange order of field serialization: [2,1,0,3] x 3 times
+		Ar << T.MaterialIndex << T.UnkMask;
 		// extra fields for older version (<= 111)
 
 		return Ar;
