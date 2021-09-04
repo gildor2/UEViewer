@@ -1800,21 +1800,24 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << InternalVersion;
 	GUseNewVanguardStaticMesh = (InternalVersion >= 13);
 
-	int		unk1CC, unk134;
-	UObject	*unk198, *unk1DC;
-	float	unk194, unk19C, unk1A0;
-	byte	unk1A4;
+	int		AuthKey, DefaultSkin;
+	UObject	*CollisionModel, *Impostor, *unk1DC;
+	float	ImpostorDistance, CullDistance, CullDistanceScalar;
+	byte	MeshDetailLevel;
 	TArray<FVanguardUTangentStream> BasisStream;
+	//These 2 int arrays are related to enabling collision in the mesh sections
 	TArray<int> unk144, unk150;
 	TArray<byte> unk200;
 
-	Ar << unk1CC << unk134 << f108 << unk198 << unk194 << unk19C;
+	Ar << AuthKey << DefaultSkin << CollisionModel << Impostor << ImpostorDistance << CullDistance;
+	f108 = CollisionModel;
+
 #if DEBUG_STATICMESH
 	appPrintf("Version: %d\n", InternalVersion);
 #endif
 	if (InternalVersion > 11)
-		Ar << unk1A0;
-	Ar << unk1A4;
+		Ar << CullDistanceScalar;
+	Ar << MeshDetailLevel;
 	Ar << unk1DC;
 
 	Ar << BoundingBox;
@@ -1829,7 +1832,7 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << Skins;
 	if (Skins.Num() && !Materials.Num())
 	{
-		const FVanguardSkin &S = Skins[0];
+		const FVanguardSkin &S = Skins[(DefaultSkin < Skins.Num() && DefaultSkin >= 0) ? DefaultSkin : 0];
 		Materials.AddZeroed(S.Textures.Num());
 		for (int i = 0; i < S.Textures.Num(); i++)
 			Materials[i].Material = S.Textures[i];
