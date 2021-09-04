@@ -1457,16 +1457,16 @@ struct FStaticMeshTriangle
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshTriangle &T)
 	{
 		guard(FStaticMeshTriangle<<);
-		int i;
+		int i, j;
 
 		assert(Ar.ArVer >= 112);
-		for (int i = 0; i < 3; i++)
+		for (i = 0; i < 3; i++)
 			Ar << T.Verts[i];
 		Ar << T.UVCount;
 		assert(T.UVCount <= 8);
 		for (i = 0; i < T.UVCount; i++)
 		{
-			for (int j = 0; j < 3; j++)
+			for (j = 0; j < 3; j++)
 				Ar << T.UVs[i][j];
 		}
 		for (i = 0; i < 3; i++)
@@ -1818,6 +1818,7 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << unk1DC;
 
 	Ar << BoundingBox;
+
 #if DEBUG_STATICMESH
 	appPrintf("Bounds: %g %g %g - %g %g %g (%d)\n", VECTOR_ARG(BoundingBox.Min), VECTOR_ARG(BoundingBox.Max), BoundingBox.IsValid);
 #endif
@@ -1837,7 +1838,21 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << Faces << UVStream << BasisStream;
 	Ar << unk144 << unk150 << unk200;
 
-	Ar << VertexStream << ColorStream << AlphaStream << IndexStream1 << IndexStream2;
+	TArray<FStaticMeshVertexVanguard> VangVerts;
+	int VertexStreamRev;
+
+	Ar << VangVerts << VertexStreamRev << ColorStream << AlphaStream << IndexStream1 << IndexStream2;
+
+	CopyArray(VertexStream.Vert, VangVerts);
+
+	//For vanguard uv set 0 is in the vertex stream, set 1 would be the first UVStream if serialized
+	if (GUseNewVanguardStaticMesh && !UVStream.Num())
+	{
+		UVStream.AddDefaulted(1);
+		UVStream[0].Data.SetNum(VangVerts.Num());
+		for (int i = 0; i < VangVerts.Num(); i++)
+			UVStream[0].Data[i] = VangVerts[i].UV;
+	}
 
 	// skip the remaining data
 	Ar.Seek(Ar.GetStopper());

@@ -1550,7 +1550,8 @@ struct FStaticMeshVertexVanguard
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexVanguard &V)
 	{
-		Ar << V.Pos << V.Normal << V.Binormal2 << V.Tangent3 << V.UV;
+		Ar << V.Pos << V.Normal;
+		if (GUseNewVanguardStaticMesh) Ar << V.Binormal2 << V.Tangent3 << V.UV;
 		return Ar;
 	}
 
