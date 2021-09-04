@@ -1544,12 +1544,13 @@ struct FStaticMeshVertexVanguard
 {
 	FVector					Pos;
 	FVector					Normal;
-	float					unk[8];
+	FVector                 Binormal2;
+	FVector                 Tangent3;
+	FMeshUVFloat            UV;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshVertexVanguard &V)
 	{
-		Ar << V.Pos << V.Normal;
-		for (int i = 0; i < 8; i++) Ar << V.unk[i];
+		Ar << V.Pos << V.Normal << V.Binormal2 << V.Tangent3 << V.UV;
 		return Ar;
 	}
 

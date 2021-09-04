@@ -36,6 +36,10 @@ UE2 MATERIALS TREE:
 				ShadowBitmapMaterial
 -				Texture
 					Cubemap
+#if VANGUARD
+				NormalBitmapMaterial
+				SpecularBitmapMaterial
+#endif
 -			ConstantMaterial
 -				ConstantColor
 				FadeColor
@@ -296,6 +300,7 @@ enum ETextureFormat
 	TEXF_CxV8U8,
 	TEXF_DXT5N,			// Note: in Bioshock this value has name 3DC, but really DXT5N is used
 	TEXF_3DC,			// BC5 compression
+	TEXF_V8U8
 };
 
 _ENUM(ETextureFormat)
@@ -316,6 +321,7 @@ _ENUM(ETextureFormat)
 	_E(TEXF_CxV8U8),
 	_E(TEXF_DXT5N),
 	_E(TEXF_3DC),
+	_E(TEXF_V8U8)
 };
 
 enum ETexClampMode
@@ -363,6 +369,63 @@ public:
 #endif // RENDERING
 };
 
+#if VANGUARD
+class UNormalBitmapMaterial : public UBitmapMaterial
+{
+	DECLARE_CLASS(UNormalBitmapMaterial, UBitmapMaterial);
+public:
+
+	UNormalBitmapMaterial() : BumpScale(8.0f) {}
+
+	~UNormalBitmapMaterial()
+	{
+		if (normalTex) delete normalTex;
+	}
+	class UTexture* BumpMap;
+	float BumpScale;
+	//Looks wrong but correct casing
+	float BumpCulldistance;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(BumpMap)
+		PROP_FLOAT(BumpScale)
+		PROP_FLOAT(BumpCulldistance)
+	END_PROP_TABLE
+
+	//CUSTOM
+	UTexture* normalTex;
+	void PostLoad() override;
+	void GetParams(CMaterialParams &Params) const override;
+};
+
+//No functionality yet
+class USpecularBitmapMaterial : public UBitmapMaterial
+{
+	DECLARE_CLASS(USpecularBitmapMaterial, UBitmapMaterial);
+public:
+	class UMaterial* ExponentMap;
+	float DiffuseStrength, SpecularStrength, EnvStrength;
+	FColor SpecularColor;
+	float SpecularPower;
+	float DiffuseClarity, SpecularClarity, EnvClarity;
+	float DiffuseBumpiness, SpecularBumpiness, EnvBumpiness;
+
+	BEGIN_PROP_TABLE
+		PROP_OBJ(ExponentMap)
+		PROP_FLOAT(DiffuseStrength)
+		PROP_FLOAT(SpecularStrength)
+		PROP_FLOAT(EnvStrength)
+		PROP_COLOR(SpecularColor)
+		PROP_FLOAT(SpecularPower)
+		PROP_FLOAT(DiffuseClarity)
+		PROP_FLOAT(SpecularClarity)
+		PROP_FLOAT(EnvClarity)
+		PROP_FLOAT(DiffuseBumpiness)
+		PROP_FLOAT(SpecularBumpiness)
+		PROP_FLOAT(EnvBumpiness)
+	END_PROP_TABLE
+};
+#endif //VANGUARD
 
 class UPalette : public UObject
 {
@@ -598,6 +661,9 @@ public:
 #if BIOSHOCK
 	UMaterial		*NormalMap;
 #endif
+#if VANGUARD
+	UMaterial       *Normal;
+#endif
 	UMaterial		*Opacity;
 	UMaterial		*Specular;
 	UMaterial		*SpecularityMask;
@@ -658,6 +724,9 @@ public:
 		PROP_BOOL(AlphaTest)
 		PROP_BYTE(AlphaRef)
 #endif // LINEAGE2
+#if VANGUARD
+		PROP_OBJ(Normal)
+#endif//VANGUARD
 #if BIOSHOCK
 		PROP_STRUC(Opacity_Bio,    FMaskMaterial)
 		PROP_STRUC(HeightMap,      FMaskMaterial)
@@ -1355,6 +1424,10 @@ public:
 #define REGISTER_MATERIAL_CLASSES_BIO	\
 	REGISTER_CLASS(FMaskMaterial)		\
 	REGISTER_CLASS(UFacingShader)
+
+#define REGISTER_MATERIAL_CLASSES_VANGUARD \
+	REGISTER_CLASS(UNormalBitmapMaterial) \
+	REGISTER_CLASS(USpecularBitmapMaterial)
 
 #define REGISTER_MATERIAL_CLASSES_SCELL	\
 	REGISTER_CLASS(UUnreal3Material)	\
