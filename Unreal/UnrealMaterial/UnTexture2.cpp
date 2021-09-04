@@ -519,6 +519,9 @@ ETexturePixelFormat UTexture::GetTexturePixelFormat() const
 		case TEXF_3DC:
 			intFormat = TPF_BC5;
 			break;
+		case TEXF_V8U8:
+			intFormat = TPF_V8U8;
+			break;
 		default:
 			appNotify("Unknown UE2 texture format: %s (%d)", EnumToName(Format), Format);
 		}

@@ -1444,42 +1444,34 @@ void FStaticLODModel::RestoreLineageMesh()
 	UStaticMesh class
 -----------------------------------------------------------------------------*/
 
-struct FStaticMeshTriangleUnk
-{
-	float					unk1[2];
-	float					unk2[2];
-	float					unk3[2];
-};
-
 // complex FStaticMeshTriangle structure
 struct FStaticMeshTriangle
 {
-	FVector					f0;
-	FVector					fC;
-	FVector					f18;
-	FStaticMeshTriangleUnk	f24[8];
-	byte					fE4[12];
-	int						fF0;
-	int						fF4;
-	int						fF8;
+	FVector					Verts[3];
+	FMeshUVFloat			UVs[8][3];
+	FColor                  Colors[3];
+	int						MaterialIndex;
+	uint32					UnkMask;
+	int						UVCount;
 
 	friend FArchive& operator<<(FArchive &Ar, FStaticMeshTriangle &T)
 	{
 		guard(FStaticMeshTriangle<<);
-		int i;
+		int i, j;
 
 		assert(Ar.ArVer >= 112);
-		Ar << T.f0 << T.fC << T.f18;
-		Ar << T.fF8;
-		assert(T.fF8 <= ARRAY_COUNT(T.f24));
-		for (i = 0; i < T.fF8; i++)
+		for (i = 0; i < 3; i++)
+			Ar << T.Verts[i];
+		Ar << T.UVCount;
+		assert(T.UVCount <= 8);
+		for (i = 0; i < T.UVCount; i++)
 		{
-			FStaticMeshTriangleUnk &V = T.f24[i];
-			Ar << V.unk1[0] << V.unk1[1] << V.unk2[0] << V.unk2[1] << V.unk3[0] << V.unk3[1];
+			for (j = 0; j < 3; j++)
+				Ar << T.UVs[i][j];
 		}
-		for (i = 0; i < 12; i++)
-			Ar << T.fE4[i];			// UT2 has strange order of field serialization: [2,1,0,3] x 3 times
-		Ar << T.fF0 << T.fF4;
+		for (i = 0; i < 3; i++)
+			Ar << T.Colors[i];			// UT2 has strange order of field serialization: [2,1,0,3] x 3 times
+		Ar << T.MaterialIndex << T.UnkMask;
 		// extra fields for older version (<= 111)
 
 		return Ar;
@@ -1808,24 +1800,28 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << InternalVersion;
 	GUseNewVanguardStaticMesh = (InternalVersion >= 13);
 
-	int		unk1CC, unk134;
-	UObject	*unk198, *unk1DC;
-	float	unk194, unk19C, unk1A0;
-	byte	unk1A4;
+	int		AuthKey, DefaultSkin;
+	UObject	*CollisionModel, *Impostor, *unk1DC;
+	float	ImpostorDistance, CullDistance, CullDistanceScalar;
+	byte	MeshDetailLevel;
 	TArray<FVanguardUTangentStream> BasisStream;
+	//These 2 int arrays are related to enabling collision in the mesh sections
 	TArray<int> unk144, unk150;
 	TArray<byte> unk200;
 
-	Ar << unk1CC << unk134 << f108 << unk198 << unk194 << unk19C;
+	Ar << AuthKey << DefaultSkin << CollisionModel << Impostor << ImpostorDistance << CullDistance;
+	f108 = CollisionModel;
+
 #if DEBUG_STATICMESH
 	appPrintf("Version: %d\n", InternalVersion);
 #endif
 	if (InternalVersion > 11)
-		Ar << unk1A0;
-	Ar << unk1A4;
+		Ar << CullDistanceScalar;
+	Ar << MeshDetailLevel;
 	Ar << unk1DC;
 
 	Ar << BoundingBox;
+
 #if DEBUG_STATICMESH
 	appPrintf("Bounds: %g %g %g - %g %g %g (%d)\n", VECTOR_ARG(BoundingBox.Min), VECTOR_ARG(BoundingBox.Max), BoundingBox.IsValid);
 #endif
@@ -1836,7 +1832,7 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << Skins;
 	if (Skins.Num() && !Materials.Num())
 	{
-		const FVanguardSkin &S = Skins[0];
+		const FVanguardSkin &S = Skins[(DefaultSkin < Skins.Num() && DefaultSkin >= 0) ? DefaultSkin : 0];
 		Materials.AddZeroed(S.Textures.Num());
 		for (int i = 0; i < S.Textures.Num(); i++)
 			Materials[i].Material = S.Textures[i];
@@ -1845,7 +1841,21 @@ void UStaticMesh::SerializeVanguardMesh(FArchive &Ar)
 	Ar << Faces << UVStream << BasisStream;
 	Ar << unk144 << unk150 << unk200;
 
-	Ar << VertexStream << ColorStream << AlphaStream << IndexStream1 << IndexStream2;
+	TArray<FStaticMeshVertexVanguard> VangVerts;
+	int VertexStreamRev;
+
+	Ar << VangVerts << VertexStreamRev << ColorStream << AlphaStream << IndexStream1 << IndexStream2;
+
+	CopyArray(VertexStream.Vert, VangVerts);
+
+	//For vanguard uv set 0 is in the vertex stream, set 1 would be the first UVStream if serialized
+	if (GUseNewVanguardStaticMesh && !UVStream.Num())
+	{
+		UVStream.AddDefaulted(1);
+		UVStream[0].Data.SetNum(VangVerts.Num());
+		for (int i = 0; i < VangVerts.Num(); i++)
+			UVStream[0].Data[i] = VangVerts[i].UV;
+	}
 
 	// skip the remaining data
 	Ar.Seek(Ar.GetStopper());

@@ -1559,6 +1559,15 @@ void UShader::GetParams(CMaterialParams &Params) const
 		Params.Normal = Params2.Diffuse;
 	}
 #endif
+#if VANGUARD
+	if (Normal)
+	{
+		//Some models look funky with this on, others look good. Disabling for now
+		//CMaterialParams Params2;
+		//Normal->GetParams(Params2);
+		//Params.Normal = Params2.Diffuse;
+	}
+#endif
 	if (SpecularityMask)
 	{
 		CMaterialParams Params2;
@@ -1583,6 +1592,143 @@ bool UShader::IsTranslucent() const
 	return (OutputBlending != OB_Normal);
 }
 
+#if VANGUARD
+void UNormalBitmapMaterial::GetParams(CMaterialParams &params) const
+{
+	if (normalTex) params.Diffuse = normalTex;
+	else if (BumpMap) params.Diffuse = BumpMap;
+}
+
+void UNormalBitmapMaterial::PostLoad()
+{
+	if (BumpMap)
+	{
+		UBits = BumpMap->UBits;
+		VBits = BumpMap->VBits;
+		USize = BumpMap->USize;
+		VSize = BumpMap->VSize;
+		UClamp = BumpMap->UClamp;
+		VClamp = BumpMap->VClamp;
+		UClampMode = BumpMap->UClampMode;
+		VClampMode = BumpMap->VClampMode;
+
+		if (BumpMap->Format == TEXF_DXT3) return;
+
+		assert(BumpMap->Format == TEXF_P8);
+
+		normalTex = new UTexture;
+		normalTex->UBits = UBits;
+		normalTex->VBits = VBits;
+		normalTex->USize = USize;
+		normalTex->VSize = VSize;
+		normalTex->UClamp = UClamp;
+		normalTex->VClamp = VClamp;
+		normalTex->UClampMode = UClampMode;
+		normalTex->VClampMode = VClampMode;
+
+		normalTex->Mips.SetNum(1);
+		//Norm mip
+		FMipmap &nMip = normalTex->Mips[0];
+		nMip.UBits = UBits;
+		nMip.VBits = VBits;
+		nMip.USize = USize;
+		nMip.VSize = VSize;
+
+		//Bump Mip
+		const FMipmap &bMip = BumpMap->Mips[0];
+
+		/* BGRA8 CODE - In client but image doesn't look like other normal maps ive seen
+		{
+			float scale = BumpScale / USize * 0.0039215689;
+
+			nMip.DataArray.AddUninitialized(USize * VSize * 4);
+
+			const byte *rawU = &bMip.DataArray[0];
+			const byte *rawV = &bMip.DataArray[USize];
+
+			//Decode into BGRA8 format
+			byte *dest = &nMip.DataArray[0];
+			for (int v = 0; v < VSize; v++)
+			{
+				const byte *rawU2 = rawU + 1;
+				for (int u = 0; u < USize; u++)
+				{
+					float fu1 = *rawU++ * scale;
+					float fv = *rawV++ * scale;
+					float fu2 = fu1 - *rawU2++ * scale;
+					fu1 -= fv;
+
+					float t = (fu1 * fu1) + (fu2 * fu2) + 1.0f;
+					float r, g, b;
+					if (t >= 0.00000001)
+					{
+						b = 1.0f / sqrtf(t);
+						g = fu1 * r;
+						r = fu2 * r;
+					}
+					else r = 0.0f, g = 0.0f, b = 0.0f;
+
+					b = (r + 1.0f) * 127.5f;
+					g = (g + 1.0f) * 127.5f;
+					r = (r + 1.0f) * 127.5f;
+
+					uint32 bb = (byte)b, gb = (byte)g, rb = (byte)r;
+					uint32 pack = bb | (gb << 8) | (rb << 16);
+					*reinterpret_cast<uint32*>(dest) = pack;
+					dest += 4;
+
+					//Safety check to stay in-bounds
+					if (u == USize - 2) rawU2 -= USize;
+				}
+			}
+
+			normalTex->Format = TEXF_RGBA8;
+			Format = TEXF_RGBA8;
+		}
+		else */
+		{
+			float scale = BumpScale / 0.00390625f;
+
+			nMip.DataArray.AddUninitialized(USize * VSize * 2);
+			byte *dest = &nMip.DataArray[0];
+
+			const byte *rawU = &bMip.DataArray[0];
+			const byte *rawV = &bMip.DataArray[USize];
+			for (int v = 0; v < VSize; v++)
+			{
+				const byte *rawU2 = rawU + 1;
+				for (int u = 0; u < USize; u++)
+				{
+					float fu1 = *rawU++ * scale;
+					float fv = *rawV++ * scale;
+					float fu2 = fu1 - *rawU2++ * scale;
+					fu1 -= fv;
+
+					float t = (fu1 * fu1) + (fu2 * fu2) + 1.0f;
+
+					float tv, tu;
+					if (t >= 0.00000001)
+					{
+						float n = 1.0f / sqrt(t);
+						tv = n * fu2;
+						tu = n * fu1;
+					}
+					else tv = tu = 0.0f;
+
+					*dest++ = appRound(tv * 128.0f);
+					*dest++ = appRound(tu * 128.0f);
+
+					//Safety check to stay in-bounds
+					if (u == USize - 2) rawU2 -= USize;
+				}
+			}
+
+			normalTex->Format = TEXF_V8U8;
+			Format = TEXF_V8U8;
+		}
+	}
+}
+#endif // VANGUARD
 
 
 #if BIOSHOCK
