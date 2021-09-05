@@ -53,6 +53,8 @@
 #error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
+// This is a CVar in UE4.27+. Set to false by default, some games might have it set to "true".
+static bool KeepMobileMinLODSettingOnDesktop = false;
 
 /*-----------------------------------------------------------------------------
 	Common data types
@@ -1831,7 +1833,7 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 		bool bCooked;
 		Ar << bCooked;
 
-		if (Ar.Game >= GAME_UE4(27))
+		if (Ar.Game >= GAME_UE4(27) && KeepMobileMinLODSettingOnDesktop)
 		{
 			// The serialization of this variable is cvar-dependent in UE4, so there's no clear way to understand
 			// if it should be serialize in our code or not.
@@ -2728,7 +2730,7 @@ no_nav_collision:
 		// Note: code below still contains 'if (bCooked)' switches, this is because the same
 		// code could be used to read data from DDC, for non-cooked assets.
 		DBG_STAT("Serializing RenderData\n");
-		if (Ar.Game >= GAME_UE4(27))
+		if (Ar.Game >= GAME_UE4(27) && KeepMobileMinLODSettingOnDesktop)
 		{
 			// The serialization of this variable is cvar-dependent in UE4, so there's no clear way to understand
 			// if it should be serialize in our code or not.

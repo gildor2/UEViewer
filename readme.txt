@@ -216,6 +216,9 @@ Oodle
 
 Changes
 ~~~~~~~
+05.09.2021
+- UE4.27 support
+
 05.07.2021
 - providing Win32 and Win64 builds of UE Viewer
 

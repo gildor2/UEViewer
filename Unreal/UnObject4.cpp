@@ -85,7 +85,11 @@ struct PropInfo
 
 static const PropInfo PropData[] =
 {
+// UStaticMesh
 BEGIN("UStaticMesh4")
+	VERSION_BLOCK(GAME_UE4(27))
+		DROP_INT8(14)					// uint8 bSupportRayTracing
+	VERSION_BLOCK(0)
 	DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
 	MAP(StaticMaterials, 2)
 	MAP(LightmapUVDensity, 3)
@@ -97,7 +101,11 @@ BEGIN("UStaticMesh4")
 	DROP_OBJ_ARRAY(22)					// TArray<UAssetUserData*> AssetUserData
 END
 
+// USkeletalMesh
 BEGIN("USkeletalMesh4")
+	VERSION_BLOCK(GAME_UE4(27))
+		DROP_INT8(21)					// uint8 bSupportRayTracing
+	VERSION_BLOCK(0)
 	MAP(Skeleton, 0)
 	DROP_VECTOR3(3)						// PositiveBoundsExtension
 	DROP_VECTOR3(4)						// PositiveBoundsExtension
@@ -125,7 +133,11 @@ BEGIN("USkeleton")
 	DROP_OBJ_ARRAY(8)					// TArray<UAssetUserData*> AssetUserData
 END
 
+// UAnimSequence
 BEGIN("UAnimSequence4")
+	VERSION_BLOCK(GAME_UE4(27))
+		MAP(RetargetSourceAssetReferencePose, 9)
+	VERSION_BLOCK(0)
 	MAP(NumFrames, 0)
 	MAP(TrackToSkeletonMapTable, 1)
 	MAP(AdditiveAnimType, 4)
@@ -133,12 +145,11 @@ BEGIN("UAnimSequence4")
 	MAP(RefPoseSeq, 6)
 	MAP(RefFrameIndex, 7)
 	MAP(RetargetSource, 8)
-	MAP(RetargetSourceAssetReferencePose, 9)
-	MAP(Interpolation, 10)
-	MAP(bEnableRootMotion, 11)
-	DROP_INT8(12, 13, 14, 15)
-	MAP(AuthoredSyncMarkers, 16)
-	MAP(BakedPerBoneCustomAttributeData, 17)
+	MAP(Interpolation, 9)
+	MAP(bEnableRootMotion, 10)
+	DROP_INT8(11, 12, 13, 14)
+	MAP(AuthoredSyncMarkers, 15)
+	MAP(BakedPerBoneCustomAttributeData, 16)
 END
 
 BEGIN("UAnimationAsset")
@@ -147,6 +158,7 @@ BEGIN("UAnimationAsset")
 	DROP_OBJ_ARRAY(2)					// AssetUserData
 END
 
+// UTexture2D
 BEGIN("UTexture2D")
 	DROP_INT8(2)						// uint8 bTemporarilyDisableStreaming:1
 	DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
@@ -161,6 +173,7 @@ BEGIN("UTexture3")
 	DROP_OBJ_ARRAY(14)					// AssetUserData
 END
 
+// UMaterialInstance
 BEGIN("UMaterialInstance")
 	MAP(Parent, 9)
 	DROP_INT8(10, 11)
@@ -174,6 +187,7 @@ BEGIN("UMaterialInstance")
 	DROP_OBJ_ARRAY(20)					//todo: TArray<UObject*> CachedReferencedTextures
 END
 
+// UMaterial
 BEGIN("UMaterial3")
 	// known properties
 	MAP(BlendMode, 17)
@@ -278,13 +292,18 @@ static const ParentInfo ParentData[] =
 	{ "UTexture2D", "UTexture3", 6 },
 	{ "UTexture3", "UStreamableRenderAsset", 15 },
 	// Mesh classes
+	{ "USkeletalMesh4", "UStreamableRenderAsset", 29, GAME_UE4(27) },
 	{ "USkeletalMesh4", "UStreamableRenderAsset", 28 },
+	{ "UStaticMesh4", "UStreamableRenderAsset", 26, GAME_UE4(27) },
 	{ "UStaticMesh4", "UStreamableRenderAsset", 25 },
 	// Material classes
 	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // contains just a single UObject* property
 	{ "UMaterialInstance", "UMaterialInterface", 21 },
+	{ "UMaterial3", "UMaterialInterface", 119, GAME_UE4(27) },
 	{ "UMaterial3", "UMaterialInterface", 117 },
-	{ "UAnimSequence4", "UAnimSequenceBase", 18 },
+	// Animation classes
+	{ "UAnimSequence4", "UAnimSequenceBase", 18, GAME_UE4(27) },
+	{ "UAnimSequence4", "UAnimSequenceBase", 17 },
 	{ "UAnimSequenceBase", "UAnimationAsset", 4 },
 	// Structures
 	{ "FStaticSwitchParameter", "FStaticParameterBase", 1 },

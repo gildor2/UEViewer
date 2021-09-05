@@ -1,8 +1,16 @@
 #!/usr/bin/perl -w
 
+# TODO:
+# - command line (has some commented code here)
+# - show file/line where class defined
+# - command line: show particular class and its parents
+# - when there's parent, parse its prpos and add count to the 1st property (e.g. for UMaterialInstanceConstant)
+
+
 @dirs =
 (
-	"../../Epic/UnrealEngine4-latest/Engine/Source/Runtime/Engine",
+	"../../Epic/UnrealEngine4/Engine/Source/Runtime/Engine",
+#	"../../Epic/UnrealEngine4-latest/Engine/Source/Runtime/Engine",
 );
 
 @files =
