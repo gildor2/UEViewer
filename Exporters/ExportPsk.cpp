@@ -80,7 +80,7 @@ static void ExportCommonMeshData
 	guard(ExportCommonMeshData);
 
 	// using 'static' here to avoid zero-filling unused fields
-	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr;
+	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, NormHdr;
 	int i;
 
 #define SECT(n)		(Sections + n)
@@ -244,6 +244,22 @@ static void ExportCommonMeshData
 		else
 			appSprintf(ARRAY_ARG(M.MaterialName), "material_%d", i);
 		Ar << M;
+	}
+	unguard;
+
+	guard(Normals);
+	NormHdr.DataCount = Share.Normals.Num();
+	NormHdr.DataSize  = sizeof(CVec3);
+	SAVE_CHUNK(NormHdr, "VTXNORMS");
+	for (i = 0; i < Share.Normals.Num(); i++)
+	{
+		CVec3 Normal;
+		Unpack(Normal, Share.Normals[i]);
+		Normal.Normalize();
+#if MIRROR_MESH
+		Normal.Y = -Normal.Y;
+#endif
+		Ar << Normal.X << Normal.Y << Normal.Z;
 	}
 	unguard;
 
