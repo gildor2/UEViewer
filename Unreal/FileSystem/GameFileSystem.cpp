@@ -447,6 +447,8 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 						s++;
 					else
 						s = GlobalPath;
+					// The name of global.utoc file is hardcoded in UE4 code in FPakPlatformFile::Initialize, see
+					// IoStoreGlobalEnvironment.InitializeFileEnvironment() function call.
 					strcpy(s, "global.utoc");
 					FIOStoreFileSystem::LoadGlobalContainer(GlobalPath);
 				}

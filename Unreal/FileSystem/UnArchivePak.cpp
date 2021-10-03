@@ -170,6 +170,19 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 	uint32 Bitfield = *(uint32*)Data;
 	Data += sizeof(uint32);
 
+	// CompressionBlockSize
+	if ((Bitfield & 0x3f) == 0x3f)
+	{
+		// UE4.27+
+		CompressionBlockSize = *(uint32*)Data;
+		Data += sizeof(uint32);
+	}
+	else
+	{
+		// UE4.26
+		CompressionBlockSize = (Bitfield & 0x3f) << 11;
+	}
+
 	CompressionMethod = (Bitfield >> 23) & 0x3f;
 
 	// Offset follows - either 32 or 64 bit value
@@ -231,14 +244,13 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 
 	// Compression information
 	CompressionBlocks.AddUninitialized(BlockCount);
-	CompressionBlockSize = 0;
 	if (BlockCount)
 	{
-		// CompressionBlockSize
-		if (UncompressedSize < 65536)
+		// Adjust CompressionBlockSize for small blocks
+		if (UncompressedSize < CompressionBlockSize)
+		{
 			CompressionBlockSize = UncompressedSize;
-		else
-			CompressionBlockSize = (Bitfield & 0x3f) << 11;
+		}
 
 		// CompressionBlocks
 		if (BlockCount == 1)
