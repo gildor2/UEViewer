@@ -171,7 +171,8 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 	Data += sizeof(uint32);
 
 	// CompressionBlockSize
-	if ((Bitfield & 0x3f) == 0x3f)
+	bool bLegacyCompressionBlockSize = ((Bitfield & 0x3f) != 0x3f);
+	if (!bLegacyCompressionBlockSize)
 	{
 		// UE4.27+
 		CompressionBlockSize = *(uint32*)Data;
@@ -249,6 +250,12 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 		// Adjust CompressionBlockSize for small blocks
 		if (UncompressedSize < CompressionBlockSize)
 		{
+			// UE4.27+ code
+			CompressionBlockSize = UncompressedSize;
+		}
+		else if (bLegacyCompressionBlockSize && UncompressedSize < 65536)
+		{
+			// UE4.26 code
 			CompressionBlockSize = UncompressedSize;
 		}
 
