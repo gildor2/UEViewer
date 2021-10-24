@@ -508,7 +508,7 @@ void UnPackage::ReplaceLoader()
 #endif // AA2
 
 #if ROCKET_LEAGUE
-	if (Game == GAME_RocketLeague && (Summary.PackageFlags & PKG_Cooked))
+	if (Game == GAME_RocketLeague && (Summary.PackageFlags & PKG_Cooked) && !GetFilename().EndsWith("_decrypted.upk"))
 	{
 		// Rocket League has an encrypted header after FPackageFileSummary containing the name/import/export tables and a compression table.
 		TArray<FString> AdditionalPackagesToCook;
