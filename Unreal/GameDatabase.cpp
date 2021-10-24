@@ -815,7 +815,7 @@ void FArchive::DetectGame()
 	if (ArVer == 868 && ArLicenseeVer == 2)		SET(GAME_Guilty);
 #endif
 #if ROCKET_LEAGUE
-	if (ArVer == 868 && (ArLicenseeVer >= 18 && ArLicenseeVer <= 22)) SET(GAME_RocketLeague);
+	if (ArVer == 868 && (ArLicenseeVer >= 18 && ArLicenseeVer <= 32)) SET(GAME_RocketLeague);
 #endif
 #if SPECIALFORCE2
 	if (ArVer == 904 && (ArLicenseeVer == 9 || ArLicenseeVer == 14)) SET(GAME_SpecialForce2);
