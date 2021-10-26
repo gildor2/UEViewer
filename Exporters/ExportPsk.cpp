@@ -306,6 +306,22 @@ static void ExportExtraUV
 	unguard;
 }
 
+static void CopyBoneName(char* Dst, int DstLen, const char* Src)
+{
+	int NameLength = strlen(Src);
+	if (NameLength < DstLen)
+	{
+		strcpy(Dst, Src);
+	}
+	else
+	{
+		int Middle = (DstLen - 4) / 2;
+		memcpy(Dst, Src, Middle);
+		memcpy(Dst + Middle, "____", 4);
+		memcpy(Dst + Middle + 4, Src + NameLength - Middle + 1, Middle); // +1 for keeping null terminating character
+		appPrintf("WARNING: bone name \"%s\" is too long, renamed to \"%s\"\n", Src, Dst);
+	}
+}
 
 static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod &Lod, FArchive &Ar)
 {
@@ -361,7 +377,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 		VBone B;
 		memset(&B, 0, sizeof(B));
 		const CSkelMeshBone &S = Mesh.RefSkeleton[i];
-		strcpy(B.Name, S.Name);
+		CopyBoneName(B.Name, sizeof(B.Name), *S.Name);
 		// count NumChildren
 		int NumChildren = 0;
 		for (j = 0; j < numBones; j++)
@@ -561,8 +577,7 @@ static void DoExportPsa(const CAnimSet* Anim, const UObject* OriginalAnim)
 	{
 		FNamedBoneBinary B;
 		memset(&B, 0, sizeof(B));
-		assert(strlen(*Anim->TrackBoneNames[i]) < sizeof(B.Name));
-		strcpy(B.Name, *Anim->TrackBoneNames[i]);
+		CopyBoneName(B.Name, sizeof(B.Name), *Anim->TrackBoneNames[i]);
 		B.Flags       = 0;						// reserved
 		B.NumChildren = 0;						// unknown here
 		B.ParentIndex = (i > 0) ? 0 : -1;		// unknown for UAnimSet
