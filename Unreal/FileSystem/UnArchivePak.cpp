@@ -954,7 +954,7 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		DirectoryPath += DirectoryName;
 		CompactFilePath(DirectoryPath);
 		// Remove any trailing slashes. Note that MountPoint may be empty (consisting just of '/'), so let's use a loop.
-		while (DirectoryPath.EndsWith("//"))
+		while (DirectoryPath[DirectoryPath.Len()-1] == '/')
 			DirectoryPath.RemoveAt(DirectoryPath.Len()-1);
 
 		// Read size of FPakDirectory (DirectoryIndex::Value)
