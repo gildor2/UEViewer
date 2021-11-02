@@ -81,7 +81,7 @@ static void InitSymbols()
 
 #if EXTRA_UNDECORATE
 
-// Strips all occurences of string 'cut' from 'string'
+// Strips all occurrences of string 'cut' from 'string'
 static void StripPrefix(char* string, const char* cut)
 {
 	int len1 = strlen(string);

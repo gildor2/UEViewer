@@ -72,7 +72,7 @@ extern "C" {
 //
 ************************************************************************/
 
-/* Always use the safe (=integral) version for pointer-comparisions.
+/* Always use the safe (=integral) version for pointer-comparisons.
  * The compiler should optimize away the additional casts anyway.
  *
  * Note that this only works if the representation and ordering

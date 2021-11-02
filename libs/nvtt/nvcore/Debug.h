@@ -73,7 +73,7 @@
 
 #endif // NV_NO_ASSERT
 
-// Use nvAssume for very simple expresions only: nvAssume(0), nvAssume(value == true), etc.
+// Use nvAssume for very simple expressions only: nvAssume(0), nvAssume(value == true), etc.
 #if defined(_DEBUG)
 #	if NV_CC_MSVC
 #		define nvAssume(exp)	__assume(exp)

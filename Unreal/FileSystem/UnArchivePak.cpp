@@ -763,7 +763,7 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		if (E.Size == 0)
 		{
 			// Happens with Jedi Fallen Order, seems assets are deleted in patches this way. If we'll continue registration,
-			// the existing (previous) asset might be overriden with zero-size file, and it won't be recognized as an asset anymore.
+			// the existing (previous) asset might be overridden with zero-size file, and it won't be recognized as an asset anymore.
 			continue;
 		}
 

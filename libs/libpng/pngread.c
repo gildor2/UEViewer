@@ -4150,7 +4150,7 @@ png_image_finish_read(png_imagep image, png_const_colorp background,
              *
              * NOTE: this will be changed in 1.7 because PNG_IMAGE_BUFFER_SIZE
              * will be changed to use png_alloc_size_t; bigger images can be
-             * accomodated on 64-bit systems.
+             * accommodated on 64-bit systems.
              */
             if (image->height <=
                 0xffffffffU/PNG_IMAGE_PIXEL_COMPONENT_SIZE(image->format)/check)

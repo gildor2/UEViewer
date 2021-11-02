@@ -942,7 +942,7 @@ png_handle_as_unknown(png_const_structrp png_ptr, png_const_bytep chunk_name)
 
    /* The code is the fifth byte after each four byte string.  Historically this
     * code was always searched from the end of the list, this is no longer
-    * necessary because the 'set' routine handles duplicate entries correcty.
+    * necessary because the 'set' routine handles duplicate entries correctly.
     */
    do /* num_chunk_list > 0, so at least one */
    {
@@ -2067,7 +2067,7 @@ png_icc_check_header(png_const_structrp png_ptr, png_colorspacerp colorspace,
     */
 
    /* Data checks (could be skipped).  These checks must be independent of the
-    * version number; however, the version number doesn't accomodate changes in
+    * version number; however, the version number doesn't accommodate changes in
     * the header fields (just the known tags and the interpretation of the
     * data.)
     */
@@ -3968,7 +3968,7 @@ png_gamma_correct(png_structrp png_ptr, unsigned int value,
 #ifdef PNG_16BIT_SUPPORTED
 /* Internal function to build a single 16-bit table - the table consists of
  * 'num' 256 entry subtables, where 'num' is determined by 'shift' - the amount
- * to shift the input values right (or 16-number_of_signifiant_bits).
+ * to shift the input values right (or 16-number_of_significant_bits).
  *
  * The caller is responsible for ensuring that the table gets cleaned up on
  * png_error (i.e. if one of the mallocs below fails) - i.e. the *table argument

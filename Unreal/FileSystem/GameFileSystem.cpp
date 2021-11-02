@@ -425,7 +425,7 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 			assert(PakVfs);
 			FString PakEncryptionKey = PakVfs->GetPakEncryptionKey();
 
-			// Check for presense of IOStore file system for this pak
+			// Check for presence of IOStore file system for this pak
 			guard(TokArchive);
 			char Path[MAX_PACKAGE_PATH];
 			appStrncpyz(Path, FullName, ARRAY_COUNT(Path));

@@ -23,7 +23,7 @@ Other options are to track web pages.
 ### Which game titles are supported?
 There are more than 300 games made with all Unreal engine versions, for all platform supported by Epic Games. Check this table: https://www.gildor.org/projects/umodel/compat
 
-I'm trying to keep it up-to-date, mostly with reports posted on my forum. Note presense of the filter on the top of the table which lets you to find a game by the part of its name or by the company name quickly.
+I'm trying to keep it up-to-date, mostly with reports posted on my forum. Note presence of the filter on the top of the table which lets you to find a game by the part of its name or by the company name quickly.
 
 ### Why don't you add support for non-Unreal engine games?
 Other game engines has different principles of data storage. Umodel is focused on Unreal engine games and most of it's code works with Unreal engine data. Another reasons (that's why I did not created separate application for other games): other game engines are usually has more simple data formats, there are a lot of extractors for them exists already, even made with non-professional programmers. So I don't think there is any reason to support other engines.
@@ -256,7 +256,7 @@ UE4 has built-in possibility to encrypt pak files. At the moment UModel doesn't 
 ### Where I can find extracted files?
 Files should be located by default in a current directory.
 
-Windows Vista and 7 has disabled writting files into "Program Files" directory for non-admin users. When you're trying to export context from some game located in Program Files, operating system will redirect all output to the "C:\Users\<UserName>\AppData\Local\VirtualStore\Program Files" directory.
+Windows Vista and 7 has disabled writing files into "Program Files" directory for non-admin users. When you're trying to export context from some game located in Program Files, operating system will redirect all output to the "C:\Users\<UserName>\AppData\Local\VirtualStore\Program Files" directory.
 
 If you having trouble locating exported files, use "-out=SomeOtherDirectory" option. Alternatively you may specify export directory in program's settings.
 

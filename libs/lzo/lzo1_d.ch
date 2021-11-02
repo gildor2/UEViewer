@@ -61,7 +61,7 @@
 //   TEST_OP    test output overrun at loop begin
 //   NEED_OP    test output overrun at every output byte
 //
-//   TEST_LB    test match postion
+//   TEST_LB    test match position
 //
 // The fastest decompressor results when testing for no overruns
 // and using LZO_EOF_CODE.

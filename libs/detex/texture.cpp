@@ -50,7 +50,7 @@ static detexDecompressBlockFuncType decompress_function[] = {
 /*
  * General block decompression function. Block is decompressed using the given
  * compressed format, and stored in the given pixel format. Returns true if
- * succesful.
+ * successful.
  */
 bool detexDecompressBlock(const uint8_t * DETEX_RESTRICT bitstring, uint32_t texture_format,
 uint32_t mode_mask, uint32_t flags, uint8_t * DETEX_RESTRICT pixel_buffer,

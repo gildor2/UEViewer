@@ -889,7 +889,7 @@ static void CacheResult(uint32_t source_format, uint32_t target_format, int n, u
 //	printf(")\n");
 }
 
-// Match conversion. Returns number of conversion steps, -1 if not succesful.
+// Match conversion. Returns number of conversion steps, -1 if not successful.
 static int detexMatchConversion(uint32_t source_pixel_format, uint32_t target_pixel_format,
 uint32_t *conversion) {
 	// Immediately return if the formats are identical.

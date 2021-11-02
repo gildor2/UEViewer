@@ -159,7 +159,7 @@ static const char dds_id[4] = {
 	'D', 'D', 'S', ' '
 };
 
-// Save textures to DDS file (multiple mip-maps levels). Return true if succesful.
+// Save textures to DDS file (multiple mip-maps levels). Return true if successful.
 bool detexSaveDDSFileWithMipmaps(detexTexture **textures, int nu_levels, const char *filename) {
 	FILE *f = fopen(filename, "wb");
 	if (f == NULL) {
@@ -288,7 +288,7 @@ bool detexSaveDDSFileWithMipmaps(detexTexture **textures, int nu_levels, const c
 	return true;
 }
 
-// Save texture to DDS file (single mip-map level). Returns true if succesful.
+// Save texture to DDS file (single mip-map level). Returns true if successful.
 bool detexSaveDDSFile(detexTexture *texture, const char *filename) {
 	detexTexture *textures[1];
 	textures[0] = texture;

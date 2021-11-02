@@ -1817,7 +1817,7 @@ Changes
 - implemented support for loading XBox360 packages
 
 25.02.2009
-- implemented support for UE3 AnimSet (all compresion algorithms are supported except
+- implemented support for UE3 AnimSet (all compression algorithms are supported except
   ACF_Float32NoW)
 
 23.02.2009
@@ -1831,7 +1831,7 @@ Changes
 - significantly improved mesh rendering speed
 
 17.02.2009
-- writting uc-script when exporting SkeletalMesh
+- writing uc-script when exporting SkeletalMesh
 
 16.02.2009
 - implemented Mirror's Edge SkeletalMesh support

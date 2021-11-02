@@ -292,7 +292,7 @@ png_set_alpha_mode_fixed(png_structrp png_ptr, int mode,
     * who use the inverse of the gamma value accidentally!  Since some of these
     * values are reasonable this may have to be changed:
     *
-    * 1.6.x: changed from 0.07..3 to 0.01..100 (to accomodate the optimal 16-bit
+    * 1.6.x: changed from 0.07..3 to 0.01..100 (to accommodate the optimal 16-bit
     * gamma of 36, and its reciprocal.)
     */
    if (output_gamma < 1000 || output_gamma > 10000000)
@@ -1317,7 +1317,7 @@ png_init_read_transformations(png_structrp png_ptr)
 
       else if (png_ptr->screen_gamma != 0)
          /* The converse - assume the file matches the screen, note that this
-          * perhaps undesireable default can (from 1.5.4) be changed by calling
+          * perhaps undesirable default can (from 1.5.4) be changed by calling
           * png_set_alpha_mode (even if the alpha handling mode isn't required
           * or isn't changed from the default.)
           */

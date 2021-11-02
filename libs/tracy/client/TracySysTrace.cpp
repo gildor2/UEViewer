@@ -65,7 +65,7 @@ struct ReadyThread
     int8_t      adjustReason;
     int8_t      adjustIncrement;
     int8_t      flag;
-    int8_t      reserverd;
+    int8_t      reserved;
 };
 
 struct ThreadTrace

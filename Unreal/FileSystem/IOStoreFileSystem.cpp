@@ -470,7 +470,7 @@ void RegisterPackageId(FPackageId PackageId, const CGameFileInfo* File)
 	{
 		if (Entry->Id == PackageId)
 		{
-			// The file could be overriden in patches
+			// The file could be overridden in patches
 			Entry->File = File;
 			return;
 		}
