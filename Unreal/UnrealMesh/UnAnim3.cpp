@@ -154,7 +154,7 @@ void UAnimSequence::Serialize(FArchive &Ar)
 	if (Ar.Game == GAME_MOH2010) goto old_code;
 #endif
 #if TERA
-	if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overriden ArVer, so compare by ArLicenseeVer ...
+	if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overridden ArVer, so compare by ArLicenseeVer ...
 #endif
 #if TRANSFORMERS
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) // Transformers: Fall of Cybertron, no version in code

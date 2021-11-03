@@ -17,7 +17,7 @@
 //?? TODO: remove this function
 static CVec3 GetMaterialDebugColor(int Index)
 {
-	// most of this code is targetted to make maximal color combinations
+	// most of this code is targeted to make maximal color combinations
 	// which are maximally different for adjacent BoneIndex values
 	static const float table[]  = { 0.9f, 0.3f, 0.6f, 1.0f };
 	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };

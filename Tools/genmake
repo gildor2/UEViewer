@@ -458,7 +458,7 @@ sub getline {
 #------------------------------------------------------------------------------
 
 sub InitCompiler {
-	# retreive global target configuration
+	# retrieve global target configuration
 	$COMPILER = $vars{"COMPILER"};
 	$TARGET   = $vars{"TARGET"};
 	$PLATFORM = $vars{"PLATFORM"};
@@ -786,7 +786,7 @@ sub AppendFilePath {
 	$path .= "/" if $path !~ /\/$/;			# ensure "/" at the end of path
 	$file = $path.$file;					# append path
 	# compress path: remove "word/../"
-	# NOTE: $inc =~ s/\b\w+\/\.\.\///g; -- does not works when dir name containg "." (\b will work incorrect)
+	# NOTE: $inc =~ s/\b\w+\/\.\.\///g; -- does not works when dir name containing "." (\b will work incorrect)
 	$file =~ s/^[^\/\.]+\/\.\.\///g;		# at begin of string
 	$file =~ s/\/[^\/\.]+\/\.\.//g;			# in the middle of the string
 	# remove "./" at filename start
@@ -945,7 +945,7 @@ sub CollectFileDependencies {
 				Error ("cannot find file \"$inc\" included from \"$chain\", directories used: [$includes]") unless $found;
 			}
 		} else {
-			# check file presense
+			# check file presence
 			if ($doRecurse) {
 				if (CollectFileDependencies ($inc2, $includes, $srcType, $chain."->".$inc2) == -1) {
 					# may be inc<->file, and may be file1->file2->file3->file1 ...

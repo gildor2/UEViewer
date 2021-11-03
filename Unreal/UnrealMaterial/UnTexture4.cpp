@@ -174,7 +174,7 @@ void UTexture2D::Serialize4(FArchive& Ar)
 	}
 
 	// Formats are added in UE4 in Source/Developer/<Platform>TargetPlatform/Private/<Platform>TargetPlatform.h,
-	// in TTargetPlatformBase::GetTextureFormats(). Formats are choosen depending on platform settings (for example,
+	// in TTargetPlatformBase::GetTextureFormats(). Formats are chosen depending on platform settings (for example,
 	// for Android) or depending on UTexture::CompressionSettings. Windows, Linux and Mac platform uses the same
 	// texture format (see FTargetPlatformBase::GetDefaultTextureFormatName()). Other platforms uses different formats,
 	// but all of them (except Android) uses single texture format per object.

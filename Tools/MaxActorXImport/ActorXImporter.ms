@@ -1302,7 +1302,7 @@ fn ImportPskFile filename skelOnly:false =
 
 	update newMesh
 
-	-- smooth vertex normals accross UV seams
+	-- smooth vertex normals across UV seams
 	max modify mode
 	select newMesh
 

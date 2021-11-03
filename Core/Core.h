@@ -326,7 +326,7 @@ void appNormalizeFilename(char *filename);
 void appMakeDirectory(const char *dirname);
 void appMakeDirectoryForFile(const char *filename);
 
-// Parsing reponse file (file with command line arguments). Throws an error if problems reading file.
+// Parsing response file (file with command line arguments). Throws an error if problems reading file.
 void appParseResponseFile(const char* filename, int& outArgc, const char**& outArgv);
 
 #define FS_FILE				1

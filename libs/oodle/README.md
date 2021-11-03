@@ -13,4 +13,4 @@ The directory structure should appear like this:
 ```
 
 You may use symlink to provide the following directories here, or simply copy the required files here. In a case the SDK is
-not availabe for the platform you're working with, the oodle support will be automatically disabled.
+not available for the platform you're working with, the oodle support will be automatically disabled.

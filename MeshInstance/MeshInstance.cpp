@@ -17,7 +17,7 @@ unsigned CMeshInstance::GetMaterialDebugColor(int Index)
 #if 0
 	//!! This code is based on GetBoneInfColor(). Should place both in some place (utility functions)
 	//!! and rename to "DebugColorByIndex()" etc. 2 versions: RGBA and float3.
-	// Most of this code is targetted to make maximal color combinations
+	// Most of this code is targeted to make maximal color combinations
 	// which are maximally different for adjacent BoneIndex values
 	static const byte table[]  = { byte(255*0.9f), byte(255*0.3f), byte(255*0.6f), byte(255*0.0f) };
 	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };

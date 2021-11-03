@@ -177,7 +177,7 @@ struct CTypeInfo
 // This class is used as Base for DECLARE_BASE()/DECLARE_CLASS() macros
 struct CNullType
 {
-	enum { PropLevel = -1 };		// overriden in BEGIN_CLASS_TABLE
+	enum { PropLevel = -1 };		// overridden in BEGIN_CLASS_TABLE
 	static constexpr const CPropInfo* StaticGetProps(int& numProps)
 	{
 		numProps = 0;

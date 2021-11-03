@@ -119,7 +119,7 @@ void BuildTangentsCommon(CMeshVertex *Verts, int VertexSize, const CIndexBuffer 
 		}
 		else
 		{
-			float pos = (V1 - V0) / (V2 - V0);			// fraction, where W[1] is placed betwen W[0] and W[2] (may be < 0 or > 1)
+			float pos = (V1 - V0) / (V2 - V0);			// fraction, where W[1] is placed between W[0] and W[2] (may be < 0 or > 1)
 			CVecT tmp;
 			Lerp(V[0]->Position, V[2]->Position, pos, tmp);
 			VectorSubtract(tmp, V[1]->Position, tang);

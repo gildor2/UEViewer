@@ -4,7 +4,7 @@
     - other modes (no opacity etc) - texture alpha-channel is ignored
 - UFinalBlend: when used from other material (UShader), all properties are ignored - simply pass Material
 
-When outer material has overriden properties, such as TwoSided, Masked etc, these properties are ignored
+When outer material has overridden properties, such as TwoSided, Masked etc, these properties are ignored
 in nested materials
 
 Shader                   -- BAD (SelfIllumination, Mask - works, Diffuse - NO)
