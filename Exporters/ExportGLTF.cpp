@@ -738,7 +738,8 @@ static void ExportAnimations(GLTFExportContext& Context, FArchive& Ar)
 			BufferData& TimeBuf = Context.Data[TimeBufIndex];
 			TimeBuf.Setup(NumKeys, "SCALAR", BufferData::FLOAT, sizeof(float));
 
-			float RateScale = 1.0f / Seq.Rate;
+			// Compute RateScale. Take care of null Rate - this might be valid if animation has just 1 frame (pose)
+			float RateScale = (Seq.Rate > 0.001f) ? 1.0f / Seq.Rate : 1.0f;
 			float LastFrameTime = 0;
 			if (TimeArray->Num() == 0 || NumKeys == 1)
 			{
