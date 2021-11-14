@@ -2092,16 +2092,19 @@ void USkeletalMesh4::ConvertMesh()
 			const FSkelMeshSection4 &S = SrcLod.Sections[Sec];
 			CMeshSection *Dst = new (Lod->Sections) CMeshSection;
 
-			// remap material for LOD
+			// Remap material for LOD
+			// In comment for LODMaterialMap, INDEX_NONE means "no remap", so let's use this logic here.
+			// Actually, INDEX_NONE in LODMaterialMap seems hides the mesh section in game.
+			// Reference: FSkeletalMeshSceneProxy
 			int MaterialIndex = S.MaterialIndex;
-			if (Info.LODMaterialMap.IsValidIndex(MaterialIndex))
-				MaterialIndex = Info.LODMaterialMap[MaterialIndex];
-			if (MaterialIndex < 0)	// UE4 using Clamp(0, Materials.Num()), not Materials.Num()-1
-				MaterialIndex = 0;
+			if (Info.LODMaterialMap.IsValidIndex(Sec) && Materials.IsValidIndex(Info.LODMaterialMap[Sec]))
+			{
+				MaterialIndex = Info.LODMaterialMap[Sec];
+			}
 
-			Dst->Material   = Materials.IsValidIndex(MaterialIndex) ? Materials[MaterialIndex].Material : NULL;
+			Dst->Material = Materials.IsValidIndex(MaterialIndex) ? Materials[MaterialIndex].Material : NULL;
 			Dst->FirstIndex = S.BaseIndex;
-			Dst->NumFaces   = S.NumTriangles;
+			Dst->NumFaces = S.NumTriangles;
 		}
 
 		unguard;	// ProcessSections
