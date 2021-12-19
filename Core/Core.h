@@ -326,7 +326,7 @@ void appNormalizeFilename(char *filename);
 void appMakeDirectory(const char *dirname);
 void appMakeDirectoryForFile(const char *filename);
 
-// Parsing reponse file (file with command line arguments). Throws an error if problems reading file.
+// Parsing response file (file with command line arguments). Throws an error if problems reading file.
 void appParseResponseFile(const char* filename, int& outArgc, const char**& outArgv);
 
 #define FS_FILE				1
@@ -523,6 +523,7 @@ struct CErrorContext
 	bool IsSwError;
 	// Suppress logging error message to a file (in a case of user mistake)
 	bool SuppressLog;
+	bool IsErrorLogged;
 
 protected:
 	// Used for error history formatting
@@ -531,6 +532,11 @@ protected:
 	ErrorHandlerType ErrorHandler;
 
 public:
+#if THREADING
+	int ErrorThreadId;
+	bool ShouldLogThisThread();
+#endif
+
 	// Call stack
 	char History[2048];
 
@@ -567,7 +573,6 @@ public:
 	// Log error message to console and notify.log, do NOT exit
 	void StandardHandler();
 
-protected:
 	void LogHistory(const char *part);
 };
 
@@ -632,21 +637,17 @@ extern bool GUseDebugger;
 #endif
 
 
-#if RENDERING
-#	define appMilliseconds()		SDL_GetTicks()
-#else
-#	ifdef _WIN32
-#		if !defined(WINAPI) 	// detect <windows.h>
-		extern "C" {
-			__declspec(dllimport) unsigned long __stdcall GetTickCount();
-		}
-#		endif
-#	else
-		// Local implementation of GetTickCount() for non-Windows platforms
-		unsigned long GetTickCount();
+#ifdef _WIN32
+#	if !defined(WINAPI) 	// detect <windows.h>
+	extern "C" {
+		__declspec(dllimport) unsigned long __stdcall GetTickCount();
+	}
 #	endif
-#	define appMilliseconds()		GetTickCount()
-#endif // RENDERING
+#else
+	// Local implementation of GetTickCount() for non-Windows platforms
+	unsigned long GetTickCount();
+#endif
+#define appMilliseconds()		GetTickCount()
 
 // Allow operation of enum class as with regular integer
 #define BITFIELD_ENUM(Enum) \

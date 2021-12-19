@@ -53,6 +53,8 @@
 #error MAX_STATIC_UV_SETS_UE4 too large
 #endif
 
+// This is a CVar in UE4.27+. Set to false by default, some games might have it set to "true".
+static bool KeepMobileMinLODSettingOnDesktop = false;
 
 /*-----------------------------------------------------------------------------
 	Common data types
@@ -294,6 +296,13 @@ struct FStaticMeshVertexBuffer4
 /*-----------------------------------------------------------------------------
 	USkeletalMesh
 -----------------------------------------------------------------------------*/
+
+// FSkeletalMeshLODInfo is in cpp file to let use forward declaration of some types
+FSkeletalMeshLODInfo::FSkeletalMeshLODInfo()
+{}
+
+FSkeletalMeshLODInfo::~FSkeletalMeshLODInfo()
+{}
 
 struct FRecomputeTangentCustomVersion
 {
@@ -850,7 +859,7 @@ struct FSkelMeshSection4
 		if (Ar.Game == GAME_Paragon) return;
 #endif
 
-		if (Ar.Game < GAME_UE4(27) || !StripFlags.IsClassDataStripped(1)) // DuplicatedVertices
+		if (Ar.Game < GAME_UE4(23) || !StripFlags.IsClassDataStripped(1)) // DuplicatedVertices, introduced in UE4.23
 		{
 			FDuplicatedVerticesBuffer DuplicatedVerticesBuffer;
 			Ar << DuplicatedVerticesBuffer;
@@ -1824,7 +1833,7 @@ void USkeletalMesh4::Serialize(FArchive &Ar)
 		bool bCooked;
 		Ar << bCooked;
 
-		if (Ar.Game >= GAME_UE4(27))
+		if (Ar.Game >= GAME_UE4(27) && KeepMobileMinLODSettingOnDesktop)
 		{
 			// The serialization of this variable is cvar-dependent in UE4, so there's no clear way to understand
 			// if it should be serialize in our code or not.
@@ -2083,16 +2092,19 @@ void USkeletalMesh4::ConvertMesh()
 			const FSkelMeshSection4 &S = SrcLod.Sections[Sec];
 			CMeshSection *Dst = new (Lod->Sections) CMeshSection;
 
-			// remap material for LOD
+			// Remap material for LOD
+			// In comment for LODMaterialMap, INDEX_NONE means "no remap", so let's use this logic here.
+			// Actually, INDEX_NONE in LODMaterialMap seems hides the mesh section in game.
+			// Reference: FSkeletalMeshSceneProxy
 			int MaterialIndex = S.MaterialIndex;
-			if (Info.LODMaterialMap.IsValidIndex(MaterialIndex))
-				MaterialIndex = Info.LODMaterialMap[MaterialIndex];
-			if (MaterialIndex < 0)	// UE4 using Clamp(0, Materials.Num()), not Materials.Num()-1
-				MaterialIndex = 0;
+			if (Info.LODMaterialMap.IsValidIndex(Sec) && Materials.IsValidIndex(Info.LODMaterialMap[Sec]))
+			{
+				MaterialIndex = Info.LODMaterialMap[Sec];
+			}
 
-			Dst->Material   = Materials.IsValidIndex(MaterialIndex) ? Materials[MaterialIndex].Material : NULL;
+			Dst->Material = Materials.IsValidIndex(MaterialIndex) ? Materials[MaterialIndex].Material : NULL;
 			Dst->FirstIndex = S.BaseIndex;
-			Dst->NumFaces   = S.NumTriangles;
+			Dst->NumFaces = S.NumTriangles;
 		}
 
 		unguard;	// ProcessSections
@@ -2141,13 +2153,6 @@ UStaticMesh4::~UStaticMesh4()
 {
 	delete ConvertedMesh;
 }
-
-FSkeletalMeshLODInfo::FSkeletalMeshLODInfo()
-{}
-
-FSkeletalMeshLODInfo::~FSkeletalMeshLODInfo()
-{}
-
 
 // Ambient occlusion data
 // When changed, constant DISTANCEFIELD_DERIVEDDATA_VER TEXT is updated
@@ -2728,7 +2733,7 @@ no_nav_collision:
 		// Note: code below still contains 'if (bCooked)' switches, this is because the same
 		// code could be used to read data from DDC, for non-cooked assets.
 		DBG_STAT("Serializing RenderData\n");
-		if (Ar.Game >= GAME_UE4(27))
+		if (Ar.Game >= GAME_UE4(27) && KeepMobileMinLODSettingOnDesktop)
 		{
 			// The serialization of this variable is cvar-dependent in UE4, so there's no clear way to understand
 			// if it should be serialize in our code or not.

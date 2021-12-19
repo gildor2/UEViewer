@@ -220,7 +220,7 @@ protected:
 //	Expose(var)			save pointer to control in variable
 //	SetParent(parent)	attach control to parent
 
-// Some functions exists in UIElement but overriden here to be able to chain them
+// Some functions exists in UIElement but overridden here to be able to chain them
 // without falling back to UIElement class: UIElement's functions can't return
 // 'this' of derived type, so we're redeclaring functions here.
 

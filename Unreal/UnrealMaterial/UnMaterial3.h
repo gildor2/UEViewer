@@ -90,6 +90,7 @@ enum ETextureCompressionSettings
 #if MASSEFF
 	TC_NormalmapHQ,
 	TC_NormalmapLQ,
+	TC_NormalmapBC7,			// ME LE
 #endif
 #if DAYSGONE
 	TC_BendDefault,
@@ -122,6 +123,7 @@ _ENUM(ETextureCompressionSettings)
 #if MASSEFF
 	_E(TC_NormalmapHQ),
 	_E(TC_NormalmapLQ),
+	_E(TC_NormalmapBC7),
 #endif
 #if DAYSGONE
 	_E(TC_BendDefault),
@@ -1161,6 +1163,39 @@ struct FVectorParameterValue
 	END_PROP_TABLE
 };
 
+#if UNREAL4
+
+struct FRuntimeVirtualTextureParameterValue
+{
+	DECLARE_STRUCT(FRuntimeVirtualTextureParameterValue)
+
+//	FGuid			ExpressionGUID;
+	FMaterialParameterInfo ParameterInfo;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo) // property 0
+		PROP_DROP(ParameterValue, PropType::UObject)	// property 1
+		PROP_DROP(ExpressionGUID, PropType::FVector4)	// property 2
+	END_PROP_TABLE
+};
+
+struct FFontParameterValue
+{
+	DECLARE_STRUCT(FFontParameterValue)
+
+//	FGuid			ExpressionGUID;
+	FMaterialParameterInfo ParameterInfo;
+
+	BEGIN_PROP_TABLE
+		PROP_STRUC(ParameterInfo, FMaterialParameterInfo) // property 0
+		PROP_DROP(FontValue, PropType::UObject)			// property 1
+		PROP_DROP(FontPage, PropType::Int)				// property 2
+		PROP_DROP(ExpressionGUID, PropType::FVector4)	// property 3
+	END_PROP_TABLE
+};
+
+#endif // UNREAL4
+
 class UMaterialInstance : public UMaterialInterface
 {
 	DECLARE_CLASS(UMaterialInstance, UMaterialInterface)
@@ -1172,6 +1207,8 @@ public:
 #if UNREAL4
 	FMaterialInstanceBasePropertyOverrides BasePropertyOverrides;
 	FStaticParameterSet StaticParameters;
+	TArray<FRuntimeVirtualTextureParameterValue> RuntimeVirtualTextureParameterValues;
+	TArray<FFontParameterValue> FontParameterValues;
 #endif
 
 	BEGIN_PROP_TABLE
@@ -1183,10 +1220,12 @@ public:
 #if UNREAL4
 		PROP_STRUC(BasePropertyOverrides, FMaterialInstanceBasePropertyOverrides)
 		PROP_STRUC(StaticParameters, FStaticParameterSet)
+		PROP_ARRAY(RuntimeVirtualTextureParameterValues, "FRuntimeVirtualTextureParameterValue")
+		PROP_ARRAY(FontParameterValues, "FFontParameterValue")
 #endif
 		PROP_DROP(PhysMaterial)
 		PROP_DROP(bHasStaticPermutationResource)
-		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overriden textures
+		PROP_DROP(ReferencedTextures)		// this is a textures from Parent plus own overridden textures
 		PROP_DROP(ReferencedTextureGuids)
 		PROP_DROP(ParentLightingGuid)
 		// physics
@@ -1306,7 +1345,9 @@ public:
 	REGISTER_CLASS(FStaticMaterialLayersParameter) \
 	REGISTER_CLASS(FStaticParameterSet) \
 	REGISTER_CLASS(FLightmassMaterialInterfaceSettings) \
-	REGISTER_CLASS(FMaterialTextureInfo)
+	REGISTER_CLASS(FMaterialTextureInfo) \
+	REGISTER_CLASS(FFontParameterValue) \
+	REGISTER_CLASS(FRuntimeVirtualTextureParameterValue)
 
 #define REGISTER_MATERIAL_ENUMS_U4		\
 	REGISTER_ENUM(ETextureSourceFormat)

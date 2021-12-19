@@ -170,6 +170,20 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 	uint32 Bitfield = *(uint32*)Data;
 	Data += sizeof(uint32);
 
+	// CompressionBlockSize
+	bool bLegacyCompressionBlockSize = ((Bitfield & 0x3f) != 0x3f);
+	if (!bLegacyCompressionBlockSize)
+	{
+		// UE4.27+
+		CompressionBlockSize = *(uint32*)Data;
+		Data += sizeof(uint32);
+	}
+	else
+	{
+		// UE4.26
+		CompressionBlockSize = (Bitfield & 0x3f) << 11;
+	}
+
 	CompressionMethod = (Bitfield >> 23) & 0x3f;
 
 	// Offset follows - either 32 or 64 bit value
@@ -231,14 +245,19 @@ void FPakEntry::DecodeFrom(const uint8* Data)
 
 	// Compression information
 	CompressionBlocks.AddUninitialized(BlockCount);
-	CompressionBlockSize = 0;
 	if (BlockCount)
 	{
-		// CompressionBlockSize
-		if (UncompressedSize < 65536)
+		// Adjust CompressionBlockSize for small blocks
+		if (UncompressedSize < CompressionBlockSize)
+		{
+			// UE4.27+ code
 			CompressionBlockSize = UncompressedSize;
-		else
-			CompressionBlockSize = (Bitfield & 0x3f) << 11;
+		}
+		else if (bLegacyCompressionBlockSize && UncompressedSize < 65536)
+		{
+			// UE4.26 code
+			CompressionBlockSize = UncompressedSize;
+		}
 
 		// CompressionBlocks
 		if (BlockCount == 1)
@@ -665,6 +684,7 @@ void FPakVFS::DecryptDataBlock(byte* Data, int DataSize)
 	guard(FPakVFS::DecryptDataBlock);
 
 	const FString& Key = GetPakEncryptionKey();
+	if (Key.Len() == 0) appError("Empty AES key");
 	appDecryptAES(Data, DataSize, &Key[0], Key.Len());
 
 	unguard;
@@ -739,9 +759,16 @@ bool FPakVFS::LoadPakIndexLegacy(FArchive* reader, const FPakInfo& info, FString
 		CompactFilePath(CombinedPath);
 		// serialize other fields
 		E.Serialize(InfoReader);
+
+		if (E.Size == 0)
+		{
+			// Happens with Jedi Fallen Order, seems assets are deleted in patches this way. If we'll continue registration,
+			// the existing (previous) asset might be overridden with zero-size file, and it won't be recognized as an asset anymore.
+			continue;
+		}
+
 		if (E.bEncrypted)
 		{
-//			appPrintf("Encrypted file: %s\n", *Filename);
 			NumEncryptedFiles++;
 		}
 		if (info.Version >= PakFile_Version_FNameBasedCompressionMethod)
@@ -927,8 +954,9 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 		DirectoryPath = MountPoint;
 		DirectoryPath += DirectoryName;
 		CompactFilePath(DirectoryPath);
-		if (DirectoryPath[DirectoryPath.Len()-1] == '/')
-			DirectoryPath.RemoveAt(DirectoryPath.Len()-1, 1);
+		// Remove any trailing slashes. Note that MountPoint may be empty (consisting just of '/'), so let's use a loop.
+		while (DirectoryPath[DirectoryPath.Len()-1] == '/')
+			DirectoryPath.RemoveAt(DirectoryPath.Len()-1);
 
 		// Read size of FPakDirectory (DirectoryIndex::Value)
 		int32 NumFilesInDirectory;
@@ -940,19 +968,25 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 			FolderIndex = RegisterGameFolder(*DirectoryPath);
 		}
 
-		for (int DirectoryFileIndex = 0; DirectoryFileIndex < NumFilesInDirectory; DirectoryFileIndex++)
+		for (int DirectoryFileIndex = 0; DirectoryFileIndex < NumFilesInDirectory; DirectoryFileIndex++, FileIndex++)
 		{
 			guard(File);
 			// Read FPakDirectory entry Key
 			FStaticString<MAX_PACKAGE_PATH> DirectoryFileName;
 			InfoReader << DirectoryFileName;
+
 			// Read FPakDirectory entry Value
+			// PakEntryLocation is positive (offset in 'EncodedPakEntries') or negative (index in 'Files').
 			int32 PakEntryLocation;
 			InfoReader << PakEntryLocation;
+			if (PakEntryLocation == 0x7fffffff || PakEntryLocation == 0x80000000)
+			{
+				// 0x7fffffff and 0x80000000 are special values, "Invalid" or "Unused"
+				continue;
+			}
 
 			FPakEntry& E = FileInfos[FileIndex];
 
-			// PakEntryLocation is positive (offset in 'EncodedPakEntries') or negative (index in 'Files')
 			// References in UE4:
 			// FPakFile::DecodePakEntry <- FPakFile::GetPakEntry (decode or pick from 'Files') <- FPakFile::Find (name to index/location)
 			if (PakEntryLocation < 0)
@@ -985,7 +1019,6 @@ bool FPakVFS::LoadPakIndex(FArchive* reader, const FPakInfo& info, FString& erro
 			reg.IndexInArchive = FileIndex;
 			E.FileInfo = RegisterFile(reg);
 
-			FileIndex++;
 			unguard;
 		}
 		unguard;

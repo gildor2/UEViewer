@@ -39,17 +39,21 @@ constexpr int MakeBitmaskWithOffset()
 struct PropInfo
 {
 	// Name of the property, should exist in class's property table (BEGIN_PROP_TABLE...)
-	// If starts with '#', the property is ignored, and the name is actually a type name.
+	// If starts with '#', the property is ignored, and the following string is a property's type name.
+	// If starts with '!', the property is ignored, and PropIndex defines the engine version constant.
 	const char* Name;
-	int			Index;
-	// When PropMask is not zero, more than one property is specified with this entry.
-	// PropMask of value '1' means 2 properties: { Index, Index + 1 }
+	// Index of the property.
+	int			PropIndex;
+	// When PropMask is not zero, more than one property is specified within this entry.
+	// PropMask of value '1' means 2 properties: { PropIndex, PropIndex + 1 }
 	uint32		PropMask;
 };
 
 #define BEGIN(type)					{ type,  0,        0 },	// store class name as field name, index is not used
 #define MAP(name,index)				{ #name, index,    0 },	// field specification
 #define END							{ NULL,  0,        0 },	// end of class - mark with NULL name
+
+#define VERSION_BLOCK(version)		{ "!",   version,  0 },	// begin engine-specific block
 
 // Multi-property "drop" instructions
 #if _MSC_VER
@@ -67,17 +71,25 @@ struct PropInfo
 
 #define DROP_OBJ_ARRAY(index)		{ "#arr_int32", index, 0 }, // TArray<UObject*>
 
-/*
- * Class table. If class is missing here, it's assumed that its property list
- * matches property table (declared with BEGIN_PROP_TABLE).
- * Notes:
- * - Classes should go in order: child, parent, parent's parent ... If not, the parent
- *   class will be captured before the child, and the property index won't match.
- * - If property is not listed, SerializeUnversionedProperties4 will skip the property as int32.
- */
+// Class table. If class is missing here, it's assumed that its property list matches property table
+// (declared with BEGIN_PROP_TABLE).
+// Declaration rules:
+// - Classes should go in order: child, parent, parent's parent ... If not, the parent
+//   class will be captured before the child, and the property index won't match.
+// - If property is not listed, SerializeUnversionedProperties4 will assume the property is int32.
+// - VERSION_BLOCK has strict syntax
+//   - no multiple fields in DROP_.. macros
+//   - VERSION_BLOCK with higher version (newer one) should go before lower (older) version
+//   - VERSION_BLOCK should be ended with constant 0
+//   - all properties inside of the VERSION_BLOCK should go in ascending order
+
 static const PropInfo PropData[] =
 {
+// UStaticMesh
 BEGIN("UStaticMesh4")
+	VERSION_BLOCK(GAME_UE4(27))
+		DROP_INT8(14)					// uint8 bSupportRayTracing
+	VERSION_BLOCK(0)
 	DROP_INT64(0)						// FPerPlatformInt MinLOD - serialized as 2x int32, didn't find why
 	MAP(StaticMaterials, 2)
 	MAP(LightmapUVDensity, 3)
@@ -89,7 +101,11 @@ BEGIN("UStaticMesh4")
 	DROP_OBJ_ARRAY(22)					// TArray<UAssetUserData*> AssetUserData
 END
 
+// USkeletalMesh
 BEGIN("USkeletalMesh4")
+	VERSION_BLOCK(GAME_UE4(27))
+		DROP_INT8(21)					// uint8 bSupportRayTracing
+	VERSION_BLOCK(0)
 	MAP(Skeleton, 0)
 	DROP_VECTOR3(3)						// PositiveBoundsExtension
 	DROP_VECTOR3(4)						// PositiveBoundsExtension
@@ -117,7 +133,11 @@ BEGIN("USkeleton")
 	DROP_OBJ_ARRAY(8)					// TArray<UAssetUserData*> AssetUserData
 END
 
+// UAnimSequence
 BEGIN("UAnimSequence4")
+	VERSION_BLOCK(GAME_UE4(27))
+		MAP(RetargetSourceAssetReferencePose, 9)
+	VERSION_BLOCK(0)
 	MAP(NumFrames, 0)
 	MAP(TrackToSkeletonMapTable, 1)
 	MAP(AdditiveAnimType, 4)
@@ -125,12 +145,11 @@ BEGIN("UAnimSequence4")
 	MAP(RefPoseSeq, 6)
 	MAP(RefFrameIndex, 7)
 	MAP(RetargetSource, 8)
-	MAP(RetargetSourceAssetReferencePose, 9)
-	MAP(Interpolation, 10)
-	MAP(bEnableRootMotion, 11)
-	DROP_INT8(12, 13, 14, 15)
-	MAP(AuthoredSyncMarkers, 16)
-	MAP(BakedPerBoneCustomAttributeData, 17)
+	MAP(Interpolation, 9)
+	MAP(bEnableRootMotion, 10)
+	DROP_INT8(11, 12, 13, 14)
+	MAP(AuthoredSyncMarkers, 15)
+	MAP(BakedPerBoneCustomAttributeData, 16)
 END
 
 BEGIN("UAnimationAsset")
@@ -139,6 +158,7 @@ BEGIN("UAnimationAsset")
 	DROP_OBJ_ARRAY(2)					// AssetUserData
 END
 
+// UTexture2D
 BEGIN("UTexture2D")
 	DROP_INT8(2)						// uint8 bTemporarilyDisableStreaming:1
 	DROP_INT8(3)						// TEnumAsByte<enum TextureAddress> AddressX
@@ -153,17 +173,21 @@ BEGIN("UTexture3")
 	DROP_OBJ_ARRAY(14)					// AssetUserData
 END
 
+// UMaterialInstance
 BEGIN("UMaterialInstance")
 	MAP(Parent, 9)
 	DROP_INT8(10, 11)
 	MAP(ScalarParameterValues, 12)
 	MAP(VectorParameterValues, 13)
 	MAP(TextureParameterValues, 14)
+	MAP(RuntimeVirtualTextureParameterValues, 15)
+	MAP(FontParameterValues, 16)
 	MAP(BasePropertyOverrides, 17)
 	MAP(StaticParameters, 18)
 	DROP_OBJ_ARRAY(20)					//todo: TArray<UObject*> CachedReferencedTextures
 END
 
+// UMaterial
 BEGIN("UMaterial3")
 	// known properties
 	MAP(BlendMode, 17)
@@ -252,23 +276,36 @@ END
 struct ParentInfo
 {
 	const char* ThisName;
-	const char* ParentName; // this could be a UE4 class name which is NOT defined here
+	const char* ParentName; // this could be a UE4 class name which is NOT defined in this table
 	int NumProps;
+	int MinEngineVersion = 0; // allow changing type information with newer engine versions
 };
+
+// Declaration rules:
+// - Parent classes should be defined after children, so the whole table could be iterated with a single pass.
+// - If there's engine-specific class declaration, newer engine declarations should go before the older ones.
 
 static const ParentInfo ParentData[] =
 {
-	// Parent classes should be defined after children, so the whole table could be iterated with a single pass
+	// Texture classes
 	{ "UTextureCube4", "UTexture3", 0 },
 	{ "UTexture2D", "UTexture3", 6 },
 	{ "UTexture3", "UStreamableRenderAsset", 15 },
+	// Mesh classes
+	{ "USkeletalMesh4", "UStreamableRenderAsset", 29, GAME_UE4(27) },
 	{ "USkeletalMesh4", "UStreamableRenderAsset", 28 },
+	{ "UStaticMesh4", "UStreamableRenderAsset", 26, GAME_UE4(27) },
 	{ "UStaticMesh4", "UStreamableRenderAsset", 25 },
-	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // just 1 UObject* property
+	// Material classes
+	{ "UMaterialInstanceConstant", "UMaterialInstance", 1 }, // contains just a single UObject* property
 	{ "UMaterialInstance", "UMaterialInterface", 21 },
+	{ "UMaterial3", "UMaterialInterface", 119, GAME_UE4(27) },
 	{ "UMaterial3", "UMaterialInterface", 117 },
-	{ "UAnimSequence4", "UAnimSequenceBase", 18 },
+	// Animation classes
+	{ "UAnimSequence4", "UAnimSequenceBase", 18, GAME_UE4(27) },
+	{ "UAnimSequence4", "UAnimSequenceBase", 17 },
 	{ "UAnimSequenceBase", "UAnimationAsset", 4 },
+	// Structures
 	{ "FStaticSwitchParameter", "FStaticParameterBase", 1 },
 	{ "FStaticComponentMaskParameter", "FStaticParameterBase", 4 },
 	{ "FStaticTerrainLayerWeightParameter", "FStaticParameterBase", 2 },
@@ -276,67 +313,131 @@ static const ParentInfo ParentData[] =
 	{ "FAnimNotifyEvent", "FAnimLinkableElement", 17 },
 };
 
-const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) const
+struct FindPropInfo
+{
+	const char* TypeName;
+	const CTypeInfo* Type;
+	int PropIndex;
+
+	FindPropInfo()
+	: TypeName(NULL)
+	, Type(NULL)
+	, PropIndex(INDEX_NONE)
+	{}
+};
+
+static void FindTypeForProperty(FindPropInfo& Info, int Game)
+{
+	//todo: Can optimize with checking if class name starts with 'U', but: CTypeInfo::Name skips 'U', plus there could be FSomething (structs).
+	//todo: Can cache information about parent type. Store NULL to avoid iteration of the whole table when no parent information stored (e.g. UStreamableRenderAsset).
+	for (const ParentInfo& Parent : ParentData)
+	{
+		if (Info.PropIndex < Parent.NumProps)
+		{
+			// Fast reject
+			continue;
+		}
+		if (Parent.MinEngineVersion && Game < Parent.MinEngineVersion)
+		{
+			// This is a type info for a newer engine
+			continue;
+		}
+		// Compare types: use exact name comparison insted of CurrentType->IsA(...), so we could
+		// skip some type information in PropData[]
+		if (strcmp(Info.TypeName, Parent.ThisName) == 0)
+		{
+			// Types are matching, redirect Info to parent type
+			Info.TypeName = Parent.ParentName;
+			Info.Type = FindStructType(Info.TypeName);
+			Info.PropIndex -= Parent.NumProps;
+		}
+	}
+}
+
+/*-----------------------------------------------------------------------------
+	Interface function for finding a property by its index
+-----------------------------------------------------------------------------*/
+
+const char* CTypeInfo::FindUnversionedProp(int InPropIndex, int& OutArrayIndex, int InGame) const
 {
 	guard(CTypeInfo::FindUnversionedProp);
 
 	OutArrayIndex = 0;
 
-	const char* CurrentClassName = Name;
-	const CTypeInfo* CurrentType = this;
+	// Find type info for this property, and offset its index to match class inheritance
+	FindPropInfo FoundProp;
+	FoundProp.TypeName = Name;
+	FoundProp.Type = this;
+	FoundProp.PropIndex = InPropIndex;
+	FindTypeForProperty(FoundProp, InGame);
 
-	//todo: can optimize with checking if class name starts with 'U', but: CTypeInfo::Name skips 'U', plus there could be FSomething (structs)
-	for (const ParentInfo& Parent : ParentData)
-	{
-		// Fast reject
-		if (PropIndex < Parent.NumProps)
-			continue;
-		// Compare types
-//		if (CurrentType)
-//		{
-//			if (!CurrentType->IsA(Parent.ThisName + 1))
-//				continue;
-//		}
-//		else
-//		{
-			if (strcmp(CurrentClassName, Parent.ThisName) != 0)
-				continue;
-//		}
-		// Types are matching, redirect to parent
-		CurrentClassName = Parent.ParentName;
-		CurrentType = FindStructType(CurrentClassName);
-		PropIndex -= Parent.NumProps;
-	}
-
-	// Find a field
+	// Now we have FoundProp filled with type information. The desired property is inside this class,
+	// all parent classes are resolved. Find a field itself.
 	const PropInfo* p;
 	const PropInfo* end;
 
 	p = PropData;
 	end = PropData + ARRAY_COUNT(PropData);
 
-	bool bClassFound = false;
 	while (p < end)
 	{
-		// Note: StrucType could correspond to a few classes from the list about
-		// because of inheritance, so don't "break" a loop when we've scanned some class, check
-		// other classes too
-		bool IsOurClass;
-		// Use exact name comparison to allow intermediate parents which aren't declared in PropData[]
-		// if (CurrentType)
-		//	IsOurClass = CurrentType->IsA(p->Name + 1);
-		// else
-			IsOurClass = stricmp(p->Name, CurrentClassName) == 0;
-
-		while (++p < end && p->Name)
+		// Use exact name comparison to allow intermediate parents which aren't declared in PropData[].
+		// Doing the same in FindTypeForProperty().
+		if (stricmp(p->Name, FoundProp.TypeName) != 0)
 		{
-			if (!IsOurClass) continue;
+			// A different class, skip its declaration.
+			while (++p < end && p->Name != NULL)
+			{}
+			// skip the END marker and continue with next type map
+			p++;
+			continue;
+		}
+
+		bool bPatchingPropIndex = false;
+		int NumInsertedProps = 0;
+
+		// Loop over PropInfo entries, either find a property or an end of the current class information.
+		while (++p < end && p->Name != NULL)
+		{
+			if (p->Name[0] == '!')
+			{
+				// Adjust the property index so it will match previous engine version
+				FoundProp.PropIndex -= NumInsertedProps;
+				NumInsertedProps = 0;
+				// This is the engine version block
+				int RequiredVersion = p->PropIndex;
+				bPatchingPropIndex = false;
+				if (InGame < RequiredVersion)
+				{
+					// Skip the whole block for the engine which is newer than loaded asset use
+					while (++p < end && p->Name != NULL && p->Name[0] != '!')
+					{}
+					// A step back, so next '++p' in outer loop will check this entry again
+					p--;
+				}
+				else if (RequiredVersion != 0)
+				{
+					// The engine version matches, so the following block will probably insert new properties
+					bPatchingPropIndex = true;
+				}
+				continue;
+			}
+
+			if (p->PropIndex <= FoundProp.PropIndex && bPatchingPropIndex)
+			{
+				// This property was inserted in this engine version, so we'll need to adjust
+				// property index at the end of version block to match previous engine version.
+				NumInsertedProps++;
+			}
+
 			if (p->PropMask)
 			{
-				uint32 IndexWithOffset = PropIndex - p->Index;
+				assert(bPatchingPropIndex == false);				// no support for masks inside VERSION_BLOCK
+				// It is used only for DROP_... macros.
+				uint32 IndexWithOffset = FoundProp.PropIndex - p->PropIndex;
 				if (IndexWithOffset > 32)
 				{
-					// 'uint' here, so negative values will also go here
+					// Note: negative values will appear as a large uint.
 					continue;
 				}
 				if ((IndexWithOffset == 0) ||						// we're implicitly storing first property
@@ -345,42 +446,31 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 					return p->Name;
 				}
 			}
-			else if (p->Index == PropIndex)
+			else if (p->PropIndex == FoundProp.PropIndex)
 			{
-				//todo: not supporting arrays here, arrays relies on class' property table matching layout
+				// Found a matching property.
+				//todo: we're not supporting arrays here, arrays relies on property table to match layout of CTypeInfo declaration
 				return p->Name;
 			}
 		}
-		if (IsOurClass)
-		{
-			// the class has been verified, and we didn't find a property
-			bClassFound = true;
-			break;
-		}
-		// skip END marker
-		p++;
-	}
 
-	if (bClassFound)
-	{
-		// We have a declaration of the class, so don't fall back to PROP declaration
-		//todo: review later, actually can "return NULL" from inside the loop body
+		// The class has been verified, and we didn't find a property. Don't fall to CTypeInfo PROP declarations.
 		return NULL;
 	}
 
-	// The property not found. Try using CTypeInfo properties, assuming their layout matches UE
+	// Type information was not found. Try using CTypeInfo properties, assuming their layout matches UE4.
 	int CurrentPropIndex = 0;
-	if (CurrentType == NULL) appError("Enumerating properties of unknown type %s", CurrentClassName);
-	for (int Index = 0; Index < CurrentType->NumProps; Index++)
+	if (FoundProp.Type == NULL) appError("Enumerating properties of unknown type %s", FoundProp.TypeName);
+	for (int Index = 0; Index < FoundProp.Type->NumProps; Index++)
 	{
-		const CPropInfo& Prop = CurrentType->Props[Index];
+		const CPropInfo& Prop = FoundProp.Type->Props[Index];
 		if (Prop.Count >= 2)
 		{
 			// Static array, should count each item as a separate property
-			if (CurrentPropIndex + Prop.Count > PropIndex)
+			if (CurrentPropIndex + Prop.Count > FoundProp.PropIndex)
 			{
 				// The property is located inside this array
-				OutArrayIndex = PropIndex - CurrentPropIndex;
+				OutArrayIndex = FoundProp.PropIndex - CurrentPropIndex;
 				return Prop.Name;
 			}
 			CurrentPropIndex += Prop.Count;
@@ -388,7 +478,7 @@ const char* CTypeInfo::FindUnversionedProp(int PropIndex, int& OutArrayIndex) co
 		else
 		{
 			// The same code, but works as Count == 1 for any values
-			if (CurrentPropIndex == PropIndex)
+			if (CurrentPropIndex == FoundProp.PropIndex)
 			{
 				return Prop.Name;
 			}

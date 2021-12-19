@@ -1200,6 +1200,7 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 				if (!ItemType)
 				{
 					appPrintf("WARNING: structure type %s is unknown, skipping array %s::%s\n", Prop->TypeName, Name, Prop->Name);
+					Ar.Seek(StopPos);
 				}
 				else if (DataCount)
 				{
@@ -1696,7 +1697,7 @@ void CTypeInfo::SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) 
 		appPrintf("Prop: %d (zeroed=%d)\n", PropIndex, bIsZeroedProp);
 	#endif
 		int ArrayIndex = 0;
-		const char* PropName = FindUnversionedProp(PropIndex, ArrayIndex);
+		const char* PropName = FindUnversionedProp(PropIndex, ArrayIndex, Ar.Game);
 	#if DEBUG_PROPS
 		DUMP_ARC_BYTES(Ar, 32, "-> ...");
 	#endif

@@ -522,8 +522,8 @@ void USkeletalMesh::Serialize(FArchive &Ar)
 	if ((Ar.Game == GAME_Tribes3 || Ar.Game == GAME_Swat4) && t3_hdrSV >= 3)
 	{
 	#if 0
-		// it looks like format of following data was chenged sinse
-		// data was prepared, and game executeble does not load these
+		// it looks like format of following data was changed since
+		// data was prepared, and game executable does not load these
 		// LazyArrays (otherwise error should occur) -- so we are
 		// simply skipping these arrays
 		TLazyArray<FT3Unk1>    unk1;

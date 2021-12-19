@@ -305,7 +305,7 @@ struct FSkelMeshSection3
 			Ar << S.unk2;
 		}
 #if MASSEFF
-		if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 135)
+		if ((Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 135) || (Ar.Game == GAME_MassEffectLE))
 		{
 			byte SomeFlag;
 			Ar << SomeFlag;
@@ -2738,7 +2738,7 @@ struct FStaticMeshVertexStream3
 		}
 #endif // SHADOWS_DAMNED
 #if MASSEFF
-		if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 150)
+		if ((Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 150) || (Ar.Game == GAME_MassEffectLE))
 		{
 			int unk28;
 			Ar << unk28;
@@ -2972,7 +2972,7 @@ struct FStaticMeshUVStream3
 		GStripStaticNormals = (HasNormals == 0);
 #endif // BATMAN
 #if MASSEFF
-		if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 150)
+		if ((Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 150) || (Ar.Game == GAME_MassEffectLE))
 		{
 			int unk30;
 			Ar << unk30;
@@ -3775,7 +3775,7 @@ void UStaticMesh3::Serialize(FArchive &Ar)
 	if (Ar.Game == GAME_GoWU) goto new_kdop;
 #endif
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 153) goto new_kdop;
+	if ((Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 153) || (Ar.Game == GAME_MassEffectLE)) goto new_kdop;
 #endif
 #if DISHONORED
 	if (Ar.Game == GAME_Dishonored) goto old_kdop;

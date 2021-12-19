@@ -482,8 +482,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 		{
 			if (Stage < data->FirstChannel)
 			{
-				// this bone position will be overriden in following channel(s); all
-				// subhierarchy bones should be overriden too; skip whole subtree
+				// this bone position will be overridden in following channel(s); all
+				// subhierarchy bones should be overridden too; skip whole subtree
 				int skip = data->SubtreeSize;
 				// note: 'skip' equals to subtree size; current bone is excluded - it
 				// will be skipped by 'for' operator (after 'continue')
@@ -507,8 +507,8 @@ void CSkelMeshInstance::UpdateSkeleton()
 			BoneDebug.AnimRotation = Bone.Orientation;
 #endif // SHOW_ANIM
 
-			// compute bone orientation
-			if (AnimSeq1 && AnimBoneIndex != INDEX_NONE && AnimSeq1->Tracks[AnimBoneIndex]->HasKeys())
+			// compute bone orientation, take care of empty Tracks array
+			if (AnimSeq1 && AnimBoneIndex != INDEX_NONE && AnimSeq1->Tracks.IsValidIndex(AnimBoneIndex) && AnimSeq1->Tracks[AnimBoneIndex]->HasKeys())
 			{
 				// get bone position from track
 				if (!AnimSeq2 || Chn->SecondaryBlend != 1.0f)
@@ -982,7 +982,7 @@ void CSkelMeshInstance::GetAnimParams(int Channel, const char *&AnimName, float 
 
 static void GetBoneInfColor(int BoneIndex, float *Color)
 {
-	// most of this code is targetted to make maximal color combinations
+	// most of this code is targeted to make maximal color combinations
 	// which are maximally different for adjacent BoneIndex values
 	static const float table[] = { 0.9f, 0.3f, 0.6f, 0.0f };
 	static const int  table2[] = { 0, 1, 2, 4, 7, 3, 5, 6 };

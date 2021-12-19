@@ -4,14 +4,15 @@ LIBC       = shared
 #MAPFILES   = 1
 CONSOLE    = 1
 
-!if !defined($OPTIMIZE)		# allow overriding of OPTIMIZE in parent project
+!if !defined(OPTIMIZE)		# allow overriding of OPTIMIZE in parent project
 OPTIMIZE   = size
 !endif
 
 PDB        = 2				# keep enabled, executable is almost the same, except embedded link to pdb file
 
-!if !defined($OLDCRT)		# allow overriding of OLDCRT in parent project
-OLDCRT     = 1				# set to 0 (or comment the line) to use "native" compiler's CRT
+!if !defined(OLDCRT)		# allow overriding of OLDCRT in parent project
+OLDCRT     = 0				# set to 0 (or comment the line) to use "native" compiler's CRT
+							# Changed 29.05.2021: Oodle static libraries requires more modern CRT which is not available in MSVCRT.dll
 !endif
 
 !if defined(TRACY)
@@ -29,9 +30,10 @@ USE_SYSTEM_LIBS = 0
 
 CPP_STD = c++14				# allow modern C++ features
 							#!! todo: add standard option for that
+							#!! todo: the standard has been changed for clang on macOS, check for "CPP_STD" below!
 
 !if "$COMPILER" eq "VisualC"
-	!if !defined($CPP_EXCEPT)
+	!if !defined(CPP_EXCEPT)
 		CPP_EXCEPT = 0									# used with WIN32_USE_SEH in Core.h
 	!endif
 	WINXP      = 1										# we're not using any modern Win32 features, so allow to worn at WinXP
@@ -61,6 +63,8 @@ CPP_STD = c++14				# allow modern C++ features
 	!endif
 	!if "$PLATFORM" ne "osx"
 		STDLIBS += GL
+	!else
+		CPP_STD = c++2a									# https://github.com/gildor2/UEViewer/issues/183#issuecomment-846745134
 	!endif
 
 	LIBC      = shared
@@ -162,12 +166,11 @@ sources(COMP_LIBS) = {
 pop(INCLUDES)
 pop(DEFINES)
 
-!if -e "$R/libs/oodle/kraken.cpp"
-	DEFINES += HAS_OODLE
-	sources(COMP_LIBS) = {
-		$R/libs/oodle/*.cpp
-	}
-!endif
+# SDL2
+!include $R/libs/SDL2/SDL2.project
+
+# oodle SDK support
+!include $R/libs/oodle/oodle.project
 
 sources(MOBILE_LIBS) = {
 	$R/libs/PowerVR/*.cpp
@@ -192,13 +195,10 @@ sources(UE4_LIBS) = {
 #------------------------------------------------
 
 OBJDIR     = $R/obj/$PRJ-$PLATFORM
-!if "$PLATFORM" ne "osx"
-STDLIBS   += SDL2		# disabled in macOS build
-!endif
 INCLUDES  += . $R/Core $R/Unreal $LIBINCLUDES
 OPTIONS   += $WARNINGS
 
-!if defined($DEBUG)
+!if defined(DEBUG)
 	DEFINES += MAX_DEBUG
 	OBJDIR  = $OBJDIR-debug
 	OPTIMIZE = none
@@ -211,12 +211,4 @@ OPTIONS   += $WARNINGS
 	sources(MAIN) = {
 		libs/tracy/TracyClient.cpp
 	}
-!endif
-
-!if "$PLATFORM" eq "win32"
-	INCLUDES += $R/libs/includewin32
-	LIBRARIES = $R/libs/SDL2/x86
-!elif "$PLATFORM" eq "win64"
-	INCLUDES += $R/libs/includewin32
-	LIBRARIES = $R/libs/SDL2/x64
 !endif

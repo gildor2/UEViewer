@@ -13,6 +13,7 @@
 	"EditorObjectVersion.h",
 	"../../../Engine/Public/SkeletalMeshTypes.h",	# for newer UE4 (post UE4.18)
 	"../../../Engine/Private/SkeletalMesh.cpp",		# for older UE4 version (UE4.18 and less)
+	"../../../Engine/Public/SkeletalMeshLegacyCustomVersions.h", # UE4.27 and newer
 	"CoreObjectVersion.h",
 	"RenderingObjectVersion.h",
 	"AnimObjectVersion.h",

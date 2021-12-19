@@ -72,6 +72,10 @@ CErrorContext GError;
 
 void appError(const char *fmt, ...)
 {
+#if THREADING
+	if (!GError.ShouldLogThisThread()) THROW;
+#endif
+
 	va_list	argptr;
 	va_start(argptr, fmt);
 	char buf[4096];
@@ -177,6 +181,10 @@ void CErrorContext::HandleError()
 
 void CErrorContext::StandardHandler()
 {
+	// Do not print error message twice (e.g. when StandardHandler is called from worker thread, then from main thread)
+	if (IsErrorLogged) return;
+	IsErrorLogged = true;
+
 	void (*PrintFunc)(const char*, ...);
 	PrintFunc = GError.SuppressLog ? appPrintf : appNotify;
 
@@ -195,6 +203,22 @@ void CErrorContext::StandardHandler()
 
 #if DO_GUARD
 
+#if THREADING
+
+bool CErrorContext::ShouldLogThisThread()
+{
+	int ThreadId = CThread::CurrentId();
+	if (ErrorThreadId == 0)
+	{
+		//todo: this operation is not thread-safe
+		ErrorThreadId = ThreadId;
+		return true;
+	}
+	return ErrorThreadId == ThreadId;
+}
+
+#endif // THREADING
+
 void CErrorContext::LogHistory(const char *part)
 {
 	if (!History[0])
@@ -204,6 +228,9 @@ void CErrorContext::LogHistory(const char *part)
 
 void CErrorContext::SetPrefix(const char* prefix)
 {
+#if THREADING
+	if (!GError.ShouldLogThisThread()) return;
+#endif
 	char buf[512];
 	appSprintf(ARRAY_ARG(buf), GError.FmtNeedArrow ? " <- %s: " : "%s: ", prefix);
 	GError.LogHistory(buf);
@@ -212,6 +239,10 @@ void CErrorContext::SetPrefix(const char* prefix)
 
 void CErrorContext::UnwindThrow(const char *fmt, ...)
 {
+#if THREADING
+	if (!GError.ShouldLogThisThread()) THROW;
+#endif
+
 	char buf[512];
 	va_list argptr;
 

@@ -1,0 +1,54 @@
+# perl highlighting
+
+OODLE_LIB=
+OODLE_LIB_FILE=
+OODLE_LIB_PATH=
+
+!if "$COMPILER" eq "VisualC"
+	!if "$PLATFORM" eq "win32"
+		OODLE_LIB_PATH=lib/Win32
+		OODLE_LIB_FILE=oo2core_win32.lib
+	!else
+		OODLE_LIB_PATH=lib/Win64
+		OODLE_LIB_FILE=oo2core_win64.lib
+	!endif
+!else
+	!if "$PLATFORM" ne "osx"
+		# Linux
+		!if "$PLATFORM" eq "unix64"
+			OODLE_LIB_PATH=lib/Linux
+			OODLE_LIB_FILE=liboo2corelinux64.a
+		!else
+			# there's no .a file for 32-bit linux
+		!endif
+	!else
+		# MacOS
+		OODLE_LIB_PATH=lib/Mac
+		OODLE_LIB_FILE=liboo2coremac64.a
+	!endif
+!endif
+
+!if "$OODLE_LIB_FILE" ne ""
+	# Append the library path
+	OODLE_LIB=$R/libs/oodle/$OODLE_LIB_PATH/$OODLE_LIB_FILE
+	# Verify if oodle SDK exists here
+	!if ! -e "$OODLE_LIB"
+		!message $OODLE_LIB doesn't exist
+		OODLE_LIB=
+	!endif
+!else
+	!message Info: the selected platform doesn't have oodle SDK support.
+!endif
+
+!if "$OODLE_LIB" ne ""
+	DEFINES += HAS_OODLE
+	LIBINCLUDES += $R/libs/oodle/include
+	LIBRARIES += $R/libs/oodle/$OODLE_LIB_PATH
+	STDLIBS += $OODLE_LIB_FILE
+	!if "$COMPILER" eq "VisualC"
+		# Ensure compatible CRT will be used when linking with Win32 Oodle static libraries
+		LINKFLAGS += -NODEFAULTLIB:msvcrt
+		# Use static CRT for release Windows builds without use of MSVCRT.dll
+		LIBC = static
+	!endif
+!endif

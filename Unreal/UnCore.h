@@ -380,6 +380,7 @@ enum EGame
 		GAME_MassEffect,
 		GAME_MassEffect2,
 		GAME_MassEffect3,
+		GAME_MassEffectLE,
 		GAME_R6Vegas2,
 		GAME_MirrorEdge,
 		GAME_TLR,
@@ -495,8 +496,9 @@ enum EGame
 		// 4.21
 		GAME_Jedi = GAME_UE4(21)+1,
 		// 4.25
-		GAME_Dauntless = GAME_UE4(25)+1,
-		GAME_Valorant = GAME_UE4(25)+2,
+		GAME_Valorant = GAME_UE4(25)+1,
+		// 4.26
+		GAME_Dauntless = GAME_UE4(26)+1,
 
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };

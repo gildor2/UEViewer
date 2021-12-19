@@ -528,7 +528,7 @@ static bool DrawTextAtAnchor(ETextAnchor anchor, unsigned color, bool bHyperlink
 		// there will be a 1 frame delay if text will be changed.
 		int realTextPosY = OffsetYForAnchor(anchor, textPosY, true);
 
-		// Compare mouse position agains the hyperlink text
+		// Compare mouse position against the hyperlink text
 		CheckHyperlink(textPosX, realTextPosY, textWidth, textHeight, msg, bHighlightLink, bClicked);
 
 		if (pHover) *pHover = bHighlightLink;
@@ -679,7 +679,7 @@ bool DrawText3DH(const CVec3 &pos, bool* isHover, unsigned color, const char *te
 	int textWidth, textHeight;
 	GetTextExtents(msg, textWidth, textHeight, true);
 
-	// Compare mouse position agains the hyperlink text
+	// Compare mouse position against the hyperlink text
 	bool bHighlightLink = false;
 	bool bClicked = false;
 	CheckHyperlink(coords[0], coords[1], textWidth, textHeight, msg, bHighlightLink, bClicked);

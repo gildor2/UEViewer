@@ -95,7 +95,7 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 	Ar << PackageFlags;
 
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect3 && Ar.ArLicenseeVer >= 194 && (PackageFlags & PKG_Cooked))
+	if ((((Ar.Game == GAME_MassEffect3 || Ar.Game == GAME_MassEffectLE) && Ar.ArLicenseeVer >= 194)) && (PackageFlags & PKG_Cooked)) // ME3 or ME3LE
 	{
 		int32 unk88;
 		Ar << unk88;
@@ -277,7 +277,7 @@ cooker_version:
 
 #if MASSEFF
 	// ... MassEffect has some additional structure here ...
-	if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffect3)
+	if (Ar.Game >= GAME_MassEffect && Ar.Game <= GAME_MassEffectLE)
 	{
 		int32 unk1, unk2, unk3[2], unk4[2];
 		if (Ar.ArLicenseeVer >= 16 && Ar.ArLicenseeVer < 136)
@@ -573,7 +573,7 @@ void UnPackage::LoadNameTable3()
 		if (Game == GAME_Wheelman) goto dword_flags;
 #endif
 #if MASSEFF
-		if (Game >= GAME_MassEffect && Game <= GAME_MassEffect3)
+		if (Game >= GAME_MassEffect && Game <= GAME_MassEffectLE)
 		{
 			if (ArLicenseeVer >= 142) goto done;			// ME3, no flags
 			if (ArLicenseeVer >= 102) goto dword_flags;		// ME2

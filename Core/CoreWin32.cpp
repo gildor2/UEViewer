@@ -81,7 +81,7 @@ static void InitSymbols()
 
 #if EXTRA_UNDECORATE
 
-// Strips all occurences of string 'cut' from 'string'
+// Strips all occurrences of string 'cut' from 'string'
 static void StripPrefix(char* string, const char* cut)
 {
 	int len1 = strlen(string);
@@ -551,6 +551,14 @@ enum { CRT_FILE_SIZE = (sizeof(char*)*3 + sizeof(int)*5) };
 extern "C" FILE* __cdecl __acrt_iob_func(unsigned Index)
 {
 	return (FILE*)((char*)__iob_func() + Index * Align(CRT_FILE_SIZE, sizeof(char*)));
+}
+
+// Required for Oodle, the CRT implementation just forwards the call to terminate()
+void terminate();
+
+extern "C" void __std_terminate()
+{
+	terminate();
 }
 
 #endif // OLDCRT

@@ -157,7 +157,7 @@ struct CTypeInfo
 
 #if UNREAL4
 	void SerializeUnversionedProperties4(FArchive& Ar, void* ObjectData) const;
-	const char* FindUnversionedProp(int PropIndex, int& OutArrayIndex) const;
+	const char* FindUnversionedProp(int InPropIndex, int& OutArrayIndex, int InGame) const;
 #endif
 
 	void ReadUnrealProperty(FArchive& Ar, struct FPropertyTag& Tag, void* ObjectData, int PropTagPos) const;
@@ -177,7 +177,7 @@ struct CTypeInfo
 // This class is used as Base for DECLARE_BASE()/DECLARE_CLASS() macros
 struct CNullType
 {
-	enum { PropLevel = -1 };		// overriden in BEGIN_CLASS_TABLE
+	enum { PropLevel = -1 };		// overridden in BEGIN_CLASS_TABLE
 	static constexpr const CPropInfo* StaticGetProps(int& numProps)
 	{
 		numProps = 0;

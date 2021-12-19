@@ -166,8 +166,8 @@ static CGameFileInfo* GameFileHash[GAME_FILE_HASH_SIZE];
 struct CGameFolderInfo
 {
 	FString Name;
-	uint16 HashNext;		// index in GameFileHash array
-	uint16 NumFiles;		// number of files located in this folder
+	int		HashNext;		// index in GameFileHash array
+	int		NumFiles;		// number of files located in this folder
 
 	CGameFolderInfo()
 	: HashNext(0)
@@ -176,7 +176,7 @@ struct CGameFolderInfo
 };
 
 static TArray<CGameFolderInfo> GameFolders;
-static uint16 GameFoldersHash[GAME_FOLDER_HASH_SIZE];
+static int GameFoldersHash[GAME_FOLDER_HASH_SIZE];
 
 
 #if UNREAL3
@@ -286,7 +286,7 @@ static void PrintHashDistribution()
 int appGetGameFolderIndex(const char* FolderName)
 {
 	int hash = GetHashForFolderName(FolderName);
-	for (uint16 index = GameFoldersHash[hash]; index; /* empty */)
+	for (int index = GameFoldersHash[hash]; index; /* empty */)
 	{
 		CGameFolderInfo& info = GameFolders[index];
 		if (!stricmp(*info.Name, FolderName))
@@ -311,7 +311,7 @@ int RegisterGameFolder(const char* FolderName)
 	// Find existing folder entry. Copy-pasted of appGetGameFolderIndex, but with passing 'hash'
 	// to the code below.
 	int hash = GetHashForFolderName(FolderName);
-	for (uint16 index = GameFoldersHash[hash]; index; /* empty */)
+	for (int index = GameFoldersHash[hash]; index; /* empty */)
 	{
 		CGameFolderInfo& info = GameFolders[index];
 		if (!stricmp(*info.Name, FolderName))
@@ -337,7 +337,6 @@ int RegisterGameFolder(const char* FolderName)
 	}
 
 	int newIndex = GameFolders.AddDefaulted();
-	assert(newIndex < 65536); // restriction for uint16
 	CGameFolderInfo& info = GameFolders[newIndex];
 	info.Name = FolderName; // there's no much need to pass folder name through appStrdupPool, so keep it as FString
 	info.HashNext = GameFoldersHash[hash];
@@ -426,7 +425,7 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 			assert(PakVfs);
 			FString PakEncryptionKey = PakVfs->GetPakEncryptionKey();
 
-			// Check for presense of IOStore file system for this pak
+			// Check for presence of IOStore file system for this pak
 			guard(TokArchive);
 			char Path[MAX_PACKAGE_PATH];
 			appStrncpyz(Path, FullName, ARRAY_COUNT(Path));
@@ -448,6 +447,8 @@ static void RegisterGameFile(const char* FullName, int64 FileSize = -1)
 						s++;
 					else
 						s = GlobalPath;
+					// The name of global.utoc file is hardcoded in UE4 code in FPakPlatformFile::Initialize, see
+					// IoStoreGlobalEnvironment.InitializeFileEnvironment() function call.
 					strcpy(s, "global.utoc");
 					FIOStoreFileSystem::LoadGlobalContainer(GlobalPath);
 				}

@@ -141,20 +141,20 @@ void UAnimSequence::Serialize(FArchive &Ar)
 	if (Ar.Game == GAME_Turok) return;
 #endif
 #if MASSEFF
-	if (Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110)
+	if ((Ar.Game == GAME_MassEffect2 && Ar.ArLicenseeVer >= 110) || (Ar.Game == GAME_MassEffectLE && Ar.ArLicenseeVer == 168)) // ME2 or ME2LE
 	{
 		guard(SerializeMassEffect2);
 		FByteBulkData RawAnimationBulkData;
 		RawAnimationBulkData.Serialize(Ar);
 		unguard;
 	}
-	if (Ar.Game == GAME_MassEffect3) goto old_code;		// Mass Effect 3 has no RawAnimationData
+	if (Ar.Game == GAME_MassEffect3 || Ar.Game == GAME_MassEffectLE) goto old_code;		// Mass Effect 3 has no RawAnimationData
 #endif // MASSEFF
 #if MOH2010
 	if (Ar.Game == GAME_MOH2010) goto old_code;
 #endif
 #if TERA
-	if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overriden ArVer, so compare by ArLicenseeVer ...
+	if (Ar.Game == GAME_Tera && Ar.ArLicenseeVer >= 11) goto new_code; // we have overridden ArVer, so compare by ArLicenseeVer ...
 #endif
 #if TRANSFORMERS
 	if (Ar.Game == GAME_Transformers && Ar.ArLicenseeVer >= 181) // Transformers: Fall of Cybertron, no version in code
@@ -295,9 +295,15 @@ static void ReadArgonautsTimeArray(const TArray<unsigned> &SourceArray, int Firs
 
 #if TRANSFORMERS
 
-void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
+bool UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 {
 	guard(UAnimSequence::DecodeTrans3Anims);
+
+	if (CompressedByteStream.Num() == 0)
+	{
+		// This situation is true for some sequences
+		return false;
+	}
 
 	// read some counts first
 	FMemReader Reader1(Trans3Data.GetData(), Trans3Data.Num());
@@ -519,6 +525,7 @@ void UAnimSequence::DecodeTrans3Anims(CAnimSequence *Dst, UAnimSet *Owner) const
 		DBG(" - %s\n", *Owner->TrackBoneNames[Bone]);
 	}
 
+	return true;
 	unguard;
 }
 
@@ -595,7 +602,7 @@ void UAnimSet::ConvertAnims()
 
 #if MASSEFF
 	UBioAnimSetData *BioData = NULL;
-	if ((ArGame >= GAME_MassEffect && ArGame <= GAME_MassEffect3) && !TrackBoneNames.Num() && Sequences.Num())
+	if ((ArGame >= GAME_MassEffect && ArGame <= GAME_MassEffectLE) && !TrackBoneNames.Num() && Sequences.Num())
 	{
 		// Mass Effect has separated TrackBoneNames from UAnimSet to UBioAnimSetData
 		BioData = Sequences[0]->m_pBioAnimSetData;
@@ -704,12 +711,20 @@ void UAnimSet::ConvertAnims()
 		if (ArGame == GAME_Transformers && Seq->Trans3Data.Num())
 		{
 			CAnimSequence *Dst = new CAnimSequence(Seq);
-			AnimSet->Sequences.Add(Dst);
 			Dst->Name      = Seq->SequenceName;
 			Dst->NumFrames = Seq->NumFrames;
 			Dst->Rate      = Seq->NumFrames / Seq->SequenceLength * Seq->RateScale;
 			Dst->bAdditive = Seq->bIsAdditive;
-			Seq->DecodeTrans3Anims(Dst, this);
+
+			if (Seq->DecodeTrans3Anims(Dst, this))
+			{
+				AnimSet->Sequences.Add(Dst);
+			}
+			else
+			{
+				// Failed to decode, drop the track
+				delete Dst;
+			}
 			continue;
 		}
 #endif // TRANSFORMERS
