@@ -219,6 +219,8 @@ FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 	//?? be done using generic serializer, or SerializeSimple should be
 	//?? extended for this
 
+	const bool bIsStatic = IsStatic();
+
 	// serialize data count
 	int Count = DataCount;
 	if (GameUsesFCompactIndex(Ar))
@@ -234,6 +236,7 @@ FArchive& FArray::SerializeSimple(FArchive &Ar, int NumFields, int FieldSize)
 		DataCount = Count;
 	}
 	if (!Count) return Ar;
+	if (bIsStatic) return Ar;
 
 	// perform serialization itself
 	Ar.Serialize(DataPtr, elementSize * Count);

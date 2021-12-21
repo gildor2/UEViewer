@@ -1393,6 +1393,9 @@ public:
 	void SerializeSCell(FArchive &Ar);
 #endif
 #if UNREAL1
+#if HP2
+	void SerializeHP2Moves(FArchive &Ar);
+#endif
 	void Upgrade();
 #endif
 
@@ -1422,6 +1425,15 @@ public:
 			return;
 		}
 #endif // SWRC
+#if UNREAL1
+#if HP2
+		if (Ar.Game == GAME_HarryPotter2)
+		{
+			SerializeHP2Moves(Ar);
+			return;
+		}
+#endif // HP2
+#endif // UNREAL1
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{
@@ -1454,7 +1466,7 @@ public:
 		unguard;
 	}
 
-	void ConvertAnims();
+	void ConvertAnims(bool bShouldAdjustTime = true);
 };
 
 
