@@ -1430,6 +1430,7 @@ public:
 		if (Ar.Game == GAME_HarryPotter2)
 		{
 			SerializeHP2Moves(Ar);
+			ConvertAnims(false);
 			return;
 		}
 #endif // HP2

@@ -1118,14 +1118,13 @@ struct FVector
 	float	X, Y, Z;
 
 	// Constructors.
-	FVector()
-	{}
+	FVector() {}
 
-	FVector( float InX, float InY, float InZ )
+	FVector(float InX, float InY, float InZ)
 	:	X(InX), Y(InY), Z(InZ)
 	{}
 
-	explicit FVector( float In )
+	explicit FVector(float In)
 	:	X(In), Y(In), Z(In)
 	{}
 
@@ -1160,16 +1159,6 @@ struct FVector
 		X *= value; Y *= value; Z *= value;
 	}
 
-	friend FVector Interp( const FVector& A, const FVector& B, float Param )
-	{
-		float Marap = 1.0f - Param;
-		return FVector
-		(
-			A.X * Marap + B.X * Param,
-			A.Y * Marap + B.Y * Param,
-			A.Z * Marap + B.Z * Param
-		);
-	}
 
 	friend FArchive& operator<<(FArchive &Ar, FVector &V)
 	{
@@ -1236,11 +1225,6 @@ struct FRotator
 	}
 };
 
-
-// Magic numbers for numerical precision.
-#define DELTA			(0.00001f)
-#define SLERP_DELTA		(0.0001f)
-
 struct FQuat
 {
 	float	X, Y, Z, W;
@@ -1253,42 +1237,6 @@ struct FQuat
 	friend FArchive& operator<<(FArchive &Ar, FQuat &F)
 	{
 		return Ar << F.X << F.Y << F.Z << F.W;
-	}
-
-	float operator |( const FQuat& Q ) const
-	{
-		return X*Q.X + Y*Q.Y + Z*Q.Z + W*Q.W;
-	}
-
-	bool Normalize()
-	{
-		// Test whether already approximately normalised.
-		float SquareSum = (float)(X*X+Y*Y+Z*Z+W*W);
-		if( fabs(SquareSum-1.f) > DELTA )
-		{
-			if( SquareSum >= DELTA )
-			{
-				//
-				// The approximate inverse square root of a number L near 1 is:
-				//
-				//	L^(-.5) ~= 1 -.5 (L-1) = 1.5 - .5 L
-				//
-				float Scale = 1.5f - SquareSum * 0.5f;
-				X *= Scale;
-				Y *= Scale;
-				Z *= Scale;
-				W *= Scale;
-			}
-			else
-			{
-				X = 0.0f;
-				Y = 0.0f;
-				Z = 0.1f;
-				W = 0.0f;
-				return false;
-			}
-		}
-		return true;
 	}
 };
 
@@ -2109,8 +2057,7 @@ class TStaticArray : public TArray<T>
 	using TArray<T>::DataPtr;
 	using TArray<T>::MaxCount;
 public:
-	FORCEINLINE
-	TStaticArray()
+	FORCEINLINE TStaticArray()
 	{
 		DataPtr = (void*)&StaticData[0];
 		MaxCount = N;

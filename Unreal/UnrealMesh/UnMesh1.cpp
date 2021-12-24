@@ -393,6 +393,27 @@ void USkeletalMesh::SerializeSkelMesh1(FArchive &Ar)
 	}
 	unguard;
 
+#if HP2
+		if (Ar.Game == GAME_HarryPotter2)
+		{
+			int i;
+			for (i = 0; i < Points.Num(); i++)
+				Points[i].Y *= -1;
+			for (i = 0; i < Triangles.Num(); i++)
+				Exchange(Triangles[i].WedgeIndex[0], Triangles[i].WedgeIndex[1]);
+			for (i = 0; i < RefSkeleton.Num(); i++)
+			{
+				FMeshBone &S = RefSkeleton[i];
+				S.BonePos.Position.Y    *= -1;
+				S.BonePos.Orientation.Y *= -1;
+				S.BonePos.Orientation.W *= -1;
+			}
+
+			ConvertMesh();
+			return;
+		}
+#endif // HP2
+
 	// mirror model: points, faces and skeleton
 	int i;
 	for (i = 0; i < Points.Num(); i++)
@@ -582,15 +603,21 @@ void UMeshAnimation::SerializeHP2Moves(FArchive &Ar)
 
 			for (int KeyQuatIndex = 0; KeyQuatIndex < TargetAnalogTrack.KeyQuat.Num(); KeyQuatIndex++)
 			{
-				TargetAnalogTrack.KeyQuat[KeyQuatIndex] = SourceAnalogTrack.KeyQuat[KeyQuatIndex].Quat();
+				FQuat TargetQuat = SourceAnalogTrack.KeyQuat[KeyQuatIndex].Quat();
+				TargetQuat.Y *= -1.0f;
 
-				TargetAnalogTrack.KeyQuat[KeyQuatIndex].X *= -1.0f;
-				TargetAnalogTrack.KeyQuat[KeyQuatIndex].W *= -1.0f;
+				// "Due to historical idiosyncrasy, root orientation is negated. !" From UE1
+				if (BoneIndex != 0)
+				{
+					TargetQuat.W *= -1.0f;
+				}
+
+				TargetAnalogTrack.KeyQuat[KeyQuatIndex] = TargetQuat;
 			}
 			for (int KeyPosIndex = 0; KeyPosIndex < TargetAnalogTrack.KeyPos.Num(); KeyPosIndex++)
 			{
 				TargetAnalogTrack.KeyPos[KeyPosIndex] = SourceAnalogTrack.GetKeyPos(KeyPosIndex);
-				TargetAnalogTrack.KeyPos[KeyPosIndex].X *= -1.0f;
+				TargetAnalogTrack.KeyPos[KeyPosIndex].Y *= -1.0f;
 			}
 
 			int CurrentTime = 0;
@@ -601,8 +628,6 @@ void UMeshAnimation::SerializeHP2Moves(FArchive &Ar)
 			}
 		}
 	}
-
-	ConvertAnims(false);
 
 	unguard;
 }
