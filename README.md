@@ -100,7 +100,7 @@ Using IDE
 As UE Viewer is using custom cross-platform build system, there's no MSBuild support. However we have a simple Visual Studio
 project which allows to use this IDE to edit, compile, run and debug the project. Project files are located in `.vs` directory.
 In order to open the project, you should start Visual Studio, use "Open a local folder" command, and then choose root project's
-directory. Please note: there's .sln file somewhere in *Tools* folder, don't use it - it is intended for UI framewwork testing.
+directory. Please note: there's .sln file somewhere in *Tools* folder, don't use it - it is intended for UI framework testing.
 
 Please note that you should use Visual Studio 2019 or newer, otherwise [some features will not work](https://www.gildor.org/smf/index.php/topic,7419.0.html).
 

@@ -2,15 +2,15 @@
 
 #if _WIN32
 #	define NUM_GLFUNCS	58
-#	define NUM_EXTFUNCS	37
+#	define NUM_EXTFUNCS	38
 #	define NUM_EXTENSIONS	11
 #elif __linux__
 #	define NUM_GLFUNCS	58
-#	define NUM_EXTFUNCS	37
+#	define NUM_EXTFUNCS	38
 #	define NUM_EXTENSIONS	11
 #else
 #	define NUM_GLFUNCS	58
-#	define NUM_EXTFUNCS	37
+#	define NUM_EXTFUNCS	38
 #	define NUM_EXTENSIONS	11
 #endif
 
@@ -104,6 +104,7 @@ static const char *GLNames[NUM_GLFUNCS + NUM_EXTFUNCS] = {
 	"glUniform2f",
 	"glUniform1i",
 	"glUniform3fv",
+	"glUniform4fv",
 	"glVertexAttrib3fv",
 	"glVertexAttribPointer",
 	"glBindRenderbufferEXT",
@@ -657,6 +658,12 @@ static void APIENTRY logUniform3fv(GLint arg1, GLsizei arg2, const GLfloat * v)
 	lib.Uniform3fv(arg1, arg2, v);
 }
 
+static void APIENTRY logUniform4fv(GLint arg1, GLsizei arg2, const GLfloat)
+{
+	printf("%s\n", "glUniform4fv");
+	lib.Uniform4fv(arg1, arg2, GLfloat);
+}
+
 static void APIENTRY logVertexAttrib3fv(GLuint index, const GLfloat * v)
 {
 	printf("%s\n", "glVertexAttrib3fv");
@@ -832,6 +839,7 @@ static const GL_t logFuncs = {
 	logUniform2f,
 	logUniform1i,
 	logUniform3fv,
+	logUniform4fv,
 	logVertexAttrib3fv,
 	logVertexAttribPointer,
 	logBindRenderbufferEXT,
@@ -871,10 +879,10 @@ static extInfo_t extInfo[NUM_EXTENSIONS] = {
 	{"1.2\0", NULL, NULL, 0, 0, 0, 0},
 	{"1.3\0", NULL, NULL, NUM_GLFUNCS+0, 2, 0, 0},
 	{"1.4\0", NULL, NULL, 0, 0, 0, 0},
-	{"2.0\0", NULL, NULL, NUM_GLFUNCS+2, 24, 0, 0},
+	{"2.0\0", NULL, NULL, NUM_GLFUNCS+2, 25, 0, 0},
 	{"3.1\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_EXT_texture_compression_s3tc\0", NULL, NULL, 0, 0, 0, 0},
-	{"GL_EXT_framebuffer_object\0", NULL, NULL, NUM_GLFUNCS+26, 11, 0, 0},
+	{"GL_EXT_framebuffer_object\0", NULL, NULL, NUM_GLFUNCS+27, 11, 0, 0},
 	{"GL_ARB_half_float_pixel\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_ARB_texture_float\0", NULL, NULL, 0, 0, 0, 0},
 	{"GL_ARB_texture_compression_rgtc\0" "GL_EXT_texture_compression_rgtc\0", NULL, NULL, 0, 0, 0, 0},
