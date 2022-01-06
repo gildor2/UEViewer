@@ -1713,7 +1713,7 @@ struct FStaticLODModel4
 		FSkinWeightProfilesData SkinWeightProfilesData;
 		Ar << SkinWeightProfilesData;
 
-		if (Ar.Game >= GAME_UE4(27))
+		if (Ar.Game >= GAME_UE4(27) || Ar.Game == GAME_UE4_25_Plus)
 		{
 			TArray<uint8> RayTracingData;
 			Ar << RayTracingData;

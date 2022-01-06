@@ -216,6 +216,9 @@ Oodle
 
 Changes
 ~~~~~~~
+06.01.2022
+- UE4.25-Plus support; use -game=ue4.25+ or select the engine in startup UI
+
 05.09.2021
 - UE4.27 support
 
