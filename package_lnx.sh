@@ -1,6 +1,6 @@
 #!/bin/bash
 archive="umodel_linux.tar.gz"
-filelist="umodel readme.txt"
+filelist="umodel readme.txt LICENSE.txt"
 
 for i in $filelist; do
 	if [ ! -f $i ]; then
