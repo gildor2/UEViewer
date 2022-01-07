@@ -224,6 +224,4 @@ Below is the list of major folders which exists in this repository or which are 
 
 License
 -------
-The code is not covered with any existing license yet, however I'm thinking about adding BSD 3-clause license. I just probably
-need help from some people who knows about that more than I (and I don't like the idea of adding license boilerplate into all
-source code files).
+UE Viewer is licensed under the MIT License, see [LICENSE.txt](https://github.com/gildor2/UEViewer/blob/master/LICENSE.txt) for more information.

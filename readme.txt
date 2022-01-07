@@ -6,6 +6,11 @@ Please support the development by making a donation here:
 https://www.gildor.org/en/donate
 
 
+License
+~~~~~~~
+UE Viewer is licensed under the MIT License.
+
+
 System requirements
 ~~~~~~~~~~~~~~~~~~~
 Windows or Linux operating system
