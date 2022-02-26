@@ -11,6 +11,9 @@
 
 #include "ObjectViewer.h"
 
+// For ColorFilter_ush
+#include "Shaders.h"
+
 
 #define NEW_OUTLINE		1
 
@@ -385,6 +388,14 @@ void CMaterialViewer::Draw2D()
 		int width, height;
 		Window->GetWindowSize(width, height);
 		int w = min(width, height) / 2;
+
+		static CShader shader;
+		if (GUseGLSL)
+		{
+			if (!shader.IsValid()) shader.Make(ColorFilter_ush);
+			shader.Use();
+		}
+
 		for (int i = 0; i < 4; i++)
 		{
 			int x0 =  (i       & 1) * w;
@@ -393,7 +404,29 @@ void CMaterialViewer::Draw2D()
 			{
 				{ 1, 1, 1 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 }	// normal, red, green, blue
 			};
-			glColor3fv(colors[i].v);
+			if (GUseGLSL)
+			{
+				// Use color filter, so we could display RGB channels as colors, and alpha as white
+				CVec4 filter, colorizer;
+				filter.Set(0, 0, 0, 0);
+				filter.v[i] = 1.0f;
+				colorizer.Set(0, 0, 0, 0);
+				if (i < 3)
+				{
+					colorizer.v[i] = 1.0f;
+				}
+				else
+				{
+					colorizer.Set(1, 1, 1, 1);
+				}
+				shader.SetUniform("FilterValue", filter);
+				shader.SetUniform("Colorizer", colorizer);
+				shader.SetUniform("Tex", 0);
+			}
+			else
+			{
+				glColor3fv(colors[i].v);
+			}
 			glBegin(GL_QUADS);
 			glTexCoord2f(1, 0);
 			glVertex2f(x0+w, y0);
@@ -405,6 +438,8 @@ void CMaterialViewer::Draw2D()
 			glVertex2f(x0+w, y0+w);
 			glEnd();
 		}
+
+		BindDefaultMaterial();
 	}
 
 	// UE1 and UE2

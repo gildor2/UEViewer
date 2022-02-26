@@ -1,5 +1,5 @@
 // Simple UI library.
-// Copyright (C) 2021 Konstantin Nosov
+// Copyright (C) 2022 Konstantin Nosov
 // Licensed under the BSD license. See LICENSE.txt file in the project root for full license information.
 
 #ifndef __FILE_CONTROLS_H__

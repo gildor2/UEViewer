@@ -471,8 +471,8 @@ static void PrintUsage()
 static void PrintVersionInfo()
 {
 	appPrintf(
-			"UE Viewer (UModel)\n" "%s\n" "%s\n" "%s\n",
-			GBuildString, GCopyrightString, GUmodelHomepage
+			"UE Viewer (UModel)\n" "%s\n" "%s\n" "%s\n%s\n",
+			GBuildString, GCopyrightString, GLicenseString, GUmodelHomepage
 	);
 }
 

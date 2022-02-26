@@ -1677,6 +1677,7 @@ struct FStaticLODModel4
 	}
 
 	// UE4.24+ serializer for most of LOD data
+	// Reference: FSkeletalMeshLODRenderData::SerializeStreamedData
 	void SerializeStreamedData(FArchive& Ar)
 	{
 		guard(FStaticLODModel4::SerializeStreamedData);
@@ -1711,6 +1712,12 @@ struct FStaticLODModel4
 
 		FSkinWeightProfilesData SkinWeightProfilesData;
 		Ar << SkinWeightProfilesData;
+
+		if (Ar.Game >= GAME_UE4(27) || Ar.Game == GAME_UE4_25_Plus)
+		{
+			TArray<uint8> RayTracingData;
+			Ar << RayTracingData;
+		}
 
 		//todo: this is a copy-paste of SerializeRenderItem_Legacy code!
 		guard(BuildVertexData);

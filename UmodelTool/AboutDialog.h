@@ -39,6 +39,7 @@ public:
 					+ NewControl(UILabel, GBuildString)
 					+ NewControl(UISpacer)
 					+ NewControl(UILabel, GCopyrightString)
+					+ NewControl(UILabel, GLicenseString)
 				]
 			]
 			// bottom part

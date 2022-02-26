@@ -16,6 +16,9 @@
 #define USE_SDL			1
 #include "GLBind.h"
 
+// For CVec4 type
+#include "MathSSE.h"
+
 bool	QGL_Init(const char *libName);
 void	QGL_Shutdown();
 void	QGL_InitExtensions();
@@ -155,6 +158,13 @@ public:
 		GLint u = glGetUniformLocation(PrObj, name);
 		if (u == -1) return false;
 		glUniform3fv(u, 1, value.v);
+		return true;
+	}
+	inline bool SetUniform(const char *name, const CVec4& value) const
+	{
+		GLint u = glGetUniformLocation(PrObj, name);
+		if (u == -1) return false;
+		glUniform4fv(u, 1, value.v);
 		return true;
 	}
 	// attributes

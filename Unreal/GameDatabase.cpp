@@ -360,6 +360,7 @@ const GameInfo GListOfGames[] = {
 			"ue4.[0-" STR(LATEST_SUPPORTED_UE4_VERSION) "]",
 			GAME_UE4(LATEST_SUPPORTED_UE4_VERSION+1)	// some invalid version number, but not zero - to show this game in "-help" output
 		},
+		G("Unreal engine 4.25 Plus", ue4.25+, GAME_UE4_25_Plus),
 		// Add custom UE4 versions here
 #	if GEARS4
 		G("Gears of War 4", gears4, GAME_Gears4),

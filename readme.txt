@@ -1,9 +1,14 @@
 UE Viewer
-(c) Konstantin Nosov (Gildor), 2007-2021
+(c) Konstantin Nosov (Gildor), 2007-2022
 
 
 Please support the development by making a donation here:
 https://www.gildor.org/en/donate
+
+
+License
+~~~~~~~
+UE Viewer is licensed under the MIT License.
 
 
 System requirements
@@ -216,6 +221,9 @@ Oodle
 
 Changes
 ~~~~~~~
+06.01.2022
+- UE4.25-Plus support; use -game=ue4.25+ or select the engine in startup UI
+
 05.09.2021
 - UE4.27 support
 
