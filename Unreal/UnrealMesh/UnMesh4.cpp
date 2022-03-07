@@ -128,6 +128,25 @@ struct FPositionVertexBuffer4
 		}
 #endif // DAYSGONE
 
+#if VALORANT
+		if (Ar.Game == GAME_Valorant)
+		{
+			int bUseFullPrecisionPositions;
+			Ar << bUseFullPrecisionPositions;
+			if (!bUseFullPrecisionPositions)
+			{
+				TArray<FVector4Half> PackedVerts;
+				PackedVerts.BulkSerialize(Ar);
+				S.Verts.AddUninitialized(PackedVerts.Num());
+				for (int i = 0; i < PackedVerts.Num(); i++)
+				{
+					S.Verts[i] = PackedVerts[i];
+				}
+				return Ar;
+			}
+		}
+#endif // VALORANT
+
 		S.Verts.BulkSerialize(Ar);
 		return Ar;
 
