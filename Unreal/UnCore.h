@@ -1027,6 +1027,13 @@ public:
 		return DataSize;
 	}
 
+	void Free() {
+		appFree((void*)DataPtr);
+		DataPtr = nullptr;
+		DataSize = 0;
+		ArPos = 0;
+	}
+
 protected:
 	const byte *DataPtr;
 	int		DataSize;
@@ -2554,6 +2561,11 @@ void appReadCompressedChunk(FArchive &Ar, byte *Buffer, int Size, int Compressio
 #define BULKDATA_Unused					0x20		// empty bulk block
 #define BULKDATA_SeparateData			0x40		// unknown name - bulk stored in a different place in the same file
 #define BULKDATA_CompressedLzx			0x80		// unknown name
+
+#if SMITE
+#define BULKDATA_Unkn					0x100       // ??? on mip 1+ if in tfc
+#define BULKDATA_CompressedOodle_SMITE  0x200       // oodle
+#endif
 
 #if BLADENSOUL
 #define BULKDATA_CompressedLzoEncr		0x100		// encrypted LZO

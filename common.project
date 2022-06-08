@@ -189,6 +189,10 @@ sources(UE4_LIBS) = {
 	$R/libs/rijndael/*.c
 }
 
+LIBINCLUDES += $R/libs/md5
+sources(MD5_LIBS) = {
+	$R/libs/md5/*.c
+}
 
 #------------------------------------------------
 #	Project-specific options

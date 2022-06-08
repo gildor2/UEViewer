@@ -1,6 +1,7 @@
 #include "Core.h"
 #include "UnCore.h"
 #include "GameFileSystem.h"
+#include "GameFileSystemSmite.h"
 
 #include "UnArchiveObb.h"
 #include "UnArchivePak.h"
@@ -815,6 +816,20 @@ void appSetRootDirectory(const char *dir, bool recurse)
 		}
 	}
 #endif // GEARS4
+
+#if SMITE
+	if(GForceGame == GAME_Smite) {
+		const CGameFileInfo* manifest = CGameFileInfo::Find("MergedFileIndexCache.bin");
+		if (manifest)
+		{
+			LoadSmiteManifest(manifest);
+		}
+		else
+		{
+			appNotify("Smite: missing MergedFileIndexCache.bin file.");
+		}
+	}
+#endif
 
 	appPrintf("Found %d game files (%d skipped) in %d folders at path \"%s\"\n", GameFiles.Num(), GNumForeignFiles, GameFolders.Num() ? GameFolders.Num()-1 : 0, dir);
 
