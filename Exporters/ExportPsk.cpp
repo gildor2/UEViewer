@@ -80,7 +80,7 @@ static void ExportCommonMeshData
 	guard(ExportCommonMeshData);
 
 	// using 'static' here to avoid zero-filling unused fields
-	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr, NormHdr;
+	static VChunkHeader MainHdr, PtsHdr, WedgHdr, FacesHdr, MatrHdr;
 	int i;
 
 #define SECT(n)		(Sections + n)
@@ -247,22 +247,6 @@ static void ExportCommonMeshData
 	}
 	unguard;
 
-	guard(Normals);
-	NormHdr.DataCount = Share.Normals.Num();
-	NormHdr.DataSize  = sizeof(CVec3);
-	SAVE_CHUNK(NormHdr, "VTXNORMS");
-	for (i = 0; i < Share.Normals.Num(); i++)
-	{
-		CVec3 Normal;
-		Unpack(Normal, Share.Normals[i]);
-		Normal.Normalize();
-#if MIRROR_MESH
-		Normal.Y = -Normal.Y;
-#endif
-		Ar << Normal.X << Normal.Y << Normal.Z;
-	}
-	unguard;
-
 	unguard;
 }
 
@@ -317,6 +301,29 @@ static void ExportExtraUV
 				Ar << UV;
 			}
 		}
+	}
+
+	unguard;
+}
+
+static void ExportVertexNormals(FArchive &Ar, const TArray<CPackedNormal> &Normals)
+{
+	guard(ExportVertexNormals);
+
+	static VChunkHeader NormalHdr;
+	NormalHdr.DataCount = Normals.Num();
+	NormalHdr.DataSize = sizeof(CVec3);
+
+	SAVE_CHUNK(NormalHdr, "VTXNORMS");
+	for (int i = 0; i < Normals.Num(); i++)
+	{
+		CVec3 Normal;
+		Unpack(Normal, Normals[i]);
+		Normal.Normalize();
+#if MIRROR_MESH
+		Normal.Y = -Normal.Y;
+#endif
+		Ar << Normal.X << Normal.Y << Normal.Z;
 	}
 
 	unguard;
@@ -461,6 +468,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 	ExportVertexColors(Ar, Lod.VertexColors, Lod.NumVerts);
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
+	ExportVertexNormals(Ar, Share.Normals);
 
 /*	if (!GExportPskx)						// nothing more to write
 		return;
@@ -900,6 +908,7 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 
 	ExportVertexColors(Ar, Lod.VertexColors, Lod.NumVerts);
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
+	ExportVertexNormals(Ar, Share.Normals);
 
 	unguard;
 }
