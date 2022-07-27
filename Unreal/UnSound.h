@@ -7,8 +7,8 @@ class USound : public UObject
 {
 	DECLARE_CLASS(USound, UObject);
 public:
+	FName				FileType;
 	float				f2C;
-	FName				f5C;
 	TLazyArray<byte>	RawData;
 
 	void Serialize(FArchive &Ar)
@@ -16,7 +16,7 @@ public:
 		guard(USound::Serialize);
 
 		Super::Serialize(Ar);
-		Ar << f5C;
+		Ar << FileType;
 #if UT2 || BATTLE_TERR || LOCO
 		if ((Ar.Game == GAME_UT2 || Ar.Game == GAME_BattleTerr || Ar.Game == GAME_Loco) && Ar.ArLicenseeVer >= 2)
 			Ar << f2C;

@@ -203,7 +203,7 @@ static bool SaveXMASound(const UObject *Obj, void *Data, int DataSize, const cha
 
 void ExportSound(const USound *Snd)
 {
-	SaveSound(Snd, (void*)&Snd->RawData[0], Snd->RawData.Num(), "unk");
+	SaveSound(Snd, (void*)&Snd->RawData[0], Snd->RawData.Num(), Snd->FileType);
 }
 
 
