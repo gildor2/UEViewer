@@ -23,6 +23,13 @@ public:
 #endif
 		Ar << RawData;
 
+		// some hack to support more games ...
+		if (Ar.Tell() < Ar.GetStopper())
+		{
+			appPrintf("USound %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+			DROP_REMAINING_DATA(Ar);
+		}
+
 		unguard;
 	}
 };
