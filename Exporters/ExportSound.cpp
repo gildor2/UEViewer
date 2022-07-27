@@ -28,7 +28,7 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 	else if (!memcmp(Data, "FSB4", 4))
 		ext = "fsb";		// FMOD sound bank
 	else if (!memcmp(Data, "MSFC", 4))
-		ext = "mp3";		// PS3 MP3 codec
+		ext = "msf";		// PS3 MP3 codec
 
 	FArchive *Ar = CreateExportArchive(Obj, EFileArchiveOptions::Default, "%s.%s", Obj->Name, ext);
 	if (Ar)
