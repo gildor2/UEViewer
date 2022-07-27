@@ -46,6 +46,7 @@ extern bool GUncook;
 extern bool GUseGroups;
 extern bool GDontOverwriteFiles;
 extern bool GDummyExport;
+extern bool GXmaExport;
 
 // forwards
 class UObject;

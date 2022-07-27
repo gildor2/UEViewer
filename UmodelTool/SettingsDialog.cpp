@@ -161,6 +161,10 @@ UIElement& UISettingsDialog::MakeExportOptions()
 			]
 			+ NewControl(UICheckbox, "Export compressed textures to dds format", &Opt.Export.ExportDdsTexture)
 		]
+		+ NewControl(UIGroup, "Sound Export")
+		[
+			NewControl(UICheckbox, "Export UE3 XMA as RIFF", &Opt.Export.ExportRiffXma)
+		]
 		+ NewControl(UICheckbox, "Don't overwrite already exported files", &Opt.Export.DontOverwriteFiles)
 		;
 }

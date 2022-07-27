@@ -7,7 +7,7 @@
 #include "Exporters.h"
 
 
-#define XMA_EXPORT		1
+bool GXmaExport = true;
 
 
 static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *DefExt)
@@ -38,8 +38,6 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 	}
 }
 
-
-#if XMA_EXPORT
 
 static void WriteRiffHeader(FArchive &Ar, int FileLength)
 {
@@ -198,8 +196,6 @@ static bool SaveXMASound(const UObject *Obj, void *Data, int DataSize, const cha
 	return true;
 }
 
-#endif // XMA_EXPORT
-
 
 void ExportSound(const USound *Snd)
 {
@@ -228,10 +224,9 @@ void ExportSoundNodeWave(const USoundNodeWave *Snd)
 	{
 		bulk = &Snd->CompressedXbox360Data;
 		ext  = "x360audio";
-#if XMA_EXPORT
-		if (SaveXMASound(Snd, bulk->BulkData, bulk->ElementCount, "xma")) return;
+
+		if (GXmaExport && SaveXMASound(Snd, bulk->BulkData, bulk->ElementCount, "xma")) return;
 		// else - detect format by data tags, like for PC
-#endif
 	}
 	else if (Snd->CompressedPS3Data.ElementCount)
 	{
