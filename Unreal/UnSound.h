@@ -21,6 +21,33 @@ public:
 		if ((Ar.Game == GAME_UT2 || Ar.Game == GAME_BattleTerr || Ar.Game == GAME_Loco) && Ar.ArLicenseeVer >= 2)
 			Ar << f2C;
 #endif
+#if HP2
+		if (Ar.Game == GAME_HP2)
+		{
+			int CoreFlags;
+			float Duration;
+			int raw_NumSamples, raw_BitsPerSample, raw_NumChannels, raw_SampleRate;
+
+			Ar << CoreFlags;
+			Ar << Duration;
+
+			// These are used for raw EA-XA
+			Ar << raw_NumSamples << raw_BitsPerSample << raw_NumChannels << raw_SampleRate;
+
+			appPrintf("USound %s: raw_NumSamples=%d, raw_BitsPerSample=%d, raw_NumChannels=%d, raw_SampleRate=%d\n",
+				Name, raw_NumSamples, raw_BitsPerSample, raw_NumChannels, raw_SampleRate);
+
+			Ar << RawData;
+
+			if (CoreFlags & 128)
+			{
+				TLazyArray<byte> LipSyncData;
+				Ar << LipSyncData;
+			}
+			return;
+		}
+#endif
+
 		Ar << RawData;
 
 		// some hack to support more games ...

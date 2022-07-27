@@ -30,6 +30,9 @@ const GameInfo GListOfGames[] = {
 	#if UNDYING
 		G("Undying", undying, GAME_Undying),
 	#endif
+	#if HP2
+		G("Harry Potter and the Chamber of Secrets", hp2, GAME_HP2),
+	#endif
 #endif // UNREAL1
 
 	// Unreal Engine 2
