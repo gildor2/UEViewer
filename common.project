@@ -44,7 +44,7 @@ CPP_STD = c++14				# allow modern C++ features
 		STDDEFS += OLDCRT								# used in code to distinguish which functions are available
 		STDDEFS += _NO_CRT_STDIO_INLINE					# UCRT (VS 2015+): without that, all printf functions will use some "common" function
 		!include $WDKCRT/msvcrt.project
-		!if "$VC_VER" >= 2015							# support for OLDCRT with modern compliers
+		!if "$VC_VER" >= 2015							# support for OLDCRT with modern compilers
 			OPTIONS += -fp:fast
 			OPTIONS += -Zc:threadSafeInit-				# disable calls to C++11 thread-safe static object initializers
 			STDDEFS += _ACRTIMP_ALT=					# remove dllimport from some CRT functions (there're just a few)

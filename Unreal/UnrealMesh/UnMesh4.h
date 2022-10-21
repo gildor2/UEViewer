@@ -16,9 +16,6 @@ class UAnimSequence4;
 #define MAX_STATIC_UV_SETS_UE4			8
 #define MAX_STATIC_LODS_UE4				8		// 4 before 4.9, 8 starting with 4.9
 
-//!! These classes should be explicitly defined
-typedef UObject UStaticMeshSocket;
-
 
 /*-----------------------------------------------------------------------------
 	USkeletalMesh
@@ -462,6 +459,35 @@ struct FStaticMaterial
 		PROP_NAME(MaterialSlotName)
 		PROP_DROP(ImportedMaterialSlotName, PropType::FName)
 		PROP_STRUC(UVChannelData, FMeshUVChannelInfo)
+	END_PROP_TABLE
+};
+
+class UStaticMeshSocket : public UObject
+{
+	DECLARE_CLASS(UStaticMeshSocket, UObject);
+	TYPE_FLAGS(TYPE_SilentLoad | TYPE_InlinePropDump);
+public:
+	UStaticMeshSocket()
+	{
+		RelativeLocation.Set(0, 0, 0);
+		RelativeRotation.Set(0, 0, 0);
+		RelativeScale.Set(1, 1, 1);
+	}
+
+	FName					SocketName;
+	FVector					RelativeLocation;
+	FRotator				RelativeRotation;
+	FVector					RelativeScale;
+	FString					Tag;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(SocketName)
+		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR(RelativeRotation)
+		PROP_VECTOR(RelativeScale)
+		PROP_STRING(Tag)
+		PROP_DROP(PreviewStaticMesh)
+		PROP_DROP(bSocketCreatedAtImport)
 	END_PROP_TABLE
 };
 
@@ -1043,6 +1069,7 @@ public:
 	REGISTER_CLASS(USkeletalMeshSocket) \
 	REGISTER_CLASS(UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
+	REGISTER_CLASS(UStaticMeshSocket) \
 	REGISTER_CLASS(FMeshBuildSettings) \
 	REGISTER_CLASS(FStaticMeshSourceModel) \
 	REGISTER_CLASS(FMeshUVChannelInfo) \
