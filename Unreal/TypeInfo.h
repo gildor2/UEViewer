@@ -201,6 +201,7 @@ namespace PropType
 	constexpr const char* FString = "FString";
 	constexpr const char* FVector = "FVector";
 	constexpr const char* FRotator = "FRotator";
+	constexpr const char* FRotator4 = "FRotator4";
 	constexpr const char* FColor = "FColor";
 	constexpr const char* FVector4 = "FVector4"; // FVector4, FQuat, FGuid etc
 }
@@ -247,6 +248,7 @@ namespace PropType
 // Structure types; note: structure names corresponds to F<StrucName> C++ struc
 #define PROP_VECTOR(Field)		_PROP_BASE(Field, PropType::FVector, FVector)
 #define PROP_ROTATOR(Field)		_PROP_BASE(Field, PropType::FRotator, FRotator)
+#define PROP_ROTATOR4(Field)	_PROP_BASE(Field, PropType::FRotator4, FRotator4)
 #define PROP_COLOR(Field)		_PROP_BASE(Field, PropType::FColor, FColor)
 
 #define END_PROP_TABLE							\

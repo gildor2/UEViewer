@@ -164,6 +164,32 @@ struct FAnimSlotGroup
 	END_PROP_TABLE
 };
 
+class USkeletalMeshSocket4 : public UObject
+{
+	DECLARE_CLASS(USkeletalMeshSocket4, UObject);
+	TYPE_FLAGS(TYPE_SilentLoad | TYPE_InlinePropDump);
+public:
+	FName					SocketName;
+	FName					BoneName;
+	FVector					RelativeLocation;
+	FRotator4				RelativeRotation;
+	FVector					RelativeScale;
+
+	USkeletalMeshSocket4()
+	{
+		RelativeLocation.Set(0, 0, 0);
+		RelativeRotation.Set(0, 0, 0);
+		RelativeScale.Set(1, 1, 1);
+	}
+	BEGIN_PROP_TABLE
+		PROP_NAME(SocketName)
+		PROP_NAME(BoneName)
+		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR4(RelativeRotation)
+		PROP_VECTOR(RelativeScale)
+	END_PROP_TABLE
+};
+
 class USkeleton : public UObject
 {
 	DECLARE_CLASS(USkeleton, UObject);
@@ -174,7 +200,7 @@ public:
 	FSmartNameContainer		SmartNames;
 	TArray<FVirtualBone>	VirtualBones;
 	TArray<FBoneNode>		BoneTree;
-	TArray<USkeletalMeshSocket*> Sockets;
+	TArray<USkeletalMeshSocket4*> Sockets;
 	TArray<FAnimSlotGroup>	SlotGroups;
 
 	BEGIN_PROP_TABLE
@@ -315,7 +341,7 @@ public:
 	TArray<FStaticLODModel4> LODModels;
 	TArray<FSkeletalMeshLODInfo> LODInfo;
 	TArray<UMorphTarget*>	MorphTargets;
-	TArray<USkeletalMeshSocket*> Sockets;
+	TArray<USkeletalMeshSocket4*> Sockets;
 #if BORDERLANDS3
 	byte					NumVertexColorChannels;
 #endif
@@ -476,14 +502,14 @@ public:
 
 	FName					SocketName;
 	FVector					RelativeLocation;
-	FRotator				RelativeRotation;
+	FRotator4				RelativeRotation;
 	FVector					RelativeScale;
 	FString					Tag;
 
 	BEGIN_PROP_TABLE
 		PROP_NAME(SocketName)
 		PROP_VECTOR(RelativeLocation)
-		PROP_ROTATOR(RelativeRotation)
+		PROP_ROTATOR4(RelativeRotation)
 		PROP_VECTOR(RelativeScale)
 		PROP_STRING(Tag)
 		PROP_DROP(PreviewStaticMesh)
@@ -1066,7 +1092,7 @@ public:
 	REGISTER_CLASS(FSkinWeightProfileInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS(UMorphTarget) \
-	REGISTER_CLASS(USkeletalMeshSocket) \
+	REGISTER_CLASS_ALIAS(USkeletalMeshSocket4, USkeletalMeshSocket) \
 	REGISTER_CLASS(UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
 	REGISTER_CLASS(UStaticMeshSocket) \

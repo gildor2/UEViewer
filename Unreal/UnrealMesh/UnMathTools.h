@@ -21,6 +21,26 @@ inline void RotatorToAxis(const FRotator& Rot, CAxis& Axis)
 //	printf("%7.3f %7.3f %7.3f\n%7.3f %7.3f %7.3f\n%7.3f %7.3f %7.3f\n", VECTOR_ARG(Axis[0]), VECTOR_ARG(Axis[1]), VECTOR_ARG(Axis[2]));
 }
 
+#if UNREAL4
+
+inline void RotatorToAxis(const FRotator4& Rot, CAxis& Axis)
+{
+	CVec3 angles;
+	angles[YAW]   = Rot.Yaw;
+	angles[PITCH] = Rot.Pitch;
+	angles[ROLL]  = Rot.Roll;
+	Axis.FromEuler(angles);
+	// X
+	Axis[0][2] *= -1;
+	// Y
+	Axis[1][2] *= -1;
+	// Z
+	Axis[2][0] *= -1;
+	Axis[2][1] *= -1;
+}
+
+#endif // UNREAL4
+
 inline void AxisToRotator(const CAxis& Axis, FRotator& Rot)
 {
 //	printf("src:\n");
