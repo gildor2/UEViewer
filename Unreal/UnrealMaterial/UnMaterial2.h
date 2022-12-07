@@ -961,6 +961,20 @@ public:
 	END_PROP_TABLE
 };
 
+class UTexCoordSource : public UTexModifier
+{
+	DECLARE_CLASS(UTexCoordSource, UTexModifier);
+public:
+	int				SourceChannel;
+
+	UTexCoordSource()
+	:	SourceChannel(1)
+	{}
+
+	BEGIN_PROP_TABLE
+		PROP_INT(SourceChannel)
+	END_PROP_TABLE
+};
 
 enum ETexEnvMapType
 {
@@ -1346,6 +1360,7 @@ public:
 	REGISTER_CLASS(UTexture)			\
 	REGISTER_CLASS(UCubemap)			\
 	REGISTER_CLASS(UFinalBlend)			\
+	REGISTER_CLASS(UTexCoordSource)		\
 	REGISTER_CLASS(UTexEnvMap)			\
 	REGISTER_CLASS(UTexOscillator)		\
 	REGISTER_CLASS(UTexPanner)			\
