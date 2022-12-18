@@ -496,6 +496,8 @@ enum EGame
 		GAME_Borderlands3 = GAME_UE4(20)+1,
 		// 4.21
 		GAME_Jedi = GAME_UE4(21)+1,
+		// 4.25
+		GAME_UE4_25_Plus = GAME_UE4(25)+1,
 		// 4.26
 		GAME_Dauntless = GAME_UE4(26)+1,
 
@@ -1202,6 +1204,7 @@ FORCEINLINE bool operator==(const FVector &V1, const FVector &V2)
 
 struct FRotator
 {
+	// UE1-UE3 FRotator, int32-based, 32768 means 180 degrees
 	int		Pitch, Yaw, Roll;
 
 	void Set(int _Yaw, int _Pitch, int _Roll)
@@ -1224,6 +1227,27 @@ struct FRotator
 		return Ar;
 	}
 };
+
+#if UNREAL4
+
+struct FRotator4
+{
+	// UE4+ FRotator, float-based, stores values in degrees
+	float	Pitch, Yaw, Roll;
+
+	void Set(float _Yaw, float _Pitch, float _Roll)
+	{
+		Pitch = _Pitch; Yaw = _Yaw; Roll = _Roll;
+	}
+
+	friend FArchive& operator<<(FArchive &Ar, FRotator4 &R)
+	{
+		Ar << R.Pitch << R.Yaw << R.Roll;
+		return Ar;
+	}
+};
+
+#endif // UNREAL4
 
 struct FQuat
 {

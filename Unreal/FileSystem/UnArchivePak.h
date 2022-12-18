@@ -76,7 +76,7 @@ struct FPakEntry
 	TArray<FPakCompressedBlock> CompressionBlocks;
 	byte		bEncrypted;					// replaced with 'Flags' in UE4.21
 
-	uint16		StructSize;					// computed value: size of FPakEntry prepended to each file
+	uint32		StructSize;					// computed value: size of FPakEntry prepended to each file
 	FPakEntry*	HashNext;					// computed value: used for fast name lookup
 
 	CGameFileInfo* FileInfo;

@@ -16,9 +16,6 @@ class UAnimSequence4;
 #define MAX_STATIC_UV_SETS_UE4			8
 #define MAX_STATIC_LODS_UE4				8		// 4 before 4.9, 8 starting with 4.9
 
-//!! These classes should be explicitly defined
-typedef UObject UStaticMeshSocket;
-
 
 /*-----------------------------------------------------------------------------
 	USkeletalMesh
@@ -167,6 +164,32 @@ struct FAnimSlotGroup
 	END_PROP_TABLE
 };
 
+class USkeletalMeshSocket4 : public UObject
+{
+	DECLARE_CLASS(USkeletalMeshSocket4, UObject);
+	TYPE_FLAGS(TYPE_SilentLoad | TYPE_InlinePropDump);
+public:
+	FName					SocketName;
+	FName					BoneName;
+	FVector					RelativeLocation;
+	FRotator4				RelativeRotation;
+	FVector					RelativeScale;
+
+	USkeletalMeshSocket4()
+	{
+		RelativeLocation.Set(0, 0, 0);
+		RelativeRotation.Set(0, 0, 0);
+		RelativeScale.Set(1, 1, 1);
+	}
+	BEGIN_PROP_TABLE
+		PROP_NAME(SocketName)
+		PROP_NAME(BoneName)
+		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR4(RelativeRotation)
+		PROP_VECTOR(RelativeScale)
+	END_PROP_TABLE
+};
+
 class USkeleton : public UObject
 {
 	DECLARE_CLASS(USkeleton, UObject);
@@ -177,7 +200,7 @@ public:
 	FSmartNameContainer		SmartNames;
 	TArray<FVirtualBone>	VirtualBones;
 	TArray<FBoneNode>		BoneTree;
-	TArray<USkeletalMeshSocket*> Sockets;
+	TArray<USkeletalMeshSocket4*> Sockets;
 	TArray<FAnimSlotGroup>	SlotGroups;
 
 	BEGIN_PROP_TABLE
@@ -318,7 +341,7 @@ public:
 	TArray<FStaticLODModel4> LODModels;
 	TArray<FSkeletalMeshLODInfo> LODInfo;
 	TArray<UMorphTarget*>	MorphTargets;
-	TArray<USkeletalMeshSocket*> Sockets;
+	TArray<USkeletalMeshSocket4*> Sockets;
 #if BORDERLANDS3
 	byte					NumVertexColorChannels;
 #endif
@@ -462,6 +485,35 @@ struct FStaticMaterial
 		PROP_NAME(MaterialSlotName)
 		PROP_DROP(ImportedMaterialSlotName, PropType::FName)
 		PROP_STRUC(UVChannelData, FMeshUVChannelInfo)
+	END_PROP_TABLE
+};
+
+class UStaticMeshSocket : public UObject
+{
+	DECLARE_CLASS(UStaticMeshSocket, UObject);
+	TYPE_FLAGS(TYPE_SilentLoad | TYPE_InlinePropDump);
+public:
+	UStaticMeshSocket()
+	{
+		RelativeLocation.Set(0, 0, 0);
+		RelativeRotation.Set(0, 0, 0);
+		RelativeScale.Set(1, 1, 1);
+	}
+
+	FName					SocketName;
+	FVector					RelativeLocation;
+	FRotator4				RelativeRotation;
+	FVector					RelativeScale;
+	FString					Tag;
+
+	BEGIN_PROP_TABLE
+		PROP_NAME(SocketName)
+		PROP_VECTOR(RelativeLocation)
+		PROP_ROTATOR4(RelativeRotation)
+		PROP_VECTOR(RelativeScale)
+		PROP_STRING(Tag)
+		PROP_DROP(PreviewStaticMesh)
+		PROP_DROP(bSocketCreatedAtImport)
 	END_PROP_TABLE
 };
 
@@ -1040,9 +1092,10 @@ public:
 	REGISTER_CLASS(FSkinWeightProfileInfo) \
 	REGISTER_CLASS_ALIAS(USkeletalMesh4, USkeletalMesh) \
 	REGISTER_CLASS(UMorphTarget) \
-	REGISTER_CLASS(USkeletalMeshSocket) \
+	REGISTER_CLASS_ALIAS(USkeletalMeshSocket4, USkeletalMeshSocket) \
 	REGISTER_CLASS(UDestructibleMesh) \
 	REGISTER_CLASS_ALIAS(UStaticMesh4, UStaticMesh) \
+	REGISTER_CLASS(UStaticMeshSocket) \
 	REGISTER_CLASS(FMeshBuildSettings) \
 	REGISTER_CLASS(FStaticMeshSourceModel) \
 	REGISTER_CLASS(FMeshUVChannelInfo) \

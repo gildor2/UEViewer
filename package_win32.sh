@@ -1,6 +1,6 @@
 #!/bin/bash
 archive="umodel_win32.zip"
-filelist="umodel.exe umodel_64.exe readme.txt SDL2.dll SDL2_64.dll"
+filelist="umodel.exe umodel_64.exe readme.txt SDL2.dll SDL2_64.dll LICENSE.txt"
 
 # Build 32 and 64 bit executables
 ./build.sh || exit 1

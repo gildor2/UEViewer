@@ -1,0 +1,24 @@
+/******************************************************************************
+ *	This shader allows to extract specific color channel from texture
+ *****************************************************************************/
+
+uniform sampler2D Tex;
+uniform vec4      FilterValue;
+uniform vec4      Colorizer;
+
+void VertexShaderMain()
+{
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+	gl_Position    = ftransform();
+}
+
+
+void PixelShaderMain()
+{
+	vec4 c;
+	vec2 TexCoord = gl_TexCoord[0].st;
+	c  = texture2D(Tex, TexCoord);
+	float d = dot(c, FilterValue);
+	c = vec4(d, d, d, 1.0) * Colorizer;
+	gl_FragColor = c;
+}

@@ -90,6 +90,7 @@ struct GL_t
 	void	(APIENTRY * Uniform2f) (GLint, GLfloat, GLfloat);
 	void	(APIENTRY * Uniform1i) (GLint, GLint);
 	void	(APIENTRY * Uniform3fv) (GLint, GLsizei, const GLfloat *v);
+	void	(APIENTRY * Uniform4fv) (GLint, GLsizei, const GLfloat *);
 	void	(APIENTRY * VertexAttrib3fv) (GLuint index, const GLfloat *v);
 	void	(APIENTRY * VertexAttribPointer) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 	void	(APIENTRY * BindRenderbufferEXT) (GLenum target, GLuint renderbuffer);
@@ -204,6 +205,7 @@ extern GL_t GL;
 #define glUniform2f	GL.Uniform2f
 #define glUniform1i	GL.Uniform1i
 #define glUniform3fv	GL.Uniform3fv
+#define glUniform4fv	GL.Uniform4fv
 #define glVertexAttrib3fv	GL.VertexAttrib3fv
 #define glVertexAttribPointer	GL.VertexAttribPointer
 #define glBindRenderbufferEXT	GL.BindRenderbufferEXT

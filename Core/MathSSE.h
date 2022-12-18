@@ -32,6 +32,11 @@ struct CVec4
 		v[3] = 0;
 	}
 
+	inline void Set(float x, float y, float z, float w)
+	{
+		v[0] = x; v[1] = y; v[2] = z; v[3] = w;
+	}
+
 	FORCEINLINE CVec4& operator=(const CVec3 &src)
 	{
 		Set(src);
