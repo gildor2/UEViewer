@@ -132,8 +132,8 @@ struct FPositionVertexBuffer4
 		if (Ar.Game == GAME_Valorant)
 		{
 			int bUseFullPrecisionPositions;
-			Ar << bUseFullPrecisionPositions;
-			Ar.Seek(Ar.Tell() + 28); // a Vec3 for offset and a Vec4 for distance?
+			FBoxSphereBounds Bounds;
+			Ar << bUseFullPrecisionPositions << Bounds;
 			if (!bUseFullPrecisionPositions)
 			{
 				TArray<FVector4Half> PackedVerts;
