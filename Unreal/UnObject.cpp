@@ -1269,6 +1269,19 @@ void CTypeInfo::ReadUnrealProperty(FArchive& Ar, FPropertyTag& Tag, void* Object
 			if (Ar.Game == GAME_MK && Ar.ArVer >= 677 && (*Tag.StrucName)[0] == 'F')
 				Tag.StrucName.Str++;		// Tag.StrucName points to 'FStrucName' instead of 'StrucName'
 #endif // MKVSDC
+
+#if UNREAL4
+			// Some type remap
+			if (Ar.Game >= GAME_UE4_BASE)
+			{
+				if (stricmp(Prop->TypeName, PropType::FRotator4) == 0)
+				{
+					SerializeStruc(Ar, value, Tag.ArrayIndex, "FRotator4");
+					break;
+				}
+			}
+#endif // UNREAL4
+
 			if (stricmp(Prop->TypeName+1, *Tag.StrucName) != 0 && stricmp(*Tag.StrucName, "None") != 0) // Tag.StrucName could be unknown in Batman2
 			{
 				appNotify("Struc property %s expected type %s but read %s", *Tag.Name, Prop->TypeName, *Tag.StrucName);
@@ -1512,7 +1525,7 @@ void CTypeInfo::SerializeBatmanProps(FArchive& Ar, void* ObjectData) const
 			break;
 
 		case NAME_RotatorProperty:
-			Ar << PROP(FRotator);
+			Ar << PROP(FRotator); // UE4 has the same memory layout, just int32 is replaced with float, so don't bother about different serializer
 			PROP_DBG("%d %d %d", FROTATOR_ARG(PROP(FRotator)));
 			break;
 
@@ -2032,6 +2045,12 @@ END_PROP_TABLE_EXTERNAL
 
 #if UNREAL4
 
+BEGIN_PROP_TABLE_EXTERNAL_WITH_NATIVE_SERIALIZER(FRotator4)
+	PROP_FLOAT(Yaw)
+	PROP_FLOAT(Pitch)
+	PROP_FLOAT(Roll)
+END_PROP_TABLE_EXTERNAL
+
 BEGIN_PROP_TABLE_EXTERNAL(FTransform)
 	PROP_STRUC(Rotation, FQuat)
 	PROP_VECTOR(Translation)
@@ -2061,6 +2080,7 @@ void RegisterCoreClasses()
 		REGISTER_CLASS_EXTERNAL(FBoxSphereBounds)
 	#endif
 	#if UNREAL4
+		REGISTER_CLASS_EXTERNAL(FRotator4)
 		REGISTER_CLASS_EXTERNAL(FTransform)
 		REGISTER_CLASS_EXTERNAL(FIntPoint)
 	#endif

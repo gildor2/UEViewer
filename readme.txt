@@ -192,7 +192,7 @@ LZO data compression library
 
 libmspack - a library for Microsoft compression formats
   (c) Stuart Caie
-  http://www.cabextract.org.uk/libmspack/
+  https://github.com/kyz/libmspack
 
 LZ4
   (c) Yann Collet
