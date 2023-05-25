@@ -499,7 +499,8 @@ enum EGame
 		GAME_UE4_25_Plus = GAME_UE4(25)+1,
 		// 4.26
 		GAME_Dauntless = GAME_UE4(26)+1,
-		GAME_Valorant = GAME_UE4(26)+2,
+		// 4.27
+		GAME_Valorant = GAME_UE4(27)+1,
 
 	GAME_ENGINE    = 0xFFF0000	// mask for game engine
 };
