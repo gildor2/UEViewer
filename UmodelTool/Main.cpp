@@ -861,7 +861,7 @@ int main(int argc, const char **argv)
 		{
 			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::psk;
 		}
-		if (!stricmp(opt, "png"))
+		else if (!stricmp(opt, "png"))
 		{
 			GSettings.Export.TextureFormat = ETextureExportFormat::png;
 			//!! todo: also screenshots
