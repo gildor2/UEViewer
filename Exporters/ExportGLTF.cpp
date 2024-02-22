@@ -1043,7 +1043,6 @@ void ExportStaticMeshGLTF(const CStaticMesh* Mesh)
 
 	int MaxLod = (GExportLods) ? Mesh->Lods.Num() : 1;
 	for (int Lod = 0; Lod < MaxLod; Lod++)
-	for (int Lod = 0; Lod < MaxLod; Lod++)
 	{
 		char suffix[32];
 		suffix[0] = 0;
