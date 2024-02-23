@@ -112,6 +112,9 @@ void FPackageFileSummary::Serialize4(FArchive &Ar)
 	FileVersion     = Version & 0xFFFF;
 	LicenseeVersion = LicenseeVersion & 0xFFFF;
 
+	if (GForcePackageVersion)
+		FileVersion = GForcePackageVersion;
+
 	// store file version to archive
 	Ar.ArVer         = FileVersion;
 	Ar.ArLicenseeVer = LicenseeVersion;
