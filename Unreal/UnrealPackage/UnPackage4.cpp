@@ -194,6 +194,10 @@ void FPackageFileSummary::Serialize4(FArchive &Ar)
 	int32 ThumbnailTableOffset;
 	Ar << ThumbnailTableOffset;
 
+#if VALORANT
+	if (Ar.Game == GAME_Valorant) Ar.Seek(Ar.Tell()+8); // no idea what these bytes are used for
+#endif // VALORANT
+
 	// guid
 	Ar << Guid;
 
