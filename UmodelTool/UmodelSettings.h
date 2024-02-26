@@ -80,6 +80,7 @@ struct CExportSettings
 	bool			SaveUncooked;
 	bool			SaveGroups;
 	bool			DontOverwriteFiles;
+	bool			ExportRiffXma;
 
 	BEGIN_PROP_TABLE
 		PROP_STRING(ExportPath)
@@ -91,6 +92,7 @@ struct CExportSettings
 		PROP_BOOL(SaveUncooked)
 		PROP_BOOL(SaveGroups)
 		PROP_BOOL(DontOverwriteFiles)
+		PROP_BOOL(ExportRiffXma)
 	END_PROP_TABLE
 
 	CExportSettings()

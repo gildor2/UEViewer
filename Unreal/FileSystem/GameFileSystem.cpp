@@ -30,7 +30,7 @@ char GRootDirectory[MAX_PACKAGE_PATH];
 
 static const char *PackageExtensions[] =
 {
-	"u", "ut2", "utx", "uax", "usx", "ukx",
+	"u", "ut2", "utx", "uax", "umx", "usx", "ukx",
 #if UNREAL3
 	"upk", "ut3", "xxx", "umap", "udk", "map",
 #endif

@@ -347,6 +347,7 @@ enum EGame
 
 	GAME_UE1       = 0x0100000,
 		GAME_Undying,
+		GAME_HP2,
 
 	GAME_UE2       = 0x0200000,
 		GAME_UT2,

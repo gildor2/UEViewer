@@ -7,7 +7,7 @@
 #include "Exporters.h"
 
 
-#define XMA_EXPORT		1
+bool GXmaExport = true;
 
 
 static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *DefExt)
@@ -28,7 +28,7 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 	else if (!memcmp(Data, "FSB4", 4))
 		ext = "fsb";		// FMOD sound bank
 	else if (!memcmp(Data, "MSFC", 4))
-		ext = "mp3";		// PS3 MP3 codec
+		ext = "msf";		// PS3 MP3 codec
 
 	FArchive *Ar = CreateExportArchive(Obj, EFileArchiveOptions::Default, "%s.%s", Obj->Name, ext);
 	if (Ar)
@@ -38,8 +38,6 @@ static void SaveSound(const UObject *Obj, void *Data, int DataSize, const char *
 	}
 }
 
-
-#if XMA_EXPORT
 
 static void WriteRiffHeader(FArchive &Ar, int FileLength)
 {
@@ -198,12 +196,10 @@ static bool SaveXMASound(const UObject *Obj, void *Data, int DataSize, const cha
 	return true;
 }
 
-#endif // XMA_EXPORT
-
 
 void ExportSound(const USound *Snd)
 {
-	SaveSound(Snd, (void*)&Snd->RawData[0], Snd->RawData.Num(), "unk");
+	SaveSound(Snd, (void*)&Snd->RawData[0], Snd->RawData.Num(), Snd->FileType);
 }
 
 
@@ -228,10 +224,9 @@ void ExportSoundNodeWave(const USoundNodeWave *Snd)
 	{
 		bulk = &Snd->CompressedXbox360Data;
 		ext  = "x360audio";
-#if XMA_EXPORT
-		if (SaveXMASound(Snd, bulk->BulkData, bulk->ElementCount, "xma")) return;
+
+		if (GXmaExport && SaveXMASound(Snd, bulk->BulkData, bulk->ElementCount, "xma")) return;
 		// else - detect format by data tags, like for PC
-#endif
 	}
 	else if (Snd->CompressedPS3Data.ElementCount)
 	{

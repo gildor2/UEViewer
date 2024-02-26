@@ -33,6 +33,7 @@
 #define DEUS_EX			1
 #define RUNE			1
 #define UNDYING			1
+#define HP2				1
 #endif
 
 // requires UNREAL25

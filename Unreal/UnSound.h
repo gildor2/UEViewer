@@ -7,8 +7,8 @@ class USound : public UObject
 {
 	DECLARE_CLASS(USound, UObject);
 public:
+	FName				FileType;
 	float				f2C;
-	FName				f5C;
 	TLazyArray<byte>	RawData;
 
 	void Serialize(FArchive &Ar)
@@ -16,12 +16,46 @@ public:
 		guard(USound::Serialize);
 
 		Super::Serialize(Ar);
-		Ar << f5C;
+		Ar << FileType;
 #if UT2 || BATTLE_TERR || LOCO
 		if ((Ar.Game == GAME_UT2 || Ar.Game == GAME_BattleTerr || Ar.Game == GAME_Loco) && Ar.ArLicenseeVer >= 2)
 			Ar << f2C;
 #endif
+#if HP2
+		if (Ar.Game == GAME_HP2)
+		{
+			int CoreFlags;
+			float Duration;
+			int raw_NumSamples, raw_BitsPerSample, raw_NumChannels, raw_SampleRate;
+
+			Ar << CoreFlags;
+			Ar << Duration;
+
+			// These are used for raw EA-XA
+			Ar << raw_NumSamples << raw_BitsPerSample << raw_NumChannels << raw_SampleRate;
+
+			appPrintf("USound %s: raw_NumSamples=%d, raw_BitsPerSample=%d, raw_NumChannels=%d, raw_SampleRate=%d\n",
+				Name, raw_NumSamples, raw_BitsPerSample, raw_NumChannels, raw_SampleRate);
+
+			Ar << RawData;
+
+			if (CoreFlags & 128)
+			{
+				TLazyArray<byte> LipSyncData;
+				Ar << LipSyncData;
+			}
+			return;
+		}
+#endif
+
 		Ar << RawData;
+
+		// some hack to support more games ...
+		if (Ar.Tell() < Ar.GetStopper())
+		{
+			appPrintf("USound %s: dropping %d bytes\n", Name, Ar.GetStopper() - Ar.Tell());
+			DROP_REMAINING_DATA(Ar);
+		}
 
 		unguard;
 	}
@@ -245,7 +279,8 @@ public:
 
 
 #define REGISTER_SOUND_CLASSES		\
-	REGISTER_CLASS(USound)
+	REGISTER_CLASS(USound)	\
+	REGISTER_CLASS_ALIAS(USound, UMusic)
 
 #define REGISTER_SOUND_CLASSES_UE3	\
 	REGISTER_CLASS(USoundNodeWave)
