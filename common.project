@@ -63,8 +63,6 @@ CPP_STD = c++14				# allow modern C++ features
 	!endif
 	!if "$PLATFORM" ne "osx"
 		STDLIBS += GL
-	!else
-		CPP_STD = c++2a									# https://github.com/gildor2/UEViewer/issues/183#issuecomment-846745134
 	!endif
 
 	LIBC      = shared
