@@ -347,6 +347,7 @@ enum EGame
 
 	GAME_UE1       = 0x0100000,
 		GAME_Undying,
+		GAME_HarryPotter2,
 
 	GAME_UE2       = 0x0200000,
 		GAME_UT2,
@@ -1118,6 +1119,17 @@ struct FVector
 {
 	float	X, Y, Z;
 
+	// Constructors.
+	FVector() {}
+
+	FVector(float InX, float InY, float InZ)
+	:	X(InX), Y(InY), Z(InZ)
+	{}
+
+	explicit FVector(float In)
+	:	X(In), Y(In), Z(In)
+	{}
+
 	void Set(float _X, float _Y, float _Z)
 	{
 		X = _X; Y = _Y; Z = _Z;
@@ -1148,6 +1160,7 @@ struct FVector
 	{
 		X *= value; Y *= value; Z *= value;
 	}
+
 
 	friend FArchive& operator<<(FArchive &Ar, FVector &V)
 	{

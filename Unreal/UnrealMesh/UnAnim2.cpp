@@ -18,7 +18,7 @@ UMeshAnimation::~UMeshAnimation()
 }
 
 
-void UMeshAnimation::ConvertAnims()
+void UMeshAnimation::ConvertAnims(bool bShouldAdjustTime /* = true */)
 {
 	guard(UMeshAnimation::ConvertAnims);
 
@@ -62,7 +62,7 @@ void UMeshAnimation::ConvertAnims()
 			CopyArray(T->KeyTime, A.KeyTime);
 			// usually MotionChunk.TrackTime is identical to NumFrames, but some packages exists where
 			// time channel should be adjusted
-			if (M.TrackTime > 0)
+			if (bShouldAdjustTime && M.TrackTime > 0)
 			{
 				float TimeScale = Src.NumFrames / M.TrackTime;
 				for (int k = 0; k < T->KeyTime.Num(); k++)
