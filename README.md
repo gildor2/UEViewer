@@ -197,29 +197,30 @@ Directory structure
 -------------------
 Below is the list of major folders which exists in this repository or which are generated during build process.
 ```
-├── .vs                   # Visual Studio 2019 project files
-├── .vscode               # Visual Studio Code project files
-├── Core                  # corelibraries not related to Unreal engine
-│   └── GL                # OpenGL wrapper builder
-├── Docs                  # miscellaneous text files
-├── Exporters             # exporters for different object types
-├── Libs                  # third-party libraries used for building
-├── MeshInstance          # mesh renderers
-├── obj                   # all compiled object files goes there
+├── .vs                                 # Visual Studio 2019 project files
+├── .vscode                             # Visual Studio Code project files
+├── Core                                # corelibraries not related to Unreal engine
+│   └── GL                              # OpenGL wrapper builder
+├── Docs                                # miscellaneous text files
+├── Exporters                           # exporters for different object types
+├── Libs                                # third-party libraries used for building
+├── MeshInstance                        # mesh renderers
+├── obj                                 # all compiled object files goes there
 ├── Tools
-│   ├── CompatTable       # source of compatibility table
-│   ├── MaxActorXImport   # ActorX Importer script for 3ds Max
-│   ├── PackageExtract    # Unreal package extractor source
-│   └── PackageUnpack     # unreal package decompressor source
-├── UI                    # library used to show UI on Windows
-├── UmodelTool            # source code of umodel itself
-├── Unreal                # source code of Unreal Engine framework
-│   └── Shaders           # shaders used in UModel's renderer
-├── Viewers               # viewers for different object types
-├── build.sh              # main build script
-├── common.project        # main project file, reused between different sub-projects
-├── t.bat                 # Windows CMD caller for test.sh
-└── test.sh               # internal script used for testing
+│   ├── CompatTable                     # source of compatibility table
+│   ├── MaxActorXImport                 # ActorX Importer script for 3ds Max
+│   ├── PackageExtract                  # Unreal package extractor source
+│   └── PackageUnpack                   # unreal package decompressor source
+├── UI                                  # library used to show UI on Windows
+├── UmodelTool                          # source code of umodel itself
+├── Unreal                              # source code of Unreal Engine framework
+│   └── Shaders                         # shaders used in UModel's renderer
+├── Viewers                             # viewers for different object types
+├── build.sh                            # main build script
+├── convert_props_txt_to_json.py        # script for converting materials .props.txt files to json format
+├── build.sh                            # main build script
+├── t.bat                               # Windows CMD caller for test.sh
+└── test.sh                             # internal script used for testing
 ```
 
 License
