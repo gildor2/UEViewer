@@ -643,6 +643,97 @@ static int GetRealTextureOffset_MH(const UTexture2D *Obj, int MipIndex)
 
 #endif // MARVEL_HEROES
 
+#if SMITE
+#include "../FileSystem/GameFileSystemSmite.h"
+#include "../UnrealPackage/UnPackageUE3Reader.h"
+
+static bool LoadBulkTextureSMITE(const UTexture2D* texture, const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, bool verbose) {
+	FMemReader* MemAr = nullptr;
+	const FTexture2DMipMap &Mip = MipsArray[MipIndex];
+
+	int i;
+	static char buf[2048];
+	for(i = 0; i < 4; ++i) {
+		static char tmp[2048];
+		texture->GetFullName(ARRAY_ARG(tmp), true, true, false);
+		switch(i) {
+			case 0:
+				appSprintf(ARRAY_ARG(buf), "%s", tmp);
+				break;
+			case 1:
+				if(texture->Package == nullptr) {
+					continue;
+				}
+				appSprintf(ARRAY_ARG(buf), "%s.%s", texture->Package->Name, tmp);
+				break;
+			case 2:
+				appSprintf(ARRAY_ARG(buf), "Textures.%s", tmp);
+				break;
+			case 3:
+				if(texture->Package == nullptr) {
+					continue;
+				}
+				appSprintf(ARRAY_ARG(buf), "%s.Textures.%s", texture->Package->Name, tmp);
+				break;
+		}
+		char *s = buf;
+		int len = 0;
+		if(verbose) {
+			appPrintf("Smite: Finding %s (Mip %d) in MergedFileIndexCache\n", buf, MipIndex);
+		}
+		while (*s) {
+			*s = toupper((unsigned char) *s);
+			len++;
+			s++;
+		}
+
+		MemAr = GetSmiteBlob(buf, len, MipIndex, "tfc");
+		if(MemAr != NULL) {
+			break;
+		}
+	}
+
+	if(MemAr == NULL) {
+		appPrintf("Smite: unable to find %s (Mip %d) in MergedFileIndexCache\n", texture->Name, MipIndex);
+		return false;
+	}
+
+	FCompressedChunkHeader H;
+	*MemAr << H;
+	TArray<FCompressedChunk> Chunks;
+	FCompressedChunk *Chunk = new (Chunks) FCompressedChunk;
+	Chunk->UncompressedOffset = 0;
+	Chunk->UncompressedSize   = H.Sum.UncompressedSize;
+	Chunk->CompressedOffset   = 0;
+	Chunk->CompressedSize     = H.Sum.CompressedSize;
+	FByteBulkData *Bulk = const_cast<FByteBulkData*>(&Mip.Data);
+	int flags = COMPRESS_LZO;
+	if (Bulk->BulkDataFlags & BULKDATA_CompressedOodle_SMITE) flags = COMPRESS_OODLE;
+	else if (Bulk->BulkDataFlags & BULKDATA_CompressedZlib) flags = COMPRESS_ZLIB;
+	else if (Bulk->BulkDataFlags & BULKDATA_CompressedLzx) flags = COMPRESS_LZX;
+
+	FUE3ArchiveReader* Ar = new FUE3ArchiveReader(MemAr, flags, Chunks);
+	Ar->IsFullyCompressed = true;
+
+	if (verbose)
+	{
+		appPrintf("Reading %s mip level %d (%dx%d) from TFC\n", texture->Name, MipIndex, Mip.SizeX, Mip.SizeY);
+	}
+
+	Bulk->BulkDataSizeOnDisk = H.Sum.UncompressedSize;
+	Bulk->ElementCount = H.Sum.UncompressedSize;
+	Bulk->BulkDataOffsetInFile = 0;
+	int backup = Bulk->BulkDataFlags;
+	Bulk->BulkDataFlags = 0; // wipe compression flags temporarily
+	Bulk->SerializeData(*Ar);
+	Bulk->BulkDataFlags = backup;
+
+	MemAr->Free();
+	delete Ar;
+	return true;
+}
+#endif // SMITE
+
 
 bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int MipIndex, const char* tfcSuffix, bool verbose) const
 {
@@ -656,6 +747,11 @@ bool UTexture2D::LoadBulkTexture(const TArray<FTexture2DMipMap> &MipsArray, int 
 	FStaticString<MAX_PACKAGE_PATH> bulkFileName;
 	if (TextureFileCacheName != "None")
 	{
+		#if SMITE
+		if(Package && Package->Game == GAME_Smite) {
+			return LoadBulkTextureSMITE(this, MipsArray, MipIndex, verbose);
+		}
+		#endif
 		// TFC file is assigned
 		bulkFileName = *TextureFileCacheName;
 
@@ -1014,6 +1110,11 @@ bool UTexture2D::GetTextureData(CTextureData &TexData) const
 				//?? Separate this function ?
 				//!! * -notfc cmdline switch
 				//!! * material viewer: support switching mip levels (for xbox decompression testing)
+				#if SMITE
+				if(Package && Package->Game == GAME_Smite) {
+					bulkFailed = false;
+				} else
+				#endif
 				if (Bulk.BulkDataFlags & BULKDATA_Unused) continue;		// mip level is stripped
 				if (!(Bulk.BulkDataFlags & BULKDATA_StoreInSeparateFile)) continue; // equals to BULKDATA_PayloadAtEndOfFile for UE4
 				// some optimization in a case of missing bulk file
