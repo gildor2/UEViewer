@@ -306,6 +306,29 @@ static void ExportExtraUV
 	unguard;
 }
 
+static void ExportVertexNormals(FArchive &Ar, const TArray<CPackedNormal> &Normals)
+{
+	guard(ExportVertexNormals);
+
+	static VChunkHeader NormalHdr;
+	NormalHdr.DataCount = Normals.Num();
+	NormalHdr.DataSize = sizeof(CVec3);
+
+	SAVE_CHUNK(NormalHdr, "VTXNORMS");
+	for (int i = 0; i < Normals.Num(); i++)
+	{
+		CVec3 Normal;
+		Unpack(Normal, Normals[i]);
+		Normal.Normalize();
+#if MIRROR_MESH
+		Normal.Y = -Normal.Y;
+#endif
+		Ar << Normal.X << Normal.Y << Normal.Z;
+	}
+
+	unguard;
+}
+
 static void CopyBoneName(char* Dst, int DstLen, const char* Src)
 {
 	int NameLength = strlen(Src);
@@ -445,6 +468,7 @@ static void ExportSkeletalMeshLod(const CSkeletalMesh &Mesh, const CSkelMeshLod 
 
 	ExportVertexColors(Ar, Lod.VertexColors, Lod.NumVerts);
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
+	ExportVertexNormals(Ar, Share.Normals);
 
 /*	if (!GExportPskx)						// nothing more to write
 		return;
@@ -884,6 +908,7 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 
 	ExportVertexColors(Ar, Lod.VertexColors, Lod.NumVerts);
 	ExportExtraUV(Ar, Lod.ExtraUV, Lod.NumVerts, Lod.NumTexCoords);
+	ExportVertexNormals(Ar, Share.Normals);
 
 	unguard;
 }

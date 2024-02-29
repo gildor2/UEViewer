@@ -2,7 +2,7 @@
 #define __PSK_H__
 
 
-#define PSK_VERSION		20100422
+#define PSK_VERSION		20210917 // VTXNORMS chunk
 #define PSA_VERSION		20100422
 
 /******************************************************************************
