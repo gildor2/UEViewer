@@ -159,6 +159,9 @@ class USoundWave : public UObject // actual parent is USoundBase
 	DECLARE_CLASS(USoundWave, UObject);
 public:
 	bool				bStreaming;
+#if ARK
+	bool				bReallyUseStreamingReserved;
+#endif
 	FByteBulkData		RawData;
 	FGuid				CompressedDataGuid;
 	TArray<FSoundFormatData> CompressedFormatData; // FFormatContainer in UE4
@@ -171,12 +174,18 @@ public:
 
 	USoundWave()
 	:	bStreaming(false)
+	#if ARK
+		, bReallyUseStreamingReserved(false)
+	#endif
 	{}
 
 	BEGIN_PROP_TABLE
 		PROP_INT(NumChannels)
 		PROP_INT(SampleRate)
 		PROP_BOOL(bStreaming)
+#if ARK
+		PROP_BOOL(bReallyUseStreamingReserved) // equivalent of bStreaming in ARK
+#endif
 		PROP_DROP(bHasVirtualizeWhenSilent)
 		PROP_DROP(bVirtualizeWhenSilent)
 		PROP_DROP(Duration)
@@ -188,6 +197,13 @@ public:
 		guard(USoundWave::Serialize);
 
 		Super::Serialize(Ar);
+
+#if ARK
+		if (Ar.Game == GAME_Ark)
+		{
+			bStreaming = bReallyUseStreamingReserved;
+		}
+#endif
 
 		bool bCooked;
 		Ar << bCooked;
@@ -216,6 +232,14 @@ public:
 
 		if (bStreaming)
 		{
+#if ARK
+			if (Ar.Game == GAME_Ark)
+			{
+				// another bCooked. this one is relevant for streaming.
+				// if negative, there's no data after it, but that won't happen with client assets.
+				Ar << bCooked;
+			}
+#endif
 			int32 NumChunks;
 			FName AudioFormat;
 			Ar << NumChunks << StreamedFormat;
