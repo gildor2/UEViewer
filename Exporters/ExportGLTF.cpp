@@ -971,6 +971,11 @@ static void ExportMeshLod(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 		"  ]\n"
 	);
 
+	// Closing brace
+	Ar.Printf("}\n");
+
+	unguard;
+
 	// Write binary data
 	guard(WriteBIN);
 	for (int i = 0; i < Context.Data.Num(); i++)
@@ -981,11 +986,6 @@ static void ExportMeshLod(GLTFExportContext& Context, const CBaseMeshLod& Lod, c
 #endif
 		Ar2.Serialize(B.Data, B.DataSize);
 	}
-	unguard;
-
-	// Closing brace
-	Ar.Printf("}\n");
-
 	unguard;
 }
 
