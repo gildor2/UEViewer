@@ -773,7 +773,7 @@ void FArchive::DetectGame()
 	if (ArVer == 721 && ArLicenseeVer == 148)	SET(GAME_Thief4);
 #endif
 #if BIOSHOCK3
-	if (ArVer == 727 && ArLicenseeVer == 75)	SET(GAME_Bioshock3);
+	if (ArVer == 727 && (ArLicenseeVer == 75 || ArLicenseeVer == 69))	SET(GAME_Bioshock3);
 #endif
 #if BULLETSTORM
 	if (ArVer == 742 && ArLicenseeVer == 29)	SET(GAME_Bulletstorm);

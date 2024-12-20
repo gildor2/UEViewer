@@ -206,7 +206,7 @@ void FPackageFileSummary::Serialize3(FArchive &Ar)
 		Ar << DependsOffset;
 
 #if BIOSHOCK3
-	if (Ar.Game == GAME_Bioshock3) goto read_unk38;
+	if (Ar.Game == GAME_Bioshock3 && Ar.ArLicenseeVer > 69) goto read_unk38;
 #endif
 
 #if DUNDEF
