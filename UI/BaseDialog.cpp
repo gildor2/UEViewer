@@ -306,7 +306,7 @@ void UIElement::MeasureTextVSize(const char* text, int* width, int* height, HWND
 	assert(wnd);
 
 	// get control's width
-	int w = *width;
+	int w = width ? *width : -1;
 	if (w < 0)
 	{
 		//!! see AllocateUISpace() for details, should separate common code in some way
