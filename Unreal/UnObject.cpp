@@ -71,9 +71,16 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 	guard(UObject::GetFullName);
 	if (!Package)
 	{
+		// Simulate package name for dummy textures
+		if (PackageIndex == INDEX_NONE && Name)
+		{
+			appSprintf(buf, bufSize, "Texture2D'%s.%s'", "MissingPackage_U", Name);
+			return;
+		}
 		buf[0] = 0;
 		return;
 	}
+
 #if UNREAL4
 	if (Package != NULL && Package->Game >= GAME_UE4_BASE)
 	{
@@ -92,7 +99,24 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 #endif // UNREAL4
 	if (PackageIndex == INDEX_NONE)
 	{
-		// This is a dummy generated export
+		if (Package)
+		{
+			if (Package->GetFilename().Len() > 0)
+			{
+				appSprintf(buf, bufSize, *Package->GetFilename(), ".%s", Package->Name, Name ? Name : "Unnamed");
+				return;
+			}
+			return;
+		}
+		// Handle dummy textures with missing package
+		if (!Package)
+		{
+			// Use fallback name if available
+			appSprintf(buf, bufSize, "MissingPackageZ.%s", Name ? Name : "Unnamed");
+			return;
+		}
+
+		// Normal dummy export with known package
 		appSprintf(buf, bufSize, "%s.%s", Package->Name, Name);
 		return;
 	}

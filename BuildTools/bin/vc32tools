@@ -1,0 +1,485 @@
+#!/bin/bash
+
+# Visual C++ compiler (CL) helper script.
+# The main purpose of this is to locate the compiler, setup environment and execute it with provided parameters.
+# It has a possibility to build makefiles using NMAKE or JOM backend, or compile (and possibly link) separate
+# C/C++ files for small applications. To get list of possible options run vc32tools without arguments.
+
+# Created by Konstantin Nosov (Gildor)
+# https://github.com/gildor2/BuildTools
+# Public Domain (https://unlicense.org/)
+
+
+# Some references for VS2017+ compiler location.
+# Article: https://devblogs.microsoft.com/cppblog/finding-the-visual-c-compiler-tools-in-visual-studio-2017/.
+# Vswhere does not enumerate toolsets: https://github.com/Microsoft/vswhere/issues/151
+# Useful batch files:
+# "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat"
+# - top-level batch, calls other, like vsdevcmd.bat, core\vsdevcmd_start.bat, parse_cmd.bat
+# "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\vsdevcmd\ext\vcvars.bat"
+# - final batch, selected toolset version is in __VCVARS_VERSION env variable.
+
+
+# Color constants
+norm="\\033[0m"
+hgl="\\033[1"
+force_nmake=""
+
+# Usage: CheckVC [params...]
+#	$1 = path - typical path to Visual Studio installation, not used since VC2017
+#	$2 = vc_version - classic version number
+#	$3 = vc_year - "year" version
+#	$4 = toolset - toolset version, used when multiple C++ toolsets are installed for single VS
+# Output:
+#	$workpath - base path to VS installation
+#	$found_vc - 'classic' version of VS which is located
+#	$found_vc_year - 'year' version
+#	$vs_compiler - path to compiler, used for VS2017+
+
+function CheckVC()
+{
+	platform="32 bit"
+	[ "$amd64" ] && platform="64 bit"
+
+	# special case for VS2017+
+	# see https://github.com/Microsoft/vswhere/wiki/Find-VC for details (PowerShell case)
+	if [ $3 -ge 2017 ]; then
+		vswhere="$progs/Microsoft Visual Studio/Installer/vswhere.exe"
+		[ -f "$vswhere" ] || return
+		version_filter="-version [$2.0,$(($2+1)).0)"
+		display_name=`"$vswhere" $version_filter -property displayName`
+		base_path=`"$vswhere" $version_filter -property installationPath`
+		[ "$base_path" ] || return
+		# get version file for specified toolset
+		version_file="$base_path/VC/Auxiliary/Build/Microsoft.VCToolsVersion.v$4.default.txt"
+		if ! [ -f "$version_file" ]; then
+			# get any toolset (most likely that will select toolset for current compiler)
+			version_file="$base_path/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt"
+			[ -f "$version_file" ] || return
+		fi
+		vs_subver=`cat "$version_file"`
+		vs_compiler="$base_path/VC/Tools/MSVC/$vs_subver"
+		[ -d "$vs_compiler" ] || return
+		workpath="$base_path/VC"
+		found_vc=$2
+		found_vc_year=$3
+		echo "$display_name toolset $4 ($vs_subver) [$platform] found at \"$base_path\" ..."
+	else
+		# pre-VS2017 path
+		# verify presence
+		vspath="$1"
+		if [ -f "$vspath/bin/nmake.exe" ]; then
+			if [ "$amd64" ] && ! [ -f "$vspath/bin/amd64/nmake.exe" ]; then
+				return
+			fi
+			workpath="$vspath"
+			found_vc=$2
+			found_vc_year=$3
+			echo "Using Visual C++ $2 ($3) [$platform] found at \"$vspath\" ..."
+		fi
+	fi
+}
+
+
+function CheckSDK()
+{
+	if [ "$sdkpath" ]; then
+		return  # already found
+	fi
+	# verify presence
+	if [ -d "$1" ] && [ -f "$1/bin/rc.exe" ]; then
+#		sdkpath="/cygdrive/${1//:/}"	# d:/path -> /cygdrive/d/path	- CygWin
+#		sdkpath="/${1//:/}"				# d:/path -> /d/path			- MSys
+		sdkpath="$1"					# no path replacement
+		echo "Found Win32 SDK at \"$1\" ..."
+	fi
+}
+
+
+function AddPath()
+{
+	# Unix has multiple items separated with ":" which is used as drive separator on Windows systems
+#	local p="/cygdrive/${1//:/}"		# d:/path -> /cygdrive/d/path	- CygWin
+	local p="/${1//:/}"					# d:/path -> /d/path			- MSys
+	# Add new path before previously defined ones, so for example if older path has "link.exe" (part of Git),
+	# we'll use one from Visual Studio (i.e. the correct one)
+	PATH="$p:$PATH"
+}
+
+
+# Parameters:
+# $1 = version, which is either version (6, 7, ...), year (2008, 2010, ...) or "latest"
+function LocateSuitableVC()
+{
+	local VC=(
+		# Format: <path-to-vs> <version> <year> <toolset>
+		"$progs/microsoft visual studio/vc98"    6 0 0			# 6.0
+		"$progs/microsoft visual studio .net/vc7" 7 2002 0		# 7.0
+		"$progs/microsoft visual studio .net 2003/vc7" 7 2003 0	# 7.1
+		"$progs/microsoft visual studio 8/vc"    8  2005 0		# 8.0
+		"$progs/microsoft visual studio 9.0/vc"  9  2008 90		# 9.0
+		"$progs/microsoft visual studio 10.0/vc" 10 2010 100	# 10.0
+		"$progs/microsoft visual studio 11.0/vc" 11 2012 0		# 11.0
+		"$progs/microsoft visual studio 12.0/vc" 12 2013 120	# 12.0
+		"$progs/microsoft visual studio 14.0/vc" 14 2015 140	# 14.0
+		"" 15 2017 141		# 15.0
+		"" 16 2019 142		# 16.0
+		"" 17 2022 143		# 17.0
+	)
+
+	if [ "$1" == "latest" ]; then
+		# Find newest VC, should iterate array in reverse order
+		local i=${#VC[@]}
+		while [ $i -gt 0 ]; do
+			((i=$i-4))
+			local vc_path="${VC[$i]}"
+			local vc_num="${VC[$i+1]}"
+			local vc_year="${VC[$i+2]}"
+			local vc_tool="${VC[$i+3]}"
+#			echo "($vc_path) $vc_num $vc_year toolset=$vc_tool"
+
+			CheckVC "$vc_path" $vc_num $vc_year $vc_tool
+			[ "$workpath" ] && break
+		done
+	else
+		local i=0
+		toolset=0
+		while [ $i -lt ${#VC[@]} ]; do
+			local vc_path="${VC[$i]}"
+			local vc_num="${VC[$i+1]}"
+			local vc_year="${VC[$i+2]}"
+			local vc_tool="${VC[$i+3]}"
+			((i=$i+4))
+#			echo "($vc_path) $vc_num $vc_year toolset=$vc_tool"
+
+			if [ "$1" ]; then
+				# "continue" if version is not large enough
+				if [ "$1" -gt 2000 ]; then
+					# this is year-based version
+					[ "$1" -gt "$vc_year" ] && continue
+				else
+					[ "$1" -gt "$vc_num" ] && continue
+				fi
+			fi
+			[ $toolset == 0 ] && toolset=$vc_tool
+
+			CheckVC "$vc_path" $vc_num $vc_year $toolset
+			[ "$workpath" ] && break
+		done
+	fi
+}
+
+
+function PrepareVC()
+{
+	if [ "$workpath" ]; then
+		return			# action already performed
+	fi
+
+	# find "Program Files" dir
+	# note: on 64-bit systems "PROGRAMFILES" will contain path to (x86) dir
+	if [ "$PROGRAMFILES" ]; then
+		progs="${PROGRAMFILES//\\//}"		# get from environment with slash replacement
+	else
+		progs="c:/program files"
+	fi
+	# When running 64-bit bash on Windows, it will use 64-bit Program Files by default. However,
+	# Visual Studio is always located in x86 directory, so switch to using it.
+	if [ -d "$progs (x86)" ]; then
+		progs="$progs (x86)"
+	fi
+
+	# ---------- Find Visual Studio ----------
+
+	LocateSuitableVC $vc_ver
+
+	if [ ! "$workpath" ]; then
+		echo -e "${hgl};31mERROR: Visual C++ was not found.${norm}"
+		exit 1
+	fi
+
+	# compute path to additional dlls
+	case $found_vc in
+		6)	ide="$workpath/../common/msdev98/bin"
+			;;
+		*)	ide="$workpath/../common7/IDE"
+			;;
+	esac
+
+	# setup environment variables
+	if [ $found_vc -ge 15 ]; then
+		if [ "$amd64" ]; then
+			AddPath "$vs_compiler/bin/Hostx64/x64"
+			LIB="$vs_compiler/lib/x64"
+		else
+			# Note: AddPath will prepend PATH, so we're adding x64 before x86, however x86 will be first for lookup
+			AddPath "$vs_compiler/bin/Hostx64/x64" # pick dlls from another target's toolset for mspdbcore.dll
+			AddPath "$vs_compiler/bin/Hostx64/x86"
+			LIB="$vs_compiler/lib/x86"
+		fi
+		INCLUDE="$vs_compiler/include"
+	else
+		# pre-VS2017 paths
+		if [ "$amd64" ]; then
+			AddPath "$workpath/bin/amd64"
+		else
+			AddPath "$workpath/bin"
+			AddPath "$ide"
+		fi
+		INCLUDE="$workpath/INCLUDE"
+		INCLUDE="$INCLUDE;$workpath/MFC/INCLUDE;$workpath/PlatformSDK/Include;$workpath/PlatformSDK/Include/prerelease" #?? may be not needed to include this
+		#?? Again, "PlatformSDK" is below - it seems that was for VS 2003
+		if [ -z "$amd64" ]; then
+			LIB="$workpath/LIB;$workpath/PlatformSDK/LIB"
+		else
+			LIB="$workpath/LIB/amd64;$workpath/PlatformSDK/LIB/x64"
+		fi
+	fi
+
+	# ---------- Find Platform SDK ----------
+
+	CheckSDK "$progs/Microsoft SDKs/Windows/v7.1"
+	CheckSDK "$progs/Microsoft SDKs/Windows/v7.0A"
+	CheckSDK "C:/Program Files/Microsoft SDKs/Windows/v6.0A"	# NOTE: not in "Program Files (x86)"
+
+	if [ "$sdkpath" ]; then
+		INCLUDE="$INCLUDE;$sdkpath/Include"
+		if [ -z "$amd64" ]; then
+			LIB="$LIB;$sdkpath/Lib"
+		else
+			LIB="$LIB;$sdkpath/Lib/x64"
+		fi
+		AddPath "$sdkpath/bin"			# VC9+ has no RC.exe in its bin directory, using it from the SDK
+	fi
+
+	# ---------- CRT for modern C++ compilers ----------
+
+	if [ -z "$sdkpath" ] || [ $found_vc -ge 14 ]; then
+		# VS starting with 2015 version doesn't have CRT, it uses UCRT from Windows Kits/10
+		win10sdk="$progs/Windows Kits/10"
+		if [ -d "$win10sdk" ]; then
+#			olddir="$PWD"
+#			cd "$win10sdk/Include"
+			win10sdk_ver="0.0.0.0"
+#			for d in "$win10sdk/Include/*"; do - changing dir + return to olddir will not work correctly for symlink'ed current directory
+			for d in `ls "$win10sdk/Include"`; do	# we're using 'ls ...' here because simple "path_with_spaces/*" will not work
+				if [[ $d > $win10sdk_ver ]]; then
+					win10sdk_ver=$d
+				fi
+			done
+#			cd "$olddir"
+			INCLUDE="$INCLUDE;$win10sdk/Include/$win10sdk_ver/ucrt;$win10sdk/Include/$win10sdk_ver/um;$win10sdk/Include/$win10sdk_ver/shared"
+			if [ -z "$amd64" ]; then
+				lib_subdir=x86
+			else
+				lib_subdir=x64
+			fi
+			LIB="$LIB;$win10sdk/Lib/$win10sdk_ver/ucrt/$lib_subdir;$win10sdk/Lib/$win10sdk_ver/um/$lib_subdir"
+			# include SDK bin directory (required for rc.exe)
+			AddPath "$win10sdk/bin/$lib_subdir"
+			AddPath "$win10sdk/bin/$win10sdk_ver/$lib_subdir"
+		else
+			echo "ERROR: $win10sdk not found"
+			exit 1
+		fi
+	fi
+
+#	echo " -- PATH: $workpath : $sdkpath"
+#	echo " -- INC: $INCLUDE"
+#	echo " -- LIB: $LIB"
+	export INCLUDE LIB
+}
+
+
+# Generate sound event using Visual Studio settings
+function VSEvent()
+{
+	Sound=$1
+	# We're using PowerShell to access registry and play sounds.
+	# Note: using '&' at the end to issue sound asynchronously, so script will not wait till sound completed.
+	{
+		cat <<EOF
+\$key = 'HKCU:\\AppEvents\\Schemes\\Apps\\devenv\\$Sound\.current';
+\$snd = (Get-ItemProperty -Path \$key -ErrorAction SilentlyContinue).'(default)'
+if ("\$snd" -ne "") { (New-Object Media.SoundPlayer \$snd).PlaySync(); }
+EOF
+	} | powershell -noprofile -noninteractive -command '$input | iex' &
+}
+
+
+function Make()
+{
+	local line
+	local makefile=$1
+	local mkfile
+	if [ -f $makefile ]; then
+		mkfile=$makefile
+	elif [ -f $makefile.mak ]; then
+		mkfile=$makefile.mak
+	else
+		echo -e "${hgl};31mERROR: makefile \"$makefile\" is not found$norm"
+		exit 1
+	fi
+	shift
+	PrepareVC
+	# choose jom when available
+	# "jom" is nmake replacement with multicore support
+	# http://qt-project.org/wiki/jom
+	# Also verify this CL option: http://msdn.microsoft.com/en-us/library/bb385193(v=vs.120).aspx
+	# (requires passing multiple .cpp files to CL in signle command line)
+	#?? jom is not compatible with VS2013 - has problems with simultaneous access from multiple CL.exe to single pdb file
+	if [ -f "${BASH_SOURCE%/*}/jom.exe" ] && [ -z "$force_nmake" ]; then
+		make=jom
+	else
+		make=nmake
+	fi
+	echo "$make $mkfile $*"
+	export TIMEFORMAT="Build time: %1R sec"
+	time vcfilt $make -nologo -s -f $mkfile $*
+	result=${PIPESTATUS[0]}
+	if [ $result -eq 0 ]; then
+		VSEvent "VS_BuildSucceeded"
+	else
+		VSEvent "VS_BuildFailed"
+	fi
+	return $result			# use return instead of exit
+}
+
+
+function Compile()
+{
+	#?? logging
+	local filename=""
+	local cppopt=""
+	local linkopt=""
+	PrepareVC
+	# get CPP options
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		*.c|*.cpp)
+			# another filename specified
+			filename="$filename $1"
+			;;
+		"/debug"|"--debug")
+			cppopt="$cppopt -Zi"
+			linkopt="-debug"
+			;;
+		"/link")
+			# get linker options
+			shift		# skip "/link"
+			linkopt="$linkopt $*"
+			break
+			;;
+		*)
+			cppopt="$cppopt $1"
+			;;
+		esac
+		shift
+	done
+	if [ -z "$filename" ]; then
+		echo "ERROR: filename is not specified"
+		exit 1
+	fi
+#	echo "CPP: <$cppopt> LNK: <$linkopt>"
+#	linker option "-merge:.rdata=.data" will merge sections, but produce warnings
+	vcfilt cl -nologo -O1 -MD $cppopt $filename -link -filealign:512 $linkopt
+	return ${PIPESTATUS[0]}			# use return instead of exit
+}
+
+
+function Link()
+{
+	PrepareVC
+	link $*
+}
+
+function Usage()
+{
+cat<<EOF
+Usage:
+  vc32tools [--version=ver] [--64] [--compile <options>] [--make <makefile[.mak]>] [--check] [--help]
+
+Compiler secection options:
+  --version=<Ver>   minimal Visual C++ version to use (version option must go first)
+  --64              use 64-bit compiler (by default 32-bit compiler is used)
+
+  <Ver> is VC year number or its version. Example: For VS2015 use --version=2015 or 14.
+  Use "--version=latest" to use most recent version available on the system. When not specified,
+  the first available (i.e. oldest) compiler version will be used.
+
+Compiling source code:
+  --compile         compile c/cpp source file(s)
+
+Extra options for compile:
+  <filename>        file(s) to compile
+  --debug           create pdb file
+  /link <options>   pass all following options directly to linker
+
+Executing makefile:
+  --make            build specified makefile
+  --nmake           force NMAKE build, do not use JOM (should go before --make)
+
+Calling linker:
+  --link            link source files
+
+Other options:
+  --check           verify availability of VC++
+  --help            display compiler help pages
+EOF
+}
+
+
+# NOTE: this will try to parse command even when called via "source <filename>", i.e. included
+while [ "1" ]; do
+
+	case "$1" in
+		--version=*)			# specify preferred compiler version
+			vc_ver=${1:10}
+			shift
+			continue			# process other switches
+			;;
+		--64)
+			amd64=1
+			shift
+			continue
+			;;
+		--nmake)
+			force_nmake=1
+			shift
+			continue
+			;;
+		--compile)
+			shift
+			Compile $*
+			exit
+			;;
+		--link)
+			shift
+			Link $*
+			exit
+			;;
+		--make)
+			shift
+			Make $*
+			exit
+			;;
+		--check)
+			PrepareVC
+			break
+			;;
+		--help)
+			PrepareVC
+			cl -?
+			exit 0
+			;;
+		"")		# no commands
+			Usage
+			exit 0
+			;;
+		*)
+			echo "Invalid vc32tools option $1"
+			exit 1
+			;;
+	esac
+
+done

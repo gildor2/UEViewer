@@ -13,6 +13,23 @@
 /*-----------------------------------------------------------------------------
 	Unreal package structures
 -----------------------------------------------------------------------------*/
+class UMissingTexture : public UObject
+{
+public:
+
+	FString TexturePath;
+
+	static const CTypeInfo* StaticGetTypeinfo()
+	{
+		static const CTypeInfo type("UTexture2D", NULL, sizeof(UMissingTexture), NULL, 0, TYPE_None, NULL, NULL);
+		return &type;
+	}
+	virtual const CTypeInfo* GetTypeinfo() const override
+	{
+		return StaticGetTypeinfo();
+	}
+
+};
 
 bool FPackageFileSummary::Serialize(FArchive &Ar)
 {
@@ -1141,10 +1158,29 @@ UObject* UnPackage::CreateImport(int index)
 		if (ObjIndex == INDEX_NONE)
 		{
 			appPrintf("WARNING: Import(%s.%s) was not found\n", PackageName, *Imp.ObjectName);
-			Imp.Missing = true;
-			return NULL;
+			//Imp.Missing = true;
+			UObject* Dummy = new UMissingTexture();
+
+			Dummy->Name = Imp.ObjectName;
+			Dummy->PackageIndex = INDEX_NONE;
+			//Dummy->Package = NULL;
+
+			//UnPackage* FakePackage = new UnPackage("MissingPackage.upk", NULL, true);
+			Dummy->Package = NULL;
+
+			// Cast to access TexturePath
+			UMissingTexture* MissingTex = static_cast<UMissingTexture*>(Dummy);
+			char buf[256];
+			appSprintf(ARRAY_ARG(buf), "%s.%s", PackageName, *Imp.ObjectName);
+			MissingTex->TexturePath = buf;
+
+			appPrintf("Creating dummy texture for metadata: %s\n", *MissingTex->TexturePath);
+			return MissingTex;
+
 		}
 	}
+
+
 #endif // UNREAL3
 
 	// at this point we have either Package == NULL (not found) or Package != NULL and ObjIndex is valid
@@ -1365,3 +1401,4 @@ TArray<char*>		MissingPackages;
 
 	unguardf("%s", *File->GetRelativeName());
 }
+

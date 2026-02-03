@@ -1146,6 +1146,10 @@ void UMaterial3::Serialize(FArchive &Ar)
 #endif
 
 	Super::Serialize(Ar);
+	//printf("UMaterial3::Serialize: %s\n", Name);
+	//for()
+
+
 #if UNREAL4
 	if (Ar.Game >= GAME_UE4_BASE)
 	{
@@ -1193,25 +1197,32 @@ void UMaterial3::Serialize(FArchive &Ar)
 	mask:
 		int unkMask;		// default 1
 		Ar << unkMask;
-	}
-	if (Ar.ArVer >= 656)
+	}	if (Ar.ArVer >= 656)
 	{
 		guard(SerializeFMaterialResource);
 		// Starting with version 656 UE3 has deprecated ReferencedTextures array.
 		// This array is serialized inside FMaterialResource which is not needed
 		// for us in other case.
 		// FMaterialResource serialization is below
+
+
 		TArray<FString>			f10;
-		TMap<UObject*, int>		f1C;
+		TMap<UObject*, int>		TextureMap;
 		int						f58;
 		FGuid					f60;
 		int						f80;
-		Ar << f10 << f1C << f58 << f60 << f80;
-		if (Ar.ArVer >= 656) Ar << ReferencedTextures;	// that is ...
-		// other fields are not interesting ...
+		//TArray<UTexture3*>		sus;
+
+		Ar << f10 << TextureMap << f58 << f60 << f80;
+		Ar << ReferencedTextures;	
+
+
+
 		unguard;
 	}
 	DROP_REMAINING_DATA(Ar);			//?? drop native data
 }
+
+
 
 #endif // UNREAL3

@@ -37,7 +37,22 @@ struct CMaterialParams
 	PARAM(Opacity)			\
 	PARAM(Emissive)			\
 	PARAM(Cube)				\
-	PARAM(Mask)
+	PARAM(Mask)				\
+	PARAM(Detail)			\
+	PARAM(AO)				\
+	PARAM(GlowMap)			\
+	PARAM(PaintMask)		\
+	PARAM(TeamColor)		\
+	PARAM(ColorLookup)		\
+	PARAM(DecalTexture)		\
+	PARAM(TilingPattern)	\
+	PARAM(HexMask)			\
+	PARAM(Environment)		\
+	PARAM(Reflection)		\
+	PARAM(Overlay)			\
+	PARAM(Noise)			\
+	PARAM(Roughness)		\
+	PARAM(Metallic)
 
 	bool IsNull() const
 	{
@@ -64,6 +79,24 @@ struct CMaterialParams
 	UUnrealMaterial			*Emissive;
 	UUnrealMaterial			*Cube;
 	UUnrealMaterial			*Mask;					// multiple mask textures baked into a single one
+	//New
+	UUnrealMaterial* Detail;
+	UUnrealMaterial* AO;
+	UUnrealMaterial* GlowMap;
+	UUnrealMaterial* PaintMask;
+	UUnrealMaterial* TeamColor;
+	UUnrealMaterial* ColorLookup;
+	UUnrealMaterial* DecalTexture;
+	UUnrealMaterial* TilingPattern;
+	UUnrealMaterial* HexMask;
+	UUnrealMaterial* Environment;
+	UUnrealMaterial* Reflection;
+	UUnrealMaterial* Overlay;
+	UUnrealMaterial* Noise;
+	UUnrealMaterial* Roughness;
+	UUnrealMaterial* Metallic;
+
+
 	// channels (used with Mask texture)
 	ETextureCannel			EmissiveChannel;
 	ETextureCannel			SpecularMaskChannel;

@@ -568,14 +568,17 @@ sub EmitCompilerDefs {
 			$defs2 .= " -d _WIN64 -d WIN64";
 		}
 		# Compiler
-		print "CPP  = cl.exe -nologo -c $defs1 -D _WINDOWS${winxp}\n";
+		#print "CPP  = cl.exe -nologo -c $defs1 -D _WINDOWS${winxp}\n";
+		print "CPP  = cl.exe -nologo -c /MT $defs1 -D _WINDOWS${winxp}\n";
 		# Linker
 		my $machine = ($PLATFORM eq "win64") ? "X64" : "X86";
 		print "LINK = link.exe -nologo -filealign:512 -incremental:no -machine:$machine\n";
 		# Library manager
 		print "AR   = link.exe -lib -nologo\n";		# cannot use "LIB" name
 		# Resource compiler
-		print "RC   = rc.exe -nologo -dNDEBUG -l 0x409${winxp}${defs2}\n"
+		
+		print "RC   = rc.exe -nologo -dNDEBUG -l 0x409${winxp}${defs2}\n";
+		print "LIBS = ucrt.lib legacy_stdio_definitions.lib msvcrt.lib kernel32.lib user32.lib advapi32.lib shell32.lib\n";
 	} elsif ($COMPILER eq "GnuC") {
 		my $platf = "gcc";
 		# platform override
@@ -1274,6 +1277,8 @@ sub FlushTargetText {
 			return $prefix."\t\$(AR) -out:\"$n\"$fileList";
 		}
 		$line = "\t\$(LINK) -out:\"$n\"";
+		$line .= " \$(LIBS)";
+		$line .= " /NODEFAULTLIB:LIBCMT";
 		$line .= GenerateOptions ($libpath, "-libpath:") if $libpath ne "";
 		$line .= " $stdlibs" if $stdlibs ne "";
 		$line .= " $libs" if $libs ne "";

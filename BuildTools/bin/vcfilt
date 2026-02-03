@@ -1,0 +1,90 @@
+#!/usr/bin/perl -w
+
+# Visual C++ compiler (CL) output colorizer.
+# It is intended to highlight error and warning messages from compiler to make them more noticeable.
+# The script works as output filter, however it starts compiler itself, so usual use is
+# `perl vcfilt <command line to run>`.
+
+# Created by Konstantin Nosov (Gildor)
+# https://github.com/gildor2/BuildTools
+# Public Domain (https://unlicense.org/)
+
+# Changes:
+# 20.09.2014
+# - removed 'nice' call - probably not needed anymore (previously used to give priority to this
+#   filter process over compiler, so there was no lags in output)
+# 31.01.2012
+# - do not use colorizing when not attached to terminal (redirected to a file)
+# 14.10.2011
+# - fixed strange bug with Win7 + new CygWin - pipe were not created when arguments are quoted
+
+
+sub color {
+	my ($line, $color) = @_;
+	return "\033[1;${color}m".$line."\033[0m";
+}
+
+$log = 0;
+if (exists $ENV{"logfile"}) {
+	$log = 1;
+	open (LOG, ">>".$ENV{"logfile"}) or $log = 0;
+}
+
+#setpriority(PRIO_PROCESS, $PID, -20); -- unimplemented
+
+# wisely combine command line, adding quotes when needed
+# other (smaller) variants:
+#	$cmdline = "\"".join("\" \"", @ARGV)."\"";
+#	- this could raise to error "Can't pipe to ..." because executable name is quoted
+#	$cmdline = join(" ", @ARGV);
+#	- combine without quotes, will not process spaces at all
+$cmdline = $ARGV[0];
+shift @ARGV;
+foreach $arg (@ARGV)
+{
+	if ($arg =~ /\s/) {
+		$cmdline .= " \"$arg\"";
+	} else {
+		$cmdline .= " $arg";
+	}
+}
+die "Usage: vcfilt <vc/make command line>\n" if !defined($cmdline);
+
+
+# set priority of executed tool lower, then this filter' priority
+#!!$cmdline = "nice -n 5 $cmdline";
+
+# create process with piped output
+#-- open(IN, "-|", "2>&1 $cmdline") or die "Can't pipe to @ARGV[0]\n";
+open(IN, "$cmdline 2>&1|") or die "Can't pipe to $ARGV[0]\n";
+$isConsole = (-t STDOUT);
+
+while ($line = <IN>)
+{
+	if (!$isConsole) {
+		print($line);
+		print(LOG $line) if $log;
+		next;
+	}
+	my $line2 = $line;
+	if ($line =~ /Microsoft|Copyright/) {
+		$line2 = color ($line, 30);
+	} elsif ($line =~ /: fatal/) {
+		$line2 = color ($line, 35);
+	} elsif ($line =~ /: error/) {
+		$line2 = color ($line, 31);
+	} elsif ($line =~ /: warning/) {
+		$line2 = color ($line, 33);
+	} elsif ($line =~ /: attention/) {	#!! temporary
+		$line2 = color ($line, 34);
+	}
+	print($line2);
+	print(LOG $line) if $log;
+}
+close(IN);
+$ret = $?;
+
+close(LOG) if $log;
+
+# return code => out; note: code 256 could be converted to 0 (8 bit value!) so convert it to 0 or 1
+exit($ret != 0);
