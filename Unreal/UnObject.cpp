@@ -74,7 +74,7 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 		// Simulate package name for dummy textures
 		if (PackageIndex == INDEX_NONE && Name)
 		{
-			appSprintf(buf, bufSize, "Texture2D'%s.%s'", "MissingPackage", Name);
+			appSprintf(buf, bufSize, "Texture2D'%s.%s'", "MissingPackage_U", Name);
 			return;
 		}
 		buf[0] = 0;
@@ -99,11 +99,20 @@ void UObject::GetFullName(char *buf, int bufSize, bool IncludeObjectName, bool I
 #endif // UNREAL4
 	if (PackageIndex == INDEX_NONE)
 	{
+		if (Package)
+		{
+			if (Package->GetFilename().Len() > 0)
+			{
+				appSprintf(buf, bufSize, *Package->GetFilename(), ".%s", Package->Name, Name ? Name : "Unnamed");
+				return;
+			}
+			return;
+		}
 		// Handle dummy textures with missing package
 		if (!Package)
 		{
 			// Use fallback name if available
-			appSprintf(buf, bufSize, "MissingPackage.%s", Name ? Name : "Unnamed");
+			appSprintf(buf, bufSize, "MissingPackageZ.%s", Name ? Name : "Unnamed");
 			return;
 		}
 

@@ -2275,7 +2275,6 @@ void UMaterial3::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures,
 	guard(UMaterial3::AppendReferencedTextures);
 	if (onlyRendered)
 	{
-		// default implementation does that
 		Super::AppendReferencedTextures(OutTextures, onlyRendered);
 	}
 	else
@@ -2285,9 +2284,11 @@ void UMaterial3::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures,
 			if (ReferencedTextures[i])
 				OutTextures.Add(ReferencedTextures[i]);
 		}
+
 		for (int i = 0; i < Expressions.Num(); i++)
 		{
 			UObject* Expr = Expressions[i];
+			// Standard safety: check if Expr is valid and its class matches
 			if (Expr && Expr->IsA("Texture3"))
 			{
 				UTexture3* Tex = static_cast<UTexture3*>(Expr);
@@ -2296,19 +2297,28 @@ void UMaterial3::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures,
 			}
 		}
 
+		// LOGGING LOOP: The most likely source of the 0x00000000 crash
 		for (int i = 0; i < Expressions.Num(); i++)
 		{
 			UObject* Expr = Expressions[i];
-			if (Expr)
+			// Replace IsValidCString with basic pointer and null-terminator check
+			if (Expr && Expr->Name && Expr->Name[0] != '\0')
+			{
 				appPrintf("Expr[%d]: %s (%s)\n", i, Expr->Name, Expr->GetClassName());
+			}
+			else if (Expr)
+			{
+				appPrintf("Expr[%d]: <Unnamed Object> (%s)\n", i, Expr->GetClassName());
+			}
 		}
 
 		if (ReferencedTextures.Num() == 0)
-			appPrintf("Warning: Material %s has no ReferencedTextures\n", Name);
-
+			appPrintf("Warning: Material %s has no ReferencedTextures\n", Name ? Name : "Unknown");
 	}
 	unguard;
 }
+
+
 
 
 
@@ -2665,9 +2675,9 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	}
 	for (i = 0; i < VectorParameterValues.Num(); i++)
 	{
-		const FVectorParameterValue &P = VectorParameterValues[i];
-		const char *Name = P.GetName();
-		const FLinearColor &Color = P.ParameterValue;
+		const FVectorParameterValue& P = VectorParameterValues[i];
+		const char* Name = P.GetName();
+		const FLinearColor& Color = P.ParameterValue;
 		EMISSIVE_COLOR(strstr(Name, "emissive"), 100);
 #if TRON
 		if (ArGame == GAME_Tron)
@@ -2684,10 +2694,10 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 			Params.Mask = NULL;		// some different meaning for this texture
 		if (Params.Mask)
 		{
-			Params.EmissiveChannel      = TC_MA;
-			Params.SpecularMaskChannel  = TC_G;
+			Params.EmissiveChannel = TC_MA;
+			Params.SpecularMaskChannel = TC_G;
 			Params.SpecularPowerChannel = TC_B;
-			Params.CubemapMaskChannel   = TC_R;
+			Params.CubemapMaskChannel = TC_R;
 		}
 	}
 #endif // TRON
@@ -2697,7 +2707,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	{
 		if (Params.Mask)
 		{
-			Params.SpecularMaskChannel  = TC_R;
+			Params.SpecularMaskChannel = TC_R;
 			Params.SpecularPowerChannel = TC_G;
 			// TC_B = skin mask
 		}
@@ -2709,7 +2719,7 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 	{
 		if (Params.Mask)
 		{
-			Params.CubemapMaskChannel   = TC_B;
+			Params.CubemapMaskChannel = TC_B;
 			Params.SpecularPowerChannel = TC_G;
 			// TC_R = skin
 		}
@@ -2726,27 +2736,54 @@ void UMaterialInstanceConstant::GetParams(CMaterialParams &Params) const
 void UMaterialInstanceConstant::AppendReferencedTextures(TArray<UUnrealMaterial*>& OutTextures, bool onlyRendered) const
 {
 	guard(UMaterialInstanceConstant::AppendReferencedTextures);
-	
+
 	if (onlyRendered)
 	{
-		// default implementation does that
+		printf("UMaterialInstanceConstant::AppendReferencedTextures: onlyRendered=True, calling Super\n");
 		Super::AppendReferencedTextures(OutTextures, onlyRendered);
 	}
 	else
 	{
-	
 		for (int i = 0; i < TextureParameterValues.Num(); i++)
 		{
 			const auto& Param = TextureParameterValues[i];
-			appPrintf("Param[%d]: %s = %s\n", i, Param.ParameterName, Param.ParameterValue ? Param.ParameterValue->Name : "<null>");
-			if (Param.ParameterValue)
-				OutTextures.AddUnique(Param.ParameterValue);
 
+			if (!Param.ParameterValue)
+			{
+				appPrintf("Warning: TextureParameterValues[%d] in MaterialInstanceConstant %s has null ParameterValue\n", i, Name ? Name : "Unknown");
+				continue;
+			}
+
+			// VITAL FIX: Ensure the parameter name pointer is not null before printing
+			const char* pName = (Param.ParameterName) ? Param.ParameterName : "None";
+			printf("MaterialInstanceConstant %s: Processing TextureParameterValues[%d] with name '%s'\n", Name ? Name : "Unknown", i, pName);
+			// Additional safety: Check if the texture pointer itself is valid
+			UUnrealMaterial* pTex = Param.ParameterValue;
+
+			appPrintf("Param[%d]: %s = %s\n", i, pName, pTex ? pTex->Name : "<null>");
+
+			if (pTex != nullptr)
+			{
+				OutTextures.AddUnique(pTex);
+			}
 		}
-		if (Parent && Parent != this) Parent->AppendReferencedTextures(OutTextures, onlyRendered);
+		printf("Pre parent check");
+
+		// Prevent infinite recursion if Parent == this
+		if (Parent != nullptr && Parent != this)
+		{
+			if (Parent->GetClassName() != nullptr)
+			{
+				if (Parent->IsA("MaterialInstanceConstant") || Parent->IsA("Material3"))
+				{
+					Parent->AppendReferencedTextures(OutTextures, onlyRendered);
+				}
+			}
+		}
 	}
 	unguard;
 }
+
 
 #endif // UNREAL3
 

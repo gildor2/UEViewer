@@ -238,7 +238,7 @@ EOF
 #-------------------------------------------------------------
 
 [ "$project" ] || SetupDefaultProject
-GetBuildNumber
+# GetBuildNumber
 DetectBuildPlatform
 
 [ "${PLATFORM:0:3}" == "vc-" ] && DetectVisualStudioVersion

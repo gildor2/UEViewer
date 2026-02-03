@@ -45,7 +45,7 @@ FString GetTextureType(const UUnrealMaterial* Tex)
 		{ "_crl", "Detail"}, // ???
 	};
 
-	if(IsValidCString(Tex->Name) == false) 
+	if (IsValidCString(Tex->Name) == false)
 	{
 		printf("Invalid texture name / pointer \n");
 		return "";
@@ -90,12 +90,36 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 	}
 
 	//todo: handle Mat->IsTexture(), Mat->IsTextureCube() to select exporter code
-	//todo: remove separate texture handling from Main.cpp exporter registraction
+	//todo: remove separate texture handling from Main.cpp exporter registration
+
+	if (Mat->IsA("MaterialInstanceConstant"))
+	{
+		const UMaterialInstance* MIC = (const UMaterialInstance*)Mat;
+		// Access Violation 0x00000000 occurs if Parent is NULL or invalid
+		if (!MIC->Parent) {
+			appPrintf("Skipping %s: NULL Parent material detected to prevent crash.\n", *Mat->Name);
+			return;
+		}
+	}
 
 	TArray<UUnrealMaterial*> AllTextures;
 	CMaterialParams Params;
-
+	printf("Will append referenced textures\n");
 	Mat->AppendReferencedTextures(AllTextures, false);
+	printf("Appended Referenced Textures\n");
+
+	for (int i = 0; i < AllTextures.Num(); i++)
+	{
+		UObject* Tex = AllTextures[i];  // Use UObject* if you're dumping textures
+		if (Tex)
+		{
+			char FullName[256];  // Allocate a buffer
+			Tex->GetFullName(FullName, sizeof(FullName), true, true, true);
+			appPrintf("Referenced_U texture [%d]: %s\n", i, FullName);
+		}
+	}
+
+
 
 	FArchive* Ar = CreateExportArchive(Mat, EFileArchiveOptions::TextFile, "%s.mat", Mat->Name);
 	if (!Ar) return;
@@ -155,6 +179,8 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 	if (PropAr)
 	{
 		Mat->GetTypeinfo()->SaveProps(Mat, *PropAr);
+
+
 		delete PropAr;
 	}
 
@@ -162,56 +188,70 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 
 	// HACK - First iterration, to gather all type-texture map. The type is assumed based on texture name, so there is no guarantee it is correct.
 	int numOtherTextures = 0;
+
+	printf("Processing textures start\n");
 	for (int i = 0; i < AllTextures.Num(); i++)
 	{
-		//Export with texture type name
 		UUnrealMaterial* Tex = AllTextures[i];
-		if (!Tex) continue;
 
-		if (IsValidCString(Tex->Name) == false) {
-			continue;
-		}
+		// 1. Strict validation
+		if (!Tex || !Tex->Name) continue;
+
+		// 2. Immediate duplication to keep memory safe
 		const char* TexPath = appStrdup(Tex->Name);
-		printf("Processing texture [%d]: %s\n", i, TexPath);
 
-		//This works but is hacky
 		FString TextureType = GetTextureType(Tex);
+		const char* FinalParamName = NULL;
+
 		if (TextureType.Len() > 0)
 		{
-			const char* paramName = appStrdup(*TextureType);
-			printf("Adding texture parameter %s=%s\n", paramName, TexPath);
-			ExportTexMap.Add({ appStrdup (paramName), TexPath });
+			// 3. Duplicate IMMEDIATELY before FString can fluctuate
+			FinalParamName = appStrdup(*TextureType);
 		}
 		else
 		{
-			char OtherType[64];
-			appSprintf(ARRAY_ARG(OtherType), "Other[%d]", numOtherTextures++);
-			const char* safeOther = appStrdup(OtherType);
+			// 4. Use a larger buffer and safe formatting
+			char OtherBuf[128];
+			appSprintf(ARRAY_ARG(OtherBuf), "Other[%d]", numOtherTextures++);
+			FinalParamName = appStrdup(OtherBuf);
+		}
 
-
-			printf("Adding texture parameter %s=%s\n", safeOther, TexPath);
-			ExportTexMap.Add({ safeOther, appStrdup(TexPath) });
-			
+		// 5. Final safety check before adding to the Map
+		if (FinalParamName && TexPath)
+		{
+			ExportTexMap.Add({ FinalParamName, TexPath });
 		}
 	}
 
-	// Second iteration: export named texture parameters from material expressions and overwrite the previous list.
-	// There can be a mistake if few parameters are using the same texture path...
-	const UMaterial3* Material = static_cast<const UMaterial3*>(Mat);
-	for (int i = 0; i < Material->Expressions.Num(); i++)
+	printf("Processing textures done\n");
+
+	if (Mat->IsA("Material3"))
 	{
-		if (Material->Expressions[i] == nullptr) continue;
-
-		const char* paramName = nullptr;
-		const char* texPath = nullptr;
-
-		printf("Expression %d: %s\n", i, Material->Expressions[i]->GetClassName());
-
-		// UMaterialExpressionTextureSampleParameter2D is inherited from UMaterialExpressionTextureSampleParameter, so no need to check it separately
-		// TODO MaterialExpressionTextureSampleParameterCube - not implemented yet
-		auto *TexSampleParameter = static_cast<const UMaterialExpressionTextureSampleParameter*>(Material->Expressions[i]);
-		if (TexSampleParameter)
+		// Second iteration: export named texture parameters from material expressions and overwrite the previous list.
+		// There can be a mistake if few parameters are using the same texture path...
+		// Second iteration: export named texture parameters
+		const UMaterial3* Material = static_cast<const UMaterial3*>(Mat);
+		for (int i = 0; i < Material->Expressions.Num(); i++)
 		{
+			printf("Processing expression %d\n", i);
+			UObject* Expr = Material->Expressions[i];
+			printf("Got expression pointer\n");
+			if (Expr == nullptr) continue;
+
+			// CRITICAL: Only process if it is actually a Texture Sample Parameter
+			if (!Expr->IsA("MaterialExpressionTextureSampleParameter"))
+			{
+				continue;
+			}
+			printf("Before cast");
+			auto* TexSampleParameter = static_cast<const UMaterialExpressionTextureSampleParameter*>(Expr);
+			printf("After cast");
+
+			if (!TexSampleParameter->Texture) continue;
+
+
+			const char* paramName = nullptr;
+			const char* texPath = nullptr;
 			printf("Found texture sample parameter expression\n");
 			auto ExpTex = TexSampleParameter->Texture;
 			if (ExpTex == nullptr)
@@ -225,8 +265,13 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 			texPath = nullptr;
 			if (ExpTex && IsValidCString(ExpTex->Name))
 			{
-				printf("  Texture name: %s\n", ExpTex->Name);
+				printf("  Texture path: \n", ExpTex->Name);
 				texPath = appStrdup(ExpTex->Name);
+			}
+			else if (IsValidCString(paramName) && paramName != "None")
+			{
+				printf("  Texture is null, but parameter is: %s \n", paramName);
+				texPath = "None";
 			}
 			else
 			{
@@ -234,13 +279,13 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 				texPath = appStrdup("Unknown");
 				continue;
 			}
-			bool KeyChanged = false;
+
 
 			printf("  Texture path: %s\n", texPath);
-
+			bool KeyChanged = false;
 			for (int x = 0; x < ExportTexMap.Num(); x++)
 			{
-				printf("  Map %d: %s=%s\n", x, ExportTexMap[x].Key, ExportTexMap[x].Value);	
+				printf("  Map %d: %s=%s\n", x, ExportTexMap[x].Key, ExportTexMap[x].Value);
 				if (ExportTexMap[x].Key == nullptr || ExportTexMap[x].Value == nullptr || paramName == nullptr || ExpTex->Name == nullptr)
 				{
 					continue;
@@ -253,7 +298,7 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 
 				//printf("%d Comparing parameter %s=%s to %s=%s\n", ExportTexMap.Num(), ExportTexMap[x].Key, ExportTexMap[x].Value, paramName, texPath);
 
-				if (ExportTexMap[x].Value == texPath)
+				if (strcmp(ExportTexMap[x].Value, texPath) == 0)
 				{
 					appPrintf("Changing texture parameter %s=%s to %s=%s\n", ExportTexMap[x].Key, ExportTexMap[x].Value, paramName, texPath);
 					ExportTexMap[x].Key = paramName;
@@ -267,106 +312,14 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 				printf("Added %s=%s\n", paramName, texPath);
 				ExportTexMap.Add({ appStrdup(paramName), appStrdup(texPath) });
 			}
+
 		}
 	}
-	/*
-	if (Mat)
-	{
-		// Try cast mnaterial to UMaterial3 to get more information about used textures
 
-		if (Mat->IsA("Material3"))
-		{
-			UMaterial3* Material = (UMaterial3*)Mat;
-
-			if (Material != nullptr)
-			{
-
-				printf("Loading Material3 CollectedTextureParameters:\n");
-				// 1) Collected texture parameters
-				for (int i = 0; i < Material->CollectedTextureParameters.Num(); ++i)
-				{
-					const CTextureParameterValue& P = Material->CollectedTextureParameters[i];
-
-					if (IsValidCString(P.Name))
-					{
-						appPrintf("CollectedTexture param: %s\n", P.Name);
-					}
-				}
-				/*
-				for (UObject* E : Material->Expressions)
-				{
-					if (E && E->IsA("MaterialExpressionTextureSampleParameter"))
-					{
-						auto* TS = static_cast<UMaterialExpressionTextureSampleParameter*>(E);
-						/*
-						if(TS !=nullptr && IsValidCString(TS->ParameterName))
-						{
-							printf("Expr param %s =", TS->ParameterName);
-						
-							printf("Expr param %s -> texture %s\n",
-								TS->ParameterName ? TS->ParameterName : "None",
-								TS->Texture ? TS->Texture->Name : "None");
-								
-						}
-					
-
-							
-					}
-				}
-				*/
-				/*
-				if (Material->DiffuseColor)
-					printf("Diffuse input connected to %s\n", Material->DiffuseColor->Name);
-				else
-					printf("Diffuse input not connected\n");
-					*/
-					
-				/*
-				for (int i = 0; i < Material->Expressions.Num(); ++i)
-				{
-					UObject* Eobj = Material->Expressions[i];
-					if (!Eobj) continue;
-					const char* cls = Eobj->GetClassName();
-					appPrintf("Expr[%d] class=%s name=%s\n", i, cls, Eobj->Name);
-
-					if (Eobj->IsA("MaterialExpressionTextureSampleParameter") || Eobj->IsA("MaterialExpressionTextureSample"))
-					{
-						const char* matname = Material->Name ? Material->Name : "None";
-						auto* TS = static_cast<const UMaterialExpressionTextureSampleParameter*>(Eobj);
-						const char* pname = TS->ParameterName ? TS->ParameterName : "None";
-						const char* tex = (TS->Texture && TS->Texture->Name) ? TS->Texture->Name : "None";
-						
-						appPrintf("  TextureSampleParam: ParameterName=%s Texture=%s Material=%s\n", pname, tex, matname);
-
-						// If your UMaterialExpression has an Outputs[] or LinkedTo[] array, follow them:
-						// for each output->LinkedTo: if a link target is the material's input node, you have a connected input.
-					}
-				}
-				*/
-				/*
-				// 2) GetParams (fast canonical check)
-				CMaterialParams Params;
-				Material->GetParams(Params); // signature depends on your fork
-				if (!Params.IsNull())
-				{
-					if (Params.Diffuse) printf("Diffuse connected -> %s\n", Params.Diffuse->Name);
-					else                printf("Diffuse not connected\n");
-					// repeat for other fields...
-				}
-				*/
-			/*
-			}
-		}
-	}
-	*/
-
-	
-	
-
-
+	printf("Exporting texture parameters to archive\n");
 	for (int i = 0; i < ExportTexMap.Num(); i++)
 	{
-		printf("Adding to texture to archive");
+		printf("Adding to texture to archive\n");
 		const char* safeKey = ExportTexMap[i].Key != nullptr ? ExportTexMap[i].Key : "Null";
 		const char* safeValue = ExportTexMap[i].Value != nullptr ? ExportTexMap[i].Value : "Null"; // value can be still null
 		printf("Exporting texture parameter %s=%s\n", safeKey, safeValue);
@@ -375,7 +328,7 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 			Ar->Printf("%s=%s\n", safeKey, safeValue);
 	}
 
-
+	printf("Adding all textures to ToExport list\n");
 	for (int i = 0; i < AllTextures.Num(); i++)
 	{
 		UUnrealMaterial* ExpMat = AllTextures[i];
@@ -387,24 +340,27 @@ void ExportMaterial(const UUnrealMaterial* Mat)
 	delete Ar; // close .mat file
 
 	// We have done with current object, now let's export referenced objects.
-
-	
 	for (UObject* Obj : ToExport)
 	{
 		if (Obj != Mat) // UTextureCube::GetParams() adds self to "Cube" field
 			ExportObject(Obj);
 	}
 
+	printf("Material export done: %s\n", Mat->Name);
 	// For MaterialInstanceConstant, export its parent too
 	if (Mat->IsA("MaterialInstanceConstant"))
 	{
+		printf("Exporting parent material\n");
 		const UMaterialInstanceConstant* Inst = static_cast<const UMaterialInstanceConstant*>(Mat);
-		if (Inst !=nullptr && Inst->Parent)
+		printf("Parent material: %s\n", Inst->Parent ? Inst->Parent->Name : "NULL");
+		if (Inst != nullptr && Inst->Parent)
 		{
-			ExportMaterial(Inst->Parent);
+			//ExportMaterial(Inst->Parent);
+			//ToExport.AddUnique(Inst->Parent);
 		}
+		printf("Parent material export done\n");
 	}
-	
+
 
 #endif // RENDERING
 
