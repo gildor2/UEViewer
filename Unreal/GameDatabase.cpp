@@ -636,7 +636,7 @@ void FArchive::DetectGame()
 		SET(GAME_UC1);
 #endif
 #if UC2
-	if (ArVer == 151 && (ArLicenseeVer == 0 || ArLicenseeVer == 1))
+	if ((ArVer >= 140 && ArVer <= 151) && (ArLicenseeVer == 0 || ArLicenseeVer == 1))
 		SET(GAME_UC2);
 #endif
 

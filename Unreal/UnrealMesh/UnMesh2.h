@@ -1577,13 +1577,26 @@ struct FStaticMeshVertexStream
 		if (Ar.Engine() == GAME_UE2X)
 		{
 			TArray<FStaticMeshVertexUC2> UC2Verts;
-			int Flag;
-			Ar << Flag;
-			if (!Flag)
+			if (Ar.ArLicenseeVer == 1)
 			{
-				Ar << UC2Verts;
-				CopyArray(S.Vert, UC2Verts);
+				// Xbox: a Flag precedes the array; skip the array when Flag is non-zero
+				int Flag;
+				Ar << Flag;
+				if (!Flag) Ar << UC2Verts;
 			}
+			else
+			{
+				// PC: no Flag; vertices are serialized one at a time because FUC2Vector/FUC2Normal
+				// use a packed int[3] format that requires per-element operator<< rather than a
+				// bulk TArray read
+				int Count;
+				Ar << Count;
+				UC2Verts.Empty(Count);
+				UC2Verts.AddZeroed(Count);
+				for (int i = 0; i < Count; i++)
+					Ar << UC2Verts[i];
+			}
+			CopyArray(S.Vert, UC2Verts);
 			return Ar << S.Revision;
 		}
 #endif // UC2
@@ -1621,9 +1634,18 @@ struct FRawColorStream
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{
-			int Flag;
-			Ar << Flag;
-			if (!Flag) Ar << S.Color;
+			if (Ar.ArLicenseeVer == 1)
+			{
+				// Xbox: a Flag precedes the color array; skip it when Flag is non-zero
+				int Flag;
+				Ar << Flag;
+				if (!Flag) Ar << S.Color;
+			}
+			else
+			{
+				// PC: color array is stored directly with no Flag guard
+				Ar << S.Color;
+			}
 			return Ar << S.Revision;
 		}
 #endif // UC2
@@ -1661,9 +1683,18 @@ struct FStaticMeshUVStream
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{
-			int Flag;
-			Ar << Flag;
-			if (!Flag) Ar << S.Data;
+			if (Ar.ArLicenseeVer == 1)
+			{
+				// Xbox: a Flag precedes the UV array; skip it when Flag is non-zero
+				int Flag;
+				Ar << Flag;
+				if (!Flag) Ar << S.Data;
+			}
+			else
+			{
+				// PC: UV array is stored directly with no Flag guard
+				Ar << S.Data;
+			}
 			return Ar << S.f10 << S.f1C;
 		}
 #endif // UC2
