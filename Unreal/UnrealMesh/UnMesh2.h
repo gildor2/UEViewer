@@ -1593,7 +1593,10 @@ struct FStaticMeshVertexStream
 				// int[3] (12 bytes each). Bypasses FStaticMeshVertexUC2/FUC2Vector entirely
 				// since those assume int16 Xbox encoding; floats need no scale/offset transform.
 				int Count;
-				Ar << Count;
+				if (Ar.ArVer < 145)
+					Ar << AR_INDEX(Count);
+				else
+					Ar << Count;
 				S.Vert.Empty(Count);
 				S.Vert.AddZeroed(Count);
 				for (int i = 0; i < Count; i++)

@@ -177,22 +177,35 @@ void FObjectExport::Serialize2X(FArchive &Ar)
 	uint32		ObjectFlags;
 #endif
 
-	Ar << ClassIndex << SuperIndex;
-	if (Ar.ArVer >= 150)
+	if (Ar.ArVer < 145)
 	{
-		int16 idx = PackageIndex;
-		Ar << idx;
-		PackageIndex = idx;
+		// ArVer=140 PC packages: compact AR_INDEX encoding for most fields
+		Ar << AR_INDEX(ClassIndex) << AR_INDEX(SuperIndex);
+		Ar << PackageIndex;
+		Ar << ObjectName << ObjectFlags;
+		Ar << AR_INDEX(SerialSize);
+		if (SerialSize)
+			Ar << AR_INDEX(SerialOffset);
 	}
 	else
-		Ar << PackageIndex;
-	Ar << ObjectName << ObjectFlags << SerialSize;
-	if (SerialSize)
-		Ar << SerialOffset;
-	// UC2 has strange thing here: indices are serialized as 4-byte int (instead of AR_INDEX),
-	// but stored into 2-byte shorts
-	ClassIndex = int16(ClassIndex);
-	SuperIndex = int16(SuperIndex);
+	{
+		// ArVer 145-151: full int32 for ClassIndex/SuperIndex/SerialSize/SerialOffset
+		Ar << ClassIndex << SuperIndex;
+		if (Ar.ArVer >= 150)
+		{
+			int16 idx = PackageIndex;
+			Ar << idx;
+			PackageIndex = idx;
+		}
+		else
+			Ar << PackageIndex;
+		Ar << ObjectName << ObjectFlags << SerialSize;
+		if (SerialSize)
+			Ar << SerialOffset;
+		// UC2 ArVer 145-151: indices are full 4-byte int, but values fit in int16
+		ClassIndex = int16(ClassIndex);
+		SuperIndex = int16(SuperIndex);
+	}
 
 	unguard;
 }
