@@ -857,9 +857,11 @@ struct FUC2Vector
 	friend FArchive& operator<<(FArchive &Ar, FUC2Vector &V)
 	{
 		if (Ar.ArLicenseeVer == 1)
-			return Ar << V.X << V.Y << V.Z;
-		// LicenseeVer == 0 -- serialize as int[3] and rescale, using some global scale
-		int X, Y, Z;
+			return Ar << V.X << V.Y << V.Z;	// Xbox: 3 int16s
+		// PC: stored as FVector (3 floats). FStaticMeshVertexStream bypasses this
+		// for the vertex stream and reads floats directly; this path exists for
+		// any other call sites and must consume exactly 12 bytes.
+		float X, Y, Z;
 		return Ar << X << Y << Z;
 	}
 };
@@ -1576,27 +1578,32 @@ struct FStaticMeshVertexStream
 #if UC2
 		if (Ar.Engine() == GAME_UE2X)
 		{
-			TArray<FStaticMeshVertexUC2> UC2Verts;
 			if (Ar.ArLicenseeVer == 1)
 			{
 				// Xbox: a Flag precedes the array; skip the array when Flag is non-zero
+				TArray<FStaticMeshVertexUC2> UC2Verts;
 				int Flag;
 				Ar << Flag;
 				if (!Flag) Ar << UC2Verts;
+				CopyArray(S.Vert, UC2Verts);
 			}
 			else
 			{
-				// PC: no Flag; vertices are serialized one at a time because FUC2Vector/FUC2Normal
-				// use a packed int[3] format that requires per-element operator<< rather than a
-				// bulk TArray read
+				// PC: positions are stored as FVector (3 floats, 12 bytes each), normals as
+				// int[3] (12 bytes each). Bypasses FStaticMeshVertexUC2/FUC2Vector entirely
+				// since those assume int16 Xbox encoding; floats need no scale/offset transform.
 				int Count;
 				Ar << Count;
-				UC2Verts.Empty(Count);
-				UC2Verts.AddZeroed(Count);
+				S.Vert.Empty(Count);
+				S.Vert.AddZeroed(Count);
 				for (int i = 0; i < Count; i++)
-					Ar << UC2Verts[i];
+				{
+					Ar << S.Vert[i].Pos;	// FVector: X, Y, Z as floats
+					int nx, ny, nz;
+					Ar << nx << ny << nz;	// normal: 3 ints, decoding TODO
+					S.Vert[i].Normal.Set(0, 0, 0);
+				}
 			}
-			CopyArray(S.Vert, UC2Verts);
 			return Ar << S.Revision;
 		}
 #endif // UC2
