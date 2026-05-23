@@ -1603,8 +1603,8 @@ struct FStaticMeshVertexStream
 				{
 					Ar << S.Vert[i].Pos;	// FVector: X, Y, Z as floats
 					int nx, ny, nz;
-					Ar << nx << ny << nz;	// normal: 3 ints, decoding TODO
-					S.Vert[i].Normal.Set(0, 0, 0);
+					Ar << nx << ny << nz;	// stored as IEEE 754 float bits
+					S.Vert[i].Normal.Set(*(float*)&nx, *(float*)&ny, *(float*)&nz);
 				}
 			}
 			return Ar << S.Revision;
