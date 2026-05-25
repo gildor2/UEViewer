@@ -72,6 +72,8 @@ void ExportMd5Anim(const CAnimSet* Anim);
 // glTF
 void ExportSkeletalMeshGLTF(const CSkeletalMesh* Mesh);
 void ExportStaticMeshGLTF(const CStaticMesh* Mesh);
+// OBJ
+void ExportStaticMeshOBJ(const CStaticMesh* Mesh);
 // 3D
 void Export3D(const UVertMesh* Mesh);
 // TGA, DDS, PNG

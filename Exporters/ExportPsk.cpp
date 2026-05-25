@@ -847,6 +847,12 @@ static void ExportStaticMeshLod(const CStaticMeshLod &Lod, FArchive &Ar)
 {
 	guard(ExportStaticMeshLod);
 
+	if (Lod.NumVerts == 0)
+	{
+		appPrintf("WARNING: skipping LOD with 0 vertices\n");
+		return;
+	}
+
 	// using 'static' here to avoid zero-filling unused fields
 	static VChunkHeader BoneHdr, InfHdr;
 

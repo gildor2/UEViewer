@@ -1621,13 +1621,20 @@ void UStaticMesh::Serialize(FArchive &Ar)
 		GUC2VectorScale = VectorScale;
 		GUC2VectorBase  = VectorBase;
 		Ar << VertexStream << ColorStream << AlphaStream << UVStream << IndexStream1;
+		// Xbox bundles IndexStream2 together with vertex data in XPR files, so it is loaded
+		// separately by LoadExternalUC2Data(); PC packages store it inline like every other stream
 		if (Ar.ArLicenseeVer != 1) Ar << IndexStream2;
-		//!!!!!
-//		appPrintf("v:%d c1:%d c2:%d uv:%d idx1:%d\n", VertexStream.Vert.Num(), ColorStream.Color.Num(), AlphaStream.Color.Num(),
-//			UVStream.Num() ? UVStream[0].Data.Num() : -1, IndexStream1.Indices.Num());
 		Ar << f108;
 
-		LoadExternalUC2Data();
+		// Xbox geometry (vertices + indices) is stored in external XPR files, not the package
+		if (Ar.ArLicenseeVer == 1)
+			LoadExternalUC2Data();
+
+		// On PC, FStaticMeshSection::NumFaces holds the last index value rather than a face count;
+		// divide by 3 to get the actual number of triangles
+		if (Ar.ArLicenseeVer == 0)
+			for (int s = 0; s < Sections.Num(); s++)
+				Sections[s].NumFaces = Sections[s].NumFaces / 3;
 
 		// skip collision information
 		goto skip_remaining;
@@ -1704,7 +1711,6 @@ void UStaticMesh::LoadExternalUC2Data()
 	//?? S.NumFaces is used as NumIndices, but it is not a multiply of 3
 	//?? (sometimes is is N*3, sometimes = N*3+1, sometimes - N*3+2 ...)
 	//?? May be UC2 uses triangle strips instead of triangles?
-	assert(IndexStream1.Indices.Num() == 0);	//???
 /*	int NumIndices = 0;
 	for (i = 0; i < Sections.Num(); i++)
 	{

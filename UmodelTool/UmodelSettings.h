@@ -58,6 +58,7 @@ enum class EExportMeshFormat : int
 	psk,
 	md5,
 	gltf,
+	obj,
 };
 
 enum class ETextureExportFormat : int

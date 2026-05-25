@@ -270,6 +270,9 @@ static void CallExportStaticMesh(const CStaticMesh* Mesh)
 	case EExportMeshFormat::gltf:
 		ExportStaticMeshGLTF(Mesh);
 		break;
+	case EExportMeshFormat::obj:
+		ExportStaticMeshOBJ(Mesh);
+		break;
 	}
 }
 
@@ -440,6 +443,7 @@ static void PrintUsage()
 			"    -psk            use ActorX format for meshes (default)\n"
 			"    -md5            use md5mesh/md5anim format for skeletal mesh\n"
 			"    -gltf           use glTF 2.0 format for mesh\n"
+			"    -obj            use OBJ format for static mesh (UT2004 import compatible)\n"
 			"    -lods           export all available mesh LOD levels\n"
 			"    -dds            export textures in DDS format whenever possible\n"
 			"    -png            export textures in PNG format instead of TGA\n"
@@ -451,7 +455,7 @@ static void PrintUsage()
 			"    SkeletalMesh    exported as ActorX psk file, MD5Mesh or glTF\n"
 			"    MeshAnimation   exported as ActorX psa file or MD5Anim\n"
 			"    VertMesh        exported as Unreal 3d file\n"
-			"    StaticMesh      exported as psk file with no skeleton (pskx) or glTF\n"
+			"    StaticMesh      exported as psk file with no skeleton (pskx), glTF, or OBJ\n"
 			"    Texture         exported in tga or dds format\n"
 			"    Sounds          file extension depends on object contents\n"
 			"    ScaleForm       gfx\n"
@@ -873,6 +877,10 @@ int main(int argc, const char **argv)
 		else if (!stricmp(opt, "gltf"))
 		{
 			GSettings.Export.SkeletalMeshFormat = GSettings.Export.StaticMeshFormat = EExportMeshFormat::gltf;
+		}
+		else if (!stricmp(opt, "obj"))
+		{
+			GSettings.Export.StaticMeshFormat = EExportMeshFormat::obj;
 		}
 		else if (!stricmp(opt, "all") && mainCmd == CMD_Dump)
 		{
