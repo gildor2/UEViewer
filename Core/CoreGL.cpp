@@ -357,7 +357,11 @@ static void CheckShader(GLuint obj, const char *type, const char *name)
 			"no errors"								// Intel
 		};
 		for (int i = 0; i < ARRAY_COUNT(checks); i++)
-			if (appStristr(infoLog, checks[i])) return;
+			if (appStristr(infoLog, checks[i]))
+			{
+				delete[] infoLog;						// was leaked: this is the common path on ATI/Intel drivers
+				return;
+			}
 	}
 #endif // FILTER_GLSL_SPAM
 
@@ -366,7 +370,7 @@ static void CheckShader(GLuint obj, const char *type, const char *name)
 	else
 		appNotify("ERROR: %s shader %s:\n%s", type, name, infoLog);
 
-	delete infoLog;
+	delete[] infoLog;								// infoLog was allocated with 'new char[]', not 'new char'
 
 	if (status != GL_TRUE) appError("error in %s shader %s", type, name);
 }
@@ -395,14 +399,18 @@ static void CheckProgram(GLuint obj, const char *name)
 			"no errors"								// Intel
 		};
 		for (int i = 0; i < ARRAY_COUNT(checks); i++)
-			if (appStristr(infoLog, checks[i])) return;
+			if (appStristr(infoLog, checks[i]))
+			{
+				delete[] infoLog;						// was leaked: this is the common path on ATI/Intel drivers
+				return;
+			}
 	}
 #endif // FILTER_GLSL_SPAM
 
 	appPrintf("%s: program %s:\n", (status == GL_TRUE) ? "WARNING" : "ERROR", name);
 	appPrintf("%s\n", infoLog);
 
-	delete infoLog;
+	delete[] infoLog;								// infoLog was allocated with 'new char[]', not 'new char'
 
 	if (status != GL_TRUE) appError("error in program %s", name);
 }
